@@ -25,10 +25,7 @@
         "NSLocationWhenInUseUsageDescription": "x/pat uses your location to show nearby spots, cafes, and coworking spaces shared by other nomads.",
         "NSCameraUsageDescription": "x/pat uses your camera to take photos of spots you want to share.",
         "NSPhotoLibraryUsageDescription": "x/pat accesses your photo library so you can share photos of great spots."
-      },
-      "associatedDomains": [
-        "applinks:xpat.social"
-      ]
+      }
     },
     "android": {
       "package": "com.aychholdings.xpat",
