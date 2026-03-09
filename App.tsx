@@ -9,7 +9,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import { AuthProvider } from './src/hooks/useAuth';
 import AppNavigator from './src/navigation/AppNavigator';
 import { PostHogProvider } from './src/lib/posthog';
+import { initSentry, Sentry } from './src/lib/sentry';
 import { colors } from './src/theme';
+
+// Initialize Sentry as early as possible
+initSentry();
 
 const linking = {
   prefixes: ['xpat://', 'https://xpat.social'],
@@ -34,7 +38,7 @@ const linking = {
 
 SplashScreen.preventAutoHideAsync();
 
-export default function App() {
+function App() {
   const [fontsLoaded] = useFonts({
     'DMSerifDisplay-Regular': require('./assets/fonts/DMSerifDisplay-Regular.ttf'),
     'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
@@ -68,3 +72,5 @@ export default function App() {
     </SafeAreaProvider>
   );
 }
+
+export default Sentry.wrap(App);

@@ -4,6 +4,7 @@ import {
   RefreshControl, ActivityIndicator, TextInput, Alert, Share,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts, spacing, radius } from '../theme';
 import { supabase } from '../lib/supabase';
@@ -16,7 +17,8 @@ import { usePostHog } from '../lib/posthog';
 import { formatTimeAgo } from '../utils/formatTime';
 
 export default function FeedScreen() {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
+  const navigation = useNavigation<any>();
   const posthog = usePostHog();
   const composerRef = useRef<TextInput>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -30,6 +32,36 @@ export default function FeedScreen() {
   const [loadingComments, setLoadingComments] = useState<Set<number>>(new Set());
   const [postingComment, setPostingComment] = useState<Set<number>>(new Set());
   const [reportTarget, setReportTarget] = useState<{ id: number; visible: boolean }>({ id: 0, visible: false });
+
+  // ---------- Auth gate ----------
+  if (!session) {
+    return (
+      <View style={styles.container}>
+        <BrandHeader />
+        <View style={styles.authGate}>
+          <View style={styles.authGateIconCircle}>
+            <Feather name="message-circle" size={40} color={colors.teal} />
+          </View>
+          <Text style={styles.authGateBrand}>
+            <Text style={styles.authGateX}>x</Text>
+            <Text style={styles.authGateSlash}>/</Text>
+            <Text style={styles.authGatePat}>pat</Text>
+          </Text>
+          <Text style={styles.authGateTitle}>See what nomads are sharing</Text>
+          <Text style={styles.authGateSubtitle}>
+            Sign in to read posts, share your experiences, and connect with the global nomad community.
+          </Text>
+          <TouchableOpacity
+            style={styles.authGateBtn}
+            onPress={() => navigation.navigate('Auth')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.authGateBtnText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   const fetchPosts = useCallback(async () => {
     const { data, error } = await supabase
@@ -610,5 +642,59 @@ const styles = StyleSheet.create({
     width: 32,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  // Auth gate styles
+  authGate: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 100,
+  },
+  authGateIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(46, 196, 160, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(46, 196, 160, 0.2)',
+  },
+  authGateBrand: {
+    fontFamily: fonts.heading,
+    fontSize: 36,
+    marginBottom: spacing.md,
+  },
+  authGateX: { color: colors.amber },
+  authGateSlash: { color: colors.teal },
+  authGatePat: { color: colors.dark.text },
+  authGateTitle: {
+    fontFamily: fonts.heading,
+    fontSize: 22,
+    color: colors.dark.text,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  authGateSubtitle: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.dark.text2,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+  },
+  authGateBtn: {
+    backgroundColor: colors.teal,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm + spacing.xs,
+    paddingHorizontal: spacing.xl + spacing.lg,
+  },
+  authGateBtnText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 16,
+    color: colors.dark.bg,
   },
 });

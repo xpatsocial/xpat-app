@@ -10,6 +10,7 @@ import FeedScreen from '../screens/FeedScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ChatScreen from '../screens/ChatScreen';
 import AddSpotScreen from '../screens/AddSpotScreen';
+import SpotDetailScreen from '../screens/SpotDetailScreen';
 import AuthScreen from '../screens/AuthScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
@@ -39,20 +40,16 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
-  const { session, loading } = useAuth();
+  const { loading } = useAuth();
   const [gdprAccepted, setGdprAccepted] = useState<boolean | null>(null);
-  const [onboardingComplete, setOnboardingComplete] = useState<boolean | null>(null);
 
   useEffect(() => {
     AsyncStorage.getItem('gdpr_accepted').then((val) => {
-      setGdprAccepted(val === 'true');
-    });
-    AsyncStorage.getItem('onboarding_complete').then((val) => {
-      setOnboardingComplete(val === 'true');
+      setGdprAccepted(val === 'true' || val === 'declined');
     });
   }, []);
 
-  if (loading || gdprAccepted === null || onboardingComplete === null) return null;
+  if (loading || gdprAccepted === null) return null;
 
   function handleGDPRAccept() {
     AsyncStorage.setItem('gdpr_accepted', 'true');
@@ -68,43 +65,47 @@ export default function AppNavigator() {
   return (
     <>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
-        {session ? (
-          <>
-            <Stack.Screen name="Main" component={MainTabs} />
-            <Stack.Screen
-              name="AddSpot"
-              component={AddSpotScreen}
-              options={{ presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="UserProfile"
-              component={UserProfileScreen}
-              options={{ presentation: 'card' }}
-            />
-            <Stack.Screen
-              name="PrivacyPolicy"
-              component={PrivacyPolicyScreen}
-              options={{ presentation: 'modal' }}
-            />
-            <Stack.Screen
-              name="Terms"
-              component={TermsOfServiceScreen}
-              options={{ presentation: 'modal' }}
-            />
-          </>
-        ) : !onboardingComplete ? (
-          <>
-            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
-            <Stack.Screen name="Auth" component={AuthScreen} />
-          </>
-        ) : (
-          <Stack.Screen name="Auth" component={AuthScreen} />
-        )}
+        <Stack.Screen name="Main" component={MainTabs} />
+        <Stack.Screen
+          name="Auth"
+          component={AuthScreen}
+          options={{ presentation: 'modal', gestureEnabled: true }}
+        />
+        <Stack.Screen
+          name="Onboarding"
+          component={OnboardingScreen}
+          options={{ presentation: 'modal', gestureEnabled: true }}
+        />
+        <Stack.Screen
+          name="AddSpot"
+          component={AddSpotScreen}
+          options={{ presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="SpotDetail"
+          component={SpotDetailScreen}
+          options={{ presentation: 'modal', gestureEnabled: true }}
+        />
+        <Stack.Screen
+          name="UserProfile"
+          component={UserProfileScreen}
+          options={{ presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="PrivacyPolicy"
+          component={PrivacyPolicyScreen}
+          options={{ presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="Terms"
+          component={TermsOfServiceScreen}
+          options={{ presentation: 'modal' }}
+        />
       </Stack.Navigator>
 
       {/* GDPR Consent overlay on first launch */}
       <GDPRConsent
-        visible={!gdprAccepted && !!session}
+        visible={!gdprAccepted}
         onAccept={handleGDPRAccept}
         onDecline={handleGDPRDecline}
       />

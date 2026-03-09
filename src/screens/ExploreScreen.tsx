@@ -352,7 +352,14 @@ export default function ExploreScreen({ navigation }: any) {
     }
 
     if (!user) {
-      Alert.alert('Sign in', 'Sign in to share neighborhood vibes.');
+      Alert.alert(
+        'Sign in required',
+        'Sign in to share neighborhood vibes.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => navigation.navigate('Auth') },
+        ],
+      );
       return;
     }
     const coord = e.nativeEvent.coordinate;
@@ -389,7 +396,17 @@ export default function ExploreScreen({ navigation }: any) {
   }
 
   async function handleSave(spot: Spot) {
-    if (!user) return;
+    if (!user) {
+      Alert.alert(
+        'Sign in required',
+        'Sign in to save spots to your collection.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Sign In', onPress: () => navigation.navigate('Auth') },
+        ],
+      );
+      return;
+    }
     const { error } = await supabase.from('saved_spots').insert({
       user_id: user.id,
       spot_id: spot.id,
@@ -512,7 +529,20 @@ export default function ExploreScreen({ navigation }: any) {
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.addBtn}
-                onPress={() => navigation.navigate('AddSpot')}
+                onPress={() => {
+                  if (!user) {
+                    Alert.alert(
+                      'Sign in required',
+                      'Sign in to add spots to the map.',
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        { text: 'Sign In', onPress: () => navigation.navigate('Auth') },
+                      ],
+                    );
+                    return;
+                  }
+                  navigation.navigate('AddSpot');
+                }}
               >
                 <Feather name="plus" size={18} color={colors.dark.bg} />
               </TouchableOpacity>

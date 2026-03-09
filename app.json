@@ -10,7 +10,8 @@
     "plugins": [
       "expo-location",
       "expo-image-picker",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "@sentry/react-native"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -61,7 +62,10 @@
               "pathPrefix": "/feed"
             }
           ],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },

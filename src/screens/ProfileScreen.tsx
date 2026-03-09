@@ -13,7 +13,7 @@ import { Spot, AFFILIATE_PARTNERS } from '../types';
 import BrandHeader from '../components/BrandHeader';
 
 export default function ProfileScreen() {
-  const { user, profile, signOut } = useAuth();
+  const { user, session, profile, signOut } = useAuth();
   const navigation = useNavigation<any>();
   const [mySpots, setMySpots] = useState<Spot[]>([]);
   const [editing, setEditing] = useState(false);
@@ -21,6 +21,36 @@ export default function ProfileScreen() {
   const [bio, setBio] = useState('');
   const [currentCity, setCurrentCity] = useState('');
   const [saving, setSaving] = useState(false);
+
+  // ---------- Auth gate ----------
+  if (!session) {
+    return (
+      <View style={styles.container}>
+        <BrandHeader />
+        <View style={styles.authGate}>
+          <View style={styles.authGateIconCircle}>
+            <Feather name="user" size={40} color={colors.teal} />
+          </View>
+          <Text style={styles.authGateBrand}>
+            <Text style={styles.authGateX}>x</Text>
+            <Text style={styles.authGateSlash}>/</Text>
+            <Text style={styles.authGatePat}>pat</Text>
+          </Text>
+          <Text style={styles.authGateTitle}>Your nomad profile</Text>
+          <Text style={styles.authGateSubtitle}>
+            Sign in to create your profile, track your spots, and access the nomad toolkit.
+          </Text>
+          <TouchableOpacity
+            style={styles.authGateBtn}
+            onPress={() => navigation.navigate('Auth')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.authGateBtnText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   useEffect(() => {
     if (profile) {
@@ -407,4 +437,58 @@ const styles = StyleSheet.create({
   },
   deleteBtnText: { fontFamily: fonts.body, fontSize: 13, color: colors.red },
   version: { fontFamily: fonts.body, fontSize: 10, color: colors.dark.text2, marginTop: spacing.lg },
+
+  // Auth gate
+  authGate: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    paddingBottom: 100,
+  },
+  authGateIconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(46, 196, 160, 0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(46, 196, 160, 0.2)',
+  },
+  authGateBrand: {
+    fontFamily: fonts.heading,
+    fontSize: 36,
+    marginBottom: spacing.md,
+  },
+  authGateX: { color: colors.amber },
+  authGateSlash: { color: colors.teal },
+  authGatePat: { color: colors.dark.text },
+  authGateTitle: {
+    fontFamily: fonts.heading,
+    fontSize: 22,
+    color: colors.dark.text,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  authGateSubtitle: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.dark.text2,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: spacing.lg,
+  },
+  authGateBtn: {
+    backgroundColor: colors.teal,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm + spacing.xs,
+    paddingHorizontal: spacing.xl + spacing.lg,
+  },
+  authGateBtnText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 16,
+    color: colors.dark.bg,
+  },
 });

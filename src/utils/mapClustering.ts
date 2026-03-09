@@ -20,7 +20,7 @@ export interface Cluster {
 export function clusterSpots(
   spots: Spot[],
   region: Region,
-  gridSize: number = 8,
+  gridSize: number = 12,
 ): Cluster[] {
   if (!region || spots.length === 0) return [];
 

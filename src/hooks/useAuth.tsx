@@ -2,6 +2,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
+import { registerForPushNotifications } from '../lib/notifications';
+import { setUser as setSentryUser, clearUser as clearSentryUser } from '../lib/sentry';
 
 interface AuthContextType {
   user: User | null;
@@ -32,8 +34,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      else setProfile(null);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+        setSentryUser(session.user.id, session.user.email);
+        // Register for push notifications after sign-in (deferred, non-blocking)
+        registerForPushNotifications(session.user.id);
+      } else {
+        setProfile(null);
+        clearSentryUser();
+      }
     });
 
     return () => subscription.unsubscribe();
