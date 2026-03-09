@@ -16,6 +16,7 @@ import OnboardingScreen from '../screens/OnboardingScreen';
 import UserProfileScreen from '../screens/UserProfileScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '../screens/TermsOfServiceScreen';
+import NomadToolkitScreen from '../screens/NomadToolkitScreen';
 import GDPRConsent from '../components/GDPRConsent';
 
 import { useAuth } from '../hooks/useAuth';
@@ -100,6 +101,11 @@ export default function AppNavigator() {
           name="Terms"
           component={TermsOfServiceScreen}
           options={{ presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="NomadToolkit"
+          component={NomadToolkitScreen}
+          options={{ presentation: 'card' }}
         />
       </Stack.Navigator>
 

@@ -3,12 +3,17 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from 'react-native';
+import { Feather } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, spacing, radius } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../lib/posthog';
 
 export default function AuthScreen() {
   const { signIn, signUp } = useAuth();
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const posthog = usePostHog();
   const [isSignUp, setIsSignUp] = useState(false);
   const [name, setName] = useState('');
@@ -42,6 +47,16 @@ export default function AuthScreen() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      {/* Close button for modal dismissal */}
+      {navigation.canGoBack() && (
+        <TouchableOpacity
+          style={[styles.closeBtn, { top: insets.top + 12 }]}
+          onPress={() => navigation.goBack()}
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
+          <Feather name="x" size={22} color={colors.dark.text2} />
+        </TouchableOpacity>
+      )}
       <View style={styles.inner}>
         <Text style={styles.brand}>
           <Text style={styles.brandX}>x</Text>
@@ -106,6 +121,19 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.dark.bg,
+  },
+  closeBtn: {
+    position: 'absolute',
+    right: spacing.lg,
+    zIndex: 10,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.dark.bg2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.dark.border,
   },
   inner: {
     flex: 1,

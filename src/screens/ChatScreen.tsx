@@ -44,36 +44,6 @@ export default function ChatScreen() {
   const [connectingTo, setConnectingTo] = useState<Set<string>>(new Set());
   const [respondingTo, setRespondingTo] = useState<Set<string>>(new Set());
 
-  // ---------- Auth gate ----------
-  if (!session) {
-    return (
-      <View style={styles.container}>
-        <BrandHeader subtitle="Community" />
-        <View style={styles.authGate}>
-          <View style={styles.authGateIconCircle}>
-            <Feather name="users" size={40} color={colors.teal} />
-          </View>
-          <Text style={styles.authGateBrand}>
-            <Text style={styles.authGateX}>x</Text>
-            <Text style={styles.authGateSlash}>/</Text>
-            <Text style={styles.authGatePat}>pat</Text>
-          </Text>
-          <Text style={styles.authGateTitle}>Connect with nomads</Text>
-          <Text style={styles.authGateSubtitle}>
-            Sign in to discover nearby nomads, send connection requests, and build your global network.
-          </Text>
-          <TouchableOpacity
-            style={styles.authGateBtn}
-            onPress={() => navigation.navigate('Auth')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.authGateBtnText}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
   // -----------------------------------------------------------------------
   // Data fetching
   // -----------------------------------------------------------------------
@@ -172,6 +142,36 @@ export default function ChatScreen() {
   useEffect(() => {
     fetchAll();
   }, [fetchAll]);
+
+  // ---------- Auth gate ----------
+  if (!session) {
+    return (
+      <View style={styles.container}>
+        <BrandHeader subtitle="Community" />
+        <View style={styles.authGate}>
+          <View style={styles.authGateIconCircle}>
+            <Feather name="users" size={40} color={colors.teal} />
+          </View>
+          <Text style={styles.authGateBrand}>
+            <Text style={styles.authGateX}>x</Text>
+            <Text style={styles.authGateSlash}>/</Text>
+            <Text style={styles.authGatePat}>pat</Text>
+          </Text>
+          <Text style={styles.authGateTitle}>Connect with nomads</Text>
+          <Text style={styles.authGateSubtitle}>
+            Sign in to discover nearby nomads, send connection requests, and build your global network.
+          </Text>
+          <TouchableOpacity
+            style={styles.authGateBtn}
+            onPress={() => navigation.navigate('Auth')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.authGateBtnText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
 
   // -----------------------------------------------------------------------
   // Actions

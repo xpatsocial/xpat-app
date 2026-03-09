@@ -33,6 +33,23 @@ export default function FeedScreen() {
   const [postingComment, setPostingComment] = useState<Set<number>>(new Set());
   const [reportTarget, setReportTarget] = useState<{ id: number; visible: boolean }>({ id: 0, visible: false });
 
+  const fetchPosts = useCallback(async () => {
+    if (!session) return;
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*, profiles(display_name, avatar_url), spots(name, city), post_likes(user_id), comments(count)')
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    if (!error && data) setPosts(data);
+    setLoading(false);
+    setRefreshing(false);
+  }, [session]);
+
+  useEffect(() => {
+    if (session) fetchPosts();
+  }, [fetchPosts, session]);
+
   // ---------- Auth gate ----------
   if (!session) {
     return (
@@ -62,22 +79,6 @@ export default function FeedScreen() {
       </View>
     );
   }
-
-  const fetchPosts = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('posts')
-      .select('*, profiles(display_name, avatar_url), spots(name, city), post_likes(user_id), comments(count)')
-      .order('created_at', { ascending: false })
-      .limit(30);
-
-    if (!error && data) setPosts(data);
-    setLoading(false);
-    setRefreshing(false);
-  }, []);
-
-  useEffect(() => {
-    fetchPosts();
-  }, [fetchPosts]);
 
   async function handlePost() {
     if (!newPost.trim() || !user) return;
@@ -291,7 +292,7 @@ export default function FeedScreen() {
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.authorName}>{item.profiles?.display_name || 'Anonymous'}</Text>
-            <Text style={styles.postTime}>{new Date(item.created_at).toLocaleDateString()}</Text>
+            <Text style={styles.postTime}>{formatTimeAgo(item.created_at)}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             {item.user_id === user?.id && (

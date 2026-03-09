@@ -22,36 +22,6 @@ export default function ProfileScreen() {
   const [currentCity, setCurrentCity] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // ---------- Auth gate ----------
-  if (!session) {
-    return (
-      <View style={styles.container}>
-        <BrandHeader />
-        <View style={styles.authGate}>
-          <View style={styles.authGateIconCircle}>
-            <Feather name="user" size={40} color={colors.teal} />
-          </View>
-          <Text style={styles.authGateBrand}>
-            <Text style={styles.authGateX}>x</Text>
-            <Text style={styles.authGateSlash}>/</Text>
-            <Text style={styles.authGatePat}>pat</Text>
-          </Text>
-          <Text style={styles.authGateTitle}>Your nomad profile</Text>
-          <Text style={styles.authGateSubtitle}>
-            Sign in to create your profile, track your spots, and access the nomad toolkit.
-          </Text>
-          <TouchableOpacity
-            style={styles.authGateBtn}
-            onPress={() => navigation.navigate('Auth')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.authGateBtnText}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
   useEffect(() => {
     if (profile) {
       setDisplayName(profile.display_name || '');
@@ -163,6 +133,36 @@ export default function ProfileScreen() {
         Alert.alert('Export Error', 'Could not export your data. Please try again.');
       }
     }
+  }
+
+  // ---------- Auth gate ----------
+  if (!session) {
+    return (
+      <View style={styles.container}>
+        <BrandHeader />
+        <View style={styles.authGate}>
+          <View style={styles.authGateIconCircle}>
+            <Feather name="user" size={40} color={colors.teal} />
+          </View>
+          <Text style={styles.authGateBrand}>
+            <Text style={styles.authGateX}>x</Text>
+            <Text style={styles.authGateSlash}>/</Text>
+            <Text style={styles.authGatePat}>pat</Text>
+          </Text>
+          <Text style={styles.authGateTitle}>Your nomad profile</Text>
+          <Text style={styles.authGateSubtitle}>
+            Sign in to create your profile, track your spots, and access the nomad toolkit.
+          </Text>
+          <TouchableOpacity
+            style={styles.authGateBtn}
+            onPress={() => navigation.navigate('Auth')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.authGateBtnText}>Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
   }
 
   const initials = (profile?.display_name || 'User')
@@ -280,6 +280,21 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>Nomad Toolkit</Text>
         </View>
 
+        <TouchableOpacity
+          style={styles.toolkitLink}
+          onPress={() => navigation.navigate('NomadToolkit')}
+          activeOpacity={0.7}
+        >
+          <View style={styles.partnerIcon}>
+            <Feather name="globe" size={18} color={colors.teal} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.partnerLabel}>Visa Explorer</Text>
+            <Text style={styles.partnerSubtitle}>60 countries with nomad visas</Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.dark.text2} />
+        </TouchableOpacity>
+
         {partners.map((partner) => (
           <View
             key={partner.name}
@@ -332,7 +347,7 @@ export default function ProfileScreen() {
           <Text style={styles.deleteBtnText}>Delete Account</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>x/pat v1.0.2 beta</Text>
+        <Text style={styles.version}>x/pat v1.0.3 beta</Text>
       </ScrollView>
     </View>
   );
@@ -389,6 +404,11 @@ const styles = StyleSheet.create({
   spotCity: { fontFamily: fonts.body, fontSize: 11, color: colors.dark.text2, marginTop: 1 },
   spotCat: { fontFamily: fonts.body, fontSize: 10, color: colors.dark.text2, textTransform: 'uppercase' },
   // Nomad Toolkit
+  toolkitLink: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: 'rgba(46, 196, 160, 0.08)', borderRadius: radius.sm, padding: spacing.sm + spacing.xs,
+    width: '100%', marginBottom: spacing.sm, borderWidth: 1, borderColor: 'rgba(46, 196, 160, 0.2)',
+  },
   partnerRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     backgroundColor: colors.dark.bg2, borderRadius: radius.sm, padding: spacing.sm + spacing.xs,
