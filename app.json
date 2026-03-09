@@ -2,11 +2,16 @@
   "expo": {
     "name": "x/pat",
     "slug": "xpat-app",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "scheme": "xpat",
+    "plugins": [
+      "expo-location",
+      "expo-image-picker",
+      "expo-splash-screen"
+    ],
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
