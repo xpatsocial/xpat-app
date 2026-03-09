@@ -302,7 +302,7 @@ export default function ProfileScreen() {
           <Text style={styles.deleteBtnText}>Delete Account</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>x/pat v1.0.1 beta</Text>
+        <Text style={styles.version}>x/pat v1.0.2 beta</Text>
       </ScrollView>
     </View>
   );

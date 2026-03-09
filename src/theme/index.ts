@@ -9,10 +9,11 @@ export const colors = {
   green: '#4CD964',
 
   dark: {
-    bg: '#0F0F11',
-    bg2: '#1C1C1E',
-    bg3: '#2C2C2E',
-    bg4: '#3A3A3C',
+    bg0: '#0F0F11',
+    bg: '#1C1C1E',
+    bg2: '#2C2C2E',
+    bg3: '#3A3A3C',
+    bg4: '#48484A',
     text: '#F5F5F5',
     text2: '#A1A1A6',
     text3: '#636366',

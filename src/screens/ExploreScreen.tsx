@@ -153,15 +153,28 @@ export default function ExploreScreen({ navigation }: any) {
     })();
   }, []);
 
-  const fetchSpots = useCallback(async () => {
+  const fetchSpots = useCallback(async (region?: Region | null) => {
     let query = supabase
       .from('spots')
       .select('*, profiles(display_name, avatar_url)')
-      .order('created_at', { ascending: false })
-      .limit(100);
+      .order('created_at', { ascending: false });
 
     if (category !== 'all') {
       query = query.eq('category', category);
+    }
+
+    // Region-based loading: fetch spots within visible map bounds + buffer
+    if (region && region.latitudeDelta < 60) {
+      const latBuffer = region.latitudeDelta * 0.5;
+      const lngBuffer = region.longitudeDelta * 0.5;
+      query = query
+        .gte('lat', region.latitude - region.latitudeDelta / 2 - latBuffer)
+        .lte('lat', region.latitude + region.latitudeDelta / 2 + latBuffer)
+        .gte('lng', region.longitude - region.longitudeDelta / 2 - lngBuffer)
+        .lte('lng', region.longitude + region.longitudeDelta / 2 + lngBuffer)
+        .limit(500);
+    } else {
+      query = query.limit(200);
     }
 
     const { data, error } = await query;
@@ -171,14 +184,14 @@ export default function ExploreScreen({ navigation }: any) {
 
   useEffect(() => {
     setLoading(true);
-    fetchSpots();
+    fetchSpots(currentRegion);
   }, [fetchSpots]);
 
   // Refresh spots when screen regains focus (e.g. after AddSpot)
   useFocusEffect(
     useCallback(() => {
-      fetchSpots();
-    }, [fetchSpots])
+      fetchSpots(currentRegion);
+    }, [fetchSpots, currentRegion])
   );
 
   // ---------- GPS Location ----------
@@ -310,11 +323,16 @@ export default function ExploreScreen({ navigation }: any) {
   }, []);
 
   const pulseDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const spotsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function handleRegionChange(region: Region) {
     setCurrentRegion(region);
     const zoomed = region.latitudeDelta < NEIGHBORHOOD_ZOOM_THRESHOLD;
     setIsNeighborhoodZoom(zoomed);
+
+    // Debounced spot refetch on pan/zoom
+    if (spotsDebounceRef.current) clearTimeout(spotsDebounceRef.current);
+    spotsDebounceRef.current = setTimeout(() => fetchSpots(region), 400);
 
     if (pulseDebounceRef.current) clearTimeout(pulseDebounceRef.current);
 

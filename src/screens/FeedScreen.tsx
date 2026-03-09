@@ -13,6 +13,7 @@ import BrandHeader from '../components/BrandHeader';
 import ReportModal from '../components/ReportModal';
 import Skeleton from '../components/Skeleton';
 import { usePostHog } from '../lib/posthog';
+import { formatTimeAgo } from '../utils/formatTime';
 
 export default function FeedScreen() {
   const { user } = useAuth();
@@ -217,20 +218,6 @@ export default function FeedScreen() {
     } catch (_) {
       // user cancelled
     }
-  }
-
-  function formatTimeAgo(dateStr: string): string {
-    const now = Date.now();
-    const then = new Date(dateStr).getTime();
-    const diffSec = Math.floor((now - then) / 1000);
-    if (diffSec < 60) return 'just now';
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}h ago`;
-    const diffDay = Math.floor(diffHr / 24);
-    if (diffDay < 7) return `${diffDay}d ago`;
-    return new Date(dateStr).toLocaleDateString();
   }
 
   function renderComment(comment: Comment) {
