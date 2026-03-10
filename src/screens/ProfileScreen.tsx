@@ -457,7 +457,7 @@ export default function ProfileScreen() {
                     color: colors.teal,
                     bgColor: 'rgba(46, 196, 160, 0.15)',
                     onPress: () => Share.share({
-                      message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!`,
+                      message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!\n\nhttps://xpat.social/spot/${spot.id}`,
                     }),
                   },
                   {

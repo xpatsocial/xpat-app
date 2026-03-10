@@ -171,7 +171,7 @@ export default function SpotBottomSheet({ spot, onClose, onSave, onAddNote, dist
               />
               <TouchableOpacity style={styles.actionIcon} onPress={() => {
                 Share.share({
-                  message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!`,
+                  message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!\n\nhttps://xpat.social/spot/${spot.id}`,
                   title: spot.name,
                 });
               }}>

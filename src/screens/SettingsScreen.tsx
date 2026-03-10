@@ -24,7 +24,7 @@ import {
 } from '../lib/profilePrompts';
 import FeedbackSheet from '../components/FeedbackSheet';
 import { initSentry } from '../lib/sentry';
-import { optOutPostHog, optInPostHog } from '../lib/posthog';
+import { optOutPostHog, optInPostHog, usePostHog } from '../lib/posthog';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -124,6 +124,7 @@ export default function SettingsScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { user, profile, signOut } = useAuth();
+  const posthog = usePostHog();
   const { preferences, updatePreference, updatePreferences } = usePreferences();
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [saving, setSaving] = useState(false);
@@ -308,6 +309,7 @@ export default function SettingsScreen() {
     if (error) {
       Alert.alert('Error', error.message);
     } else {
+      posthog.capture('profile_updated', { completion: calculateProfileCompletion({ ...profile, ...profileData } as any) });
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setHasChanges(false);
     }
@@ -406,6 +408,7 @@ export default function SettingsScreen() {
                   style: 'destructive',
                   onPress: async () => {
                     try {
+                      posthog.capture('account_deletion_requested');
                       const { error } = await supabase.rpc('delete_user_account');
                       if (error) {
                         Alert.alert('Error', error.message || 'Could not process deletion request. Please try again.');

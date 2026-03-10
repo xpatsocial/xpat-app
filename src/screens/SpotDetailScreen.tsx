@@ -177,11 +177,11 @@ export default function SpotDetailScreen() {
   }
 
   async function handleShare() {
+    posthog.capture('spot_shared', { spot_id: spot.id });
     await Share.share({
-      message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!`,
+      message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!\n\nhttps://xpat.social/spot/${spot.id}`,
       title: spot.name,
     });
-    posthog.capture('spot_shared', { spot_id: spot.id });
   }
 
   function handleNavigate() {

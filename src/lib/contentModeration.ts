@@ -17,6 +17,12 @@ export const BLOCKED_KEYWORDS: string[] = [
   'congratulations you won', 'nigerian prince', 'send money',
   // Explicit solicitation
   'escort', 'sugar daddy', 'sugar mommy', 'pay per meet',
+  // Substance-related
+  'buy drugs', 'sell drugs', 'cocaine', 'heroin', 'meth',
+  // Sexual exploitation
+  'nudes', 'onlyfans', 'xxx', 'hookup app',
+  // Violence / threats
+  'kill you', 'death threat', 'bomb threat',
 ];
 
 /** Domains commonly used for off-platform recruitment. */

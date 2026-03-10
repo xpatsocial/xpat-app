@@ -105,7 +105,7 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
     if (error) {
       Alert.alert('Error', error.message);
     } else {
-      posthog.capture('post_created');
+      posthog.capture('post_created', { has_spot: false });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setNewPost('');
       fetchPosts();
@@ -218,6 +218,7 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
     if (error) {
       Alert.alert('Error', error.message);
     } else {
+      posthog.capture('comment_created', { post_id: postId });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setCommentTexts((prev) => ({ ...prev, [postId]: '' }));
       fetchComments(postId);
@@ -282,8 +283,9 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
     try {
       const authorName = item.profiles?.display_name || 'Someone';
       const spotInfo = item.spots ? ` at ${item.spots?.name}, ${item.spots?.city}` : '';
+      posthog.capture('post_shared', { post_id: item.id });
       await Share.share({
-        message: `${authorName}${spotInfo}: "${item.content}" — shared via x/pat`,
+        message: `${authorName}${spotInfo}: "${item.content}" — shared via x/pat\n\nhttps://xpat.social/feed`,
       });
     } catch (_) {
       // user cancelled
@@ -473,7 +475,7 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
           <Text style={styles.emptyTitle}>No posts yet</Text>
           <Text style={styles.emptyText}>Share what you're up to!</Text>
           <Feather name="users" size={24} color={colors.dark.text2} style={{ marginTop: spacing.md }} />
-          <Text style={styles.emptySubtext}>Your family and friends will see your posts here</Text>
+          <Text style={styles.emptySubtext}>Post tips, ask questions, and share discoveries with the nomad community</Text>
           <TouchableOpacity
             style={styles.emptyPostBtn}
             onPress={() => composerRef.current?.focus()}
