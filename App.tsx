@@ -11,6 +11,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { PostHogProvider } from './src/lib/posthog';
 import { initSentry, Sentry } from './src/lib/sentry';
 import { colors } from './src/theme';
+import ErrorBoundary from './src/components/ErrorBoundary';
 
 // Initialize Sentry as early as possible
 initSentry();
@@ -65,7 +66,9 @@ function App() {
       <PostHogProvider>
         <AuthProvider>
           <NavigationContainer linking={linking as any}>
-            <AppNavigator />
+            <ErrorBoundary>
+              <AppNavigator />
+            </ErrorBoundary>
           </NavigationContainer>
         </AuthProvider>
       </PostHogProvider>

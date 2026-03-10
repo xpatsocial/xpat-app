@@ -22,8 +22,8 @@ interface ReportModalProps {
   onSubmit: (reason: string) => void;
 }
 
-const REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Fake Profile', 'Scam', 'Other'];
-const SHEET_HEIGHT = 340;
+const REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Fake Profile', 'Scam', 'Felt unsafe at meetup', 'Other'];
+const SHEET_HEIGHT = 380;
 const DISMISS_THRESHOLD = 80;
 
 const SPRING_CONFIG = {

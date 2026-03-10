@@ -13,13 +13,13 @@ import SwipeCardDeck, {
   SwipeCardDeckRef,
   SwipeDirection,
 } from '../components/SwipeCardDeck';
-import { AppEvent } from '../types';
+import { LegacyAppEvent } from '../types';
 
 // ---------------------------------------------------------------------------
 // Extended event type with display helpers
 // ---------------------------------------------------------------------------
 
-interface SwipeEvent extends AppEvent {
+interface SwipeEvent extends LegacyAppEvent {
   attendee_count: number;
   creator_name: string;
   category_emoji: string;
@@ -289,14 +289,11 @@ export default function EventSwipeScreen() {
     switch (direction) {
       case 'right':
         // TODO: insert RSVP "going" via supabase
-        console.log(`[EventSwipe] RSVP going: ${event.title}`);
         break;
       case 'left':
-        console.log(`[EventSwipe] Skipped: ${event.title}`);
         break;
       case 'up':
         // TODO: insert RSVP "interested" via supabase
-        console.log(`[EventSwipe] Interested: ${event.title}`);
         break;
     }
   }, []);

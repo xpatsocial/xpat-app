@@ -50,7 +50,7 @@ export default function AffiliateCard({
 
   return (
     <BlurView tint="dark" intensity={60} style={styles.container}>
-      <Text style={styles.badge}>Partner</Text>
+      <Text style={styles.badge}>Sponsored</Text>
 
       {primary && (
         <View style={styles.row}>
@@ -79,6 +79,10 @@ export default function AffiliateCard({
           <Text style={styles.comingSoon}>Soon</Text>
         </View>
       </View>
+
+      <Text style={styles.disclosure}>
+        x/pat earns a commission at no extra cost to you
+      </Text>
     </BlurView>
   );
 }
@@ -145,5 +149,10 @@ const styles = StyleSheet.create({
     color: colors.dark.bg,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
+  },
+  disclosure: {
+    fontFamily: fonts.body,
+    fontSize: 9,
+    color: colors.dark.text3,
   },
 });

@@ -18,6 +18,7 @@ const DEFAULTS: Omit<UserPreferences, 'user_id'> = {
   auto_join_city_chat: true,
   auto_load_images: true,
   preferred_language: 'en',
+  location_precision: 'city',
 };
 
 const LOCAL_KEY = 'user_preferences_local';

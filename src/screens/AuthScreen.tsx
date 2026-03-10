@@ -11,6 +11,46 @@ import { colors, fonts, spacing, radius } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../lib/posthog';
 
+// EU country codes for GDPR parental consent notice (13-16)
+const EU_TIMEZONES = [
+  'Europe/Berlin', 'Europe/Paris', 'Europe/Rome', 'Europe/Madrid',
+  'Europe/Amsterdam', 'Europe/Brussels', 'Europe/Vienna', 'Europe/Warsaw',
+  'Europe/Lisbon', 'Europe/Dublin', 'Europe/Athens', 'Europe/Bucharest',
+  'Europe/Helsinki', 'Europe/Stockholm', 'Europe/Copenhagen', 'Europe/Prague',
+  'Europe/Budapest',
+];
+
+function isLikelyEU(): boolean {
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return EU_TIMEZONES.some((euTz) => tz.startsWith(euTz.split('/')[0] + '/'));
+  } catch {
+    return false;
+  }
+}
+
+function calculateAge(birthdate: Date): number {
+  const today = new Date();
+  let age = today.getFullYear() - birthdate.getFullYear();
+  const monthDiff = today.getMonth() - birthdate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthdate.getDate())) {
+    age--;
+  }
+  return age;
+}
+
+function parseBirthdate(month: string, day: string, year: string): Date | null {
+  const m = parseInt(month, 10);
+  const d = parseInt(day, 10);
+  const y = parseInt(year, 10);
+  if (isNaN(m) || isNaN(d) || isNaN(y)) return null;
+  if (m < 1 || m > 12 || d < 1 || d > 31 || y < 1900 || y > new Date().getFullYear()) return null;
+  const date = new Date(y, m - 1, d);
+  // Validate the date is real (e.g. Feb 30 would roll over)
+  if (date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+  return date;
+}
+
 export default function AuthScreen() {
   const { signIn, signUp, signInWithApple } = useAuth();
   const navigation = useNavigation();
@@ -22,6 +62,38 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Age verification state
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthDay, setBirthDay] = useState('');
+  const [birthYear, setBirthYear] = useState('');
+  const [ageVerified, setAgeVerified] = useState(false);
+  const [showParentalNotice, setShowParentalNotice] = useState(false);
+
+  function handleVerifyAge() {
+    const birthdate = parseBirthdate(birthMonth, birthDay, birthYear);
+    if (!birthdate) {
+      Alert.alert('Invalid Date', 'Please enter a valid date of birth (MM / DD / YYYY).');
+      return;
+    }
+    const age = calculateAge(birthdate);
+    if (age < 13) {
+      Alert.alert(
+        'Age Requirement',
+        'You must be at least 13 years old to create an x/pat account.',
+      );
+      return;
+    }
+    if (age >= 13 && age < 16 && isLikelyEU()) {
+      setShowParentalNotice(true);
+    }
+    setAgeVerified(true);
+  }
+
+  function getBirthdateISO(): string | undefined {
+    const birthdate = parseBirthdate(birthMonth, birthDay, birthYear);
+    return birthdate ? birthdate.toISOString().split('T')[0] : undefined;
+  }
+
   async function handleSubmit() {
     if (!email || !password) {
       Alert.alert('Missing fields', 'Please enter email and password.');
@@ -29,7 +101,7 @@ export default function AuthScreen() {
     }
     setLoading(true);
     if (isSignUp) {
-      const { error } = await signUp(email, password, name);
+      const { error } = await signUp(email, password, name, getBirthdateISO());
       if (error) {
         Alert.alert('Sign Up Error', error.message);
       } else {
@@ -41,6 +113,16 @@ export default function AuthScreen() {
       if (error) Alert.alert('Sign In Error', error.message);
     }
     setLoading(false);
+  }
+
+  // Reset age verification when switching between sign-in and sign-up
+  function handleToggleMode() {
+    setIsSignUp(!isSignUp);
+    setAgeVerified(false);
+    setShowParentalNotice(false);
+    setBirthMonth('');
+    setBirthDay('');
+    setBirthYear('');
   }
 
   return (
@@ -89,49 +171,133 @@ export default function AuthScreen() {
           </>
         )}
 
-        {isSignUp && (
-          <TextInput
-            style={styles.input}
-            placeholder="Your name"
-            placeholderTextColor={colors.dark.text2}
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-          />
+        {/* Age verification gate — shown before signup form */}
+        {isSignUp && !ageVerified && (
+          <>
+            <Text style={styles.ageLabel}>Date of Birth</Text>
+            <Text style={styles.ageSublabel}>You must be 13 or older to join x/pat</Text>
+            <View style={styles.dobRow}>
+              <TextInput
+                style={[styles.input, styles.dobInput]}
+                placeholder="MM"
+                placeholderTextColor={colors.dark.text2}
+                value={birthMonth}
+                onChangeText={(v) => setBirthMonth(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+              <Text style={styles.dobSeparator}>/</Text>
+              <TextInput
+                style={[styles.input, styles.dobInput]}
+                placeholder="DD"
+                placeholderTextColor={colors.dark.text2}
+                value={birthDay}
+                onChangeText={(v) => setBirthDay(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+              <Text style={styles.dobSeparator}>/</Text>
+              <TextInput
+                style={[styles.input, styles.dobInputYear]}
+                placeholder="YYYY"
+                placeholderTextColor={colors.dark.text2}
+                value={birthYear}
+                onChangeText={(v) => setBirthYear(v.replace(/[^0-9]/g, '').slice(0, 4))}
+                keyboardType="number-pad"
+                maxLength={4}
+              />
+            </View>
+            <TouchableOpacity style={styles.button} onPress={handleVerifyAge}>
+              <Text style={styles.buttonText}>Continue</Text>
+            </TouchableOpacity>
+          </>
         )}
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor={colors.dark.text2}
-          value={email}
-          onChangeText={setEmail}
-          keyboardType="email-address"
-          autoCapitalize="none"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Password"
-          placeholderTextColor={colors.dark.text2}
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-        />
 
-        <TouchableOpacity
-          style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={colors.dark.bg} />
-          ) : (
-            <Text style={styles.buttonText}>
-              {isSignUp ? 'Create Account' : 'Sign In'}
-            </Text>
-          )}
-        </TouchableOpacity>
+        {/* Signup form — shown after age is verified */}
+        {isSignUp && ageVerified && (
+          <>
+            {showParentalNotice && (
+              <View style={styles.parentalNotice}>
+                <Feather name="info" size={14} color={colors.amber} />
+                <Text style={styles.parentalNoticeText}>
+                  Under EU regulations, users aged 13-15 may need parental consent. By continuing, you confirm you have parental or guardian consent to use this service.
+                </Text>
+              </View>
+            )}
+            <TextInput
+              style={styles.input}
+              placeholder="Your name"
+              placeholderTextColor={colors.dark.text2}
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor={colors.dark.text2}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={colors.dark.text2}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.dark.bg} />
+              ) : (
+                <Text style={styles.buttonText}>Create Account</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
 
-        <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
+        {/* Sign-in form — no age gate needed */}
+        {!isSignUp && (
+          <>
+            <TextInput
+              style={styles.input}
+              placeholder="Email"
+              placeholderTextColor={colors.dark.text2}
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="Password"
+              placeholderTextColor={colors.dark.text2}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.dark.bg} />
+              ) : (
+                <Text style={styles.buttonText}>Sign In</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
+
+        <TouchableOpacity onPress={handleToggleMode}>
           <Text style={styles.switchText}>
             {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
           </Text>
@@ -237,5 +403,65 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     textTransform: 'uppercase',
     letterSpacing: 1,
+  },
+  // Age verification styles
+  ageLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    color: colors.dark.text,
+    marginBottom: spacing.xs,
+  },
+  ageSublabel: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.dark.text2,
+    marginBottom: spacing.md,
+  },
+  dobRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  dobInput: {
+    flex: 1,
+    textAlign: 'center',
+    marginBottom: 0,
+  },
+  dobInputYear: {
+    flex: 1.5,
+    textAlign: 'center',
+    backgroundColor: 'rgba(44, 44, 46, 0.6)',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.dark.text,
+    borderWidth: 1,
+    borderColor: 'rgba(46, 196, 160, 0.12)',
+    marginBottom: 0,
+  },
+  dobSeparator: {
+    fontFamily: fonts.body,
+    fontSize: 18,
+    color: colors.dark.text2,
+    marginHorizontal: spacing.xs,
+  },
+  parentalNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(232, 128, 58, 0.1)',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 128, 58, 0.2)',
+    marginBottom: spacing.md,
+  },
+  parentalNoticeText: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.amber,
+    flex: 1,
+    lineHeight: 16,
   },
 });

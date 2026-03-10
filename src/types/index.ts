@@ -16,6 +16,21 @@ export interface Profile {
   open_to?: string[];
   timezone?: string | null;
   nationality?: string | null;
+  // Profile enrichment fields
+  tagline?: string | null;
+  travel_style?: string[];
+  work_type?: string | null;
+  prompt_1_question?: string | null;
+  prompt_1_answer?: string | null;
+  prompt_2_question?: string | null;
+  prompt_2_answer?: string | null;
+  prompt_3_question?: string | null;
+  prompt_3_answer?: string | null;
+  countries_visited?: string[];
+  next_destination?: string | null;
+  custom_status?: string | null;
+  custom_status_emoji?: string | null;
+  profile_completion_score?: number;
 }
 
 export interface Spot {
@@ -103,7 +118,33 @@ export interface CheckIn {
   profiles?: Profile;
 }
 
+export type EventCategory = 'meetup' | 'coworking' | 'dinner' | 'activity' | 'workshop' | 'other';
+
 export interface AppEvent {
+  id: string;
+  creator_id: string;
+  title: string;
+  description: string | null;
+  spot_id: string | null;
+  city: string;
+  country: string;
+  venue_name: string | null;
+  venue_address: string | null;
+  lat: number | null;
+  lng: number | null;
+  starts_at: string;
+  ends_at: string | null;
+  max_attendees: number | null;
+  category: EventCategory;
+  is_recurring: boolean;
+  created_at: string;
+  profiles?: Profile;
+  event_rsvps?: EventRsvp[];
+  rsvp_count?: number;
+}
+
+/** @deprecated Use AppEvent instead — kept for legacy swipe screen compat */
+export interface LegacyAppEvent {
   id: number;
   creator_id: string;
   spot_id: number | null;
@@ -124,17 +165,63 @@ export interface Connection {
   requester_id: string;
   target_id: string;
   status: 'pending' | 'accepted' | 'declined';
+  message: string | null;
   created_at: string;
+  updated_at: string;
+  profiles?: Profile;
 }
+
+export type ConnectionStatus = 'none' | 'pending_sent' | 'pending_received' | 'connected';
+
+export interface DirectMessage {
+  id: string;
+  sender_id: string;
+  recipient_id: string;
+  content: string;
+  read_at: string | null;
+  created_at: string;
+  profiles?: Profile;
+}
+
+export interface DMConversation {
+  user_id: string;
+  profile: Profile;
+  last_message: DirectMessage;
+  unread_count: number;
+}
+
+export interface UserPresence {
+  user_id: string;
+  last_seen: string;
+  status: 'online' | 'away' | 'offline';
+}
+
+export type PresenceDisplay = {
+  status: 'online' | 'recently_active' | 'offline';
+  label: string | null;
+};
 
 export type ActivityStatus = 'exploring' | 'working' | 'available' | 'offline';
 
 export interface EventRsvp {
   id: string;
-  event_id: number;
+  event_id: string;
   user_id: string;
-  status: 'going' | 'interested' | 'not_going';
+  status: 'going' | 'interested' | 'cancelled';
   created_at: string;
+  profiles?: Profile;
+}
+
+export type PresenceStatus = 'here' | 'exploring' | 'working' | 'available';
+
+export interface CityPresence {
+  id: string;
+  user_id: string;
+  city: string;
+  country: string;
+  status: PresenceStatus;
+  last_active: string;
+  arrived_at: string;
   profiles?: Profile;
 }
 
@@ -143,11 +230,21 @@ export interface TravelPlan {
   user_id: string;
   city: string;
   country: string;
-  start_date: string;
-  end_date: string;
+  arrives_at: string;
+  departs_at: string | null;
   is_public: boolean;
   created_at: string;
   profiles?: Profile;
+}
+
+export interface TravelOverlap {
+  plan_id: string;
+  other_user_id: string;
+  other_display_name: string | null;
+  other_avatar_url: string | null;
+  city: string;
+  overlap_start: string;
+  overlap_end: string;
 }
 
 export interface UserAvailability {
@@ -214,7 +311,7 @@ export interface Block {
   created_at: string;
 }
 
-export type ReportCategory = 'spam' | 'harassment' | 'inappropriate' | 'fake_profile' | 'scam' | 'other';
+export type ReportCategory = 'spam' | 'harassment' | 'inappropriate' | 'fake_profile' | 'scam' | 'unsafe_meetup' | 'other';
 
 export interface Report {
   id: string;
@@ -243,6 +340,7 @@ export interface UserPreferences {
   auto_join_city_chat: boolean;
   auto_load_images: boolean;
   preferred_language: string;
+  location_precision: 'city' | 'exact';
 }
 
 export const AFFILIATE_PARTNERS: Record<string, AffiliatePartner> = {
@@ -250,4 +348,5 @@ export const AFFILIATE_PARTNERS: Record<string, AffiliatePartner> = {
   safetywing: { name: 'SafetyWing', icon: 'shield', label: 'Travel Insurance', subtitle: 'Coverage for nomads', url: 'https://safetywing.com/' },
   wise: { name: 'Wise', icon: 'credit-card', label: 'Money Transfer', subtitle: 'Send money anywhere', url: 'https://wise.com/' },
   booking: { name: 'Booking.com', icon: 'home', label: 'Accommodation', subtitle: 'Find your next stay', url: 'https://www.booking.com/' },
+  nordvpn: { name: 'NordVPN', icon: 'lock', label: 'VPN Security', subtitle: 'Secure public WiFi', url: 'https://nordvpn.com/' },
 };

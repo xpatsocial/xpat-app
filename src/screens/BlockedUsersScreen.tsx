@@ -11,6 +11,7 @@ import { colors, fonts, spacing, radius } from '../theme';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Profile } from '../types';
+import Avatar from '../components/Avatar';
 
 interface BlockedUser {
   id: string;
@@ -124,9 +125,12 @@ export default function BlockedUsersScreen() {
             const name = item.profile?.display_name || 'Unknown User';
             return (
               <View style={styles.card}>
-                <View style={styles.avatar}>
-                  <Text style={styles.avatarText}>{getInitials(name)}</Text>
-                </View>
+                <Avatar
+                  uri={item.profile?.avatar_url}
+                  name={name}
+                  userId={item.blocked_id}
+                  size={40}
+                />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.name}>{name}</Text>
                   {item.profile?.username && (

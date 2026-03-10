@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { captureException } from '../lib/sentry';
 
 interface TranslationResult {
   translatedText: string;
@@ -39,7 +40,7 @@ export function useTranslate() {
         });
 
         if (error || !data) {
-          console.error('[Translate] Error:', error?.message);
+          captureException(error, { context: 'Translate', targetLang });
           return null;
         }
 
@@ -52,7 +53,7 @@ export function useTranslate() {
         cacheSet(cacheKey, result);
         return result;
       } catch (e) {
-        console.error('[Translate] Exception:', e);
+        captureException(e, { context: 'Translate exception', targetLang });
         return null;
       } finally {
         setTranslating((prev) => {

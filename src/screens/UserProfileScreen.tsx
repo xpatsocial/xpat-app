@@ -10,7 +10,8 @@ import * as Haptics from 'expo-haptics';
 import { colors, fonts, spacing, radius } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { Profile, Spot, Post, Connection } from '../types';
+import { Profile, Spot, Post, Connection, TravelOverlap } from '../types';
+import { useTravelPlans } from '../hooks/useTravelPlans';
 
 type UserProfileParams = {
   UserProfile: { userId: string };
@@ -34,6 +35,8 @@ export default function UserProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [travelOverlaps, setTravelOverlaps] = useState<TravelOverlap[]>([]);
+  const { getOverlapsWithUser } = useTravelPlans();
 
   const fetchAll = useCallback(async () => {
     if (!userId || !user) return;
@@ -119,9 +122,15 @@ export default function UserProfileScreen() {
       setMutualCount(mutual);
     }
 
+    // Fetch travel overlaps
+    if (user) {
+      const overlaps = await getOverlapsWithUser(userId);
+      setTravelOverlaps(overlaps);
+    }
+
     setLoading(false);
     setRefreshing(false);
-  }, [userId, user]);
+  }, [userId, user, getOverlapsWithUser]);
 
   useEffect(() => {
     fetchAll();
@@ -307,15 +316,110 @@ export default function UserProfileScreen() {
 
           <Text style={styles.name}>{profile.display_name || 'Anonymous'}</Text>
 
+          {profile.tagline && (
+            <Text style={styles.tagline}>{profile.tagline}</Text>
+          )}
+
+          {(profile.custom_status || profile.custom_status_emoji) && (
+            <View style={styles.customStatusRow}>
+              {profile.custom_status_emoji && (
+                <Text style={styles.customStatusEmoji}>{profile.custom_status_emoji}</Text>
+              )}
+              {profile.custom_status && (
+                <Text style={styles.customStatusText}>{profile.custom_status}</Text>
+              )}
+            </View>
+          )}
+
           {profile.current_city && (
             <View style={styles.cityRow}>
               <Feather name="map-pin" size={12} color={colors.amber} />
               <Text style={styles.city}>{profile.current_city}</Text>
+              {profile.next_destination && (
+                <>
+                  <Feather name="arrow-right" size={10} color={colors.dark.text3} style={{ marginHorizontal: 4 }} />
+                  <Feather name="navigation" size={10} color={colors.teal} />
+                  <Text style={styles.nextDest}>{profile.next_destination}</Text>
+                </>
+              )}
+            </View>
+          )}
+
+          {profile.work_type && (
+            <View style={styles.workRow}>
+              <Feather name="briefcase" size={11} color={colors.dark.text2} />
+              <Text style={styles.workType}>{profile.work_type}</Text>
             </View>
           )}
 
           {profile.bio && <Text style={styles.bio}>{profile.bio}</Text>}
+
+          {/* Travel Style Tags */}
+          {(profile.travel_style?.length ?? 0) > 0 && (
+            <View style={styles.travelStyleRow}>
+              {profile.travel_style!.map((style) => (
+                <View key={style} style={styles.travelStylePill}>
+                  <Text style={styles.travelStyleText}>{style}</Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
+
+        {/* Profile Prompts */}
+        {[
+          { q: profile.prompt_1_question, a: profile.prompt_1_answer },
+          { q: profile.prompt_2_question, a: profile.prompt_2_answer },
+          { q: profile.prompt_3_question, a: profile.prompt_3_answer },
+        ].filter(p => p.q && p.a).length > 0 && (
+          <View style={styles.promptsSection}>
+            {[
+              { q: profile.prompt_1_question, a: profile.prompt_1_answer },
+              { q: profile.prompt_2_question, a: profile.prompt_2_answer },
+              { q: profile.prompt_3_question, a: profile.prompt_3_answer },
+            ].filter(p => p.q && p.a).map((prompt, idx) => (
+              <View key={idx} style={styles.promptCard}>
+                <Text style={styles.promptCardQuestion}>{prompt.q}</Text>
+                <Text style={styles.promptCardAnswer}>{prompt.a}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Countries Visited */}
+        {(profile.countries_visited?.length ?? 0) > 0 && (
+          <View style={styles.countriesVisitedSection}>
+            <View style={styles.countriesVisitedHeader}>
+              <Feather name="globe" size={14} color={colors.teal} />
+              <Text style={styles.countriesVisitedTitle}>
+                {profile.countries_visited!.length} countries visited
+              </Text>
+            </View>
+            <View style={styles.countriesVisitedPills}>
+              {profile.countries_visited!.map((country) => (
+                <View key={country} style={styles.cvPill}>
+                  <Text style={styles.cvPillText}>{country}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Travel Overlap Cards */}
+        {travelOverlaps.length > 0 && travelOverlaps.map((overlap) => (
+          <View key={overlap.plan_id} style={styles.overlapCard}>
+            <Feather name="navigation" size={16} color={colors.teal} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.overlapTitle}>
+                You'll both be in {overlap.city}{' '}
+                {new Date(overlap.overlap_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                {' – '}
+                {new Date(overlap.overlap_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}!
+              </Text>
+              <Text style={styles.overlapCta}>Plan something?</Text>
+            </View>
+          </View>
+        ))}
 
         {/* Connection button + mutual connections */}
         <View style={styles.actionRow}>
@@ -492,6 +596,94 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.amber,
   },
+  tagline: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.amber,
+    textAlign: 'center',
+    marginBottom: spacing.xs,
+    fontStyle: 'italic',
+  },
+  customStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(46, 196, 160, 0.08)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    marginBottom: spacing.xs,
+  },
+  customStatusEmoji: { fontSize: 14 },
+  customStatusText: { fontFamily: fonts.body, fontSize: 11, color: colors.teal },
+  nextDest: { fontFamily: fonts.body, fontSize: 12, color: colors.teal, marginLeft: 2 },
+  workRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginBottom: spacing.xs,
+  },
+  workType: { fontFamily: fonts.body, fontSize: 12, color: colors.dark.text2 },
+  travelStyleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+  },
+  travelStylePill: {
+    backgroundColor: 'rgba(232, 128, 58, 0.12)',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(232, 128, 58, 0.25)',
+  },
+  travelStyleText: { fontFamily: fonts.body, fontSize: 11, color: colors.amber },
+  // Prompts
+  promptsSection: { width: '100%', marginBottom: spacing.md, gap: spacing.sm },
+  promptCard: {
+    backgroundColor: colors.dark.bg2,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    borderLeftWidth: 3,
+    borderLeftColor: colors.amber,
+  },
+  promptCardQuestion: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 12,
+    color: colors.amber,
+    marginBottom: spacing.xs,
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  promptCardAnswer: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.dark.text,
+    lineHeight: 21,
+  },
+  // Countries visited
+  countriesVisitedSection: { width: '100%', marginBottom: spacing.md },
+  countriesVisitedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  countriesVisitedTitle: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.dark.text },
+  countriesVisitedPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  cvPill: {
+    backgroundColor: 'rgba(46, 196, 160, 0.08)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(46, 196, 160, 0.2)',
+  },
+  cvPillText: { fontFamily: fonts.body, fontSize: 10, color: colors.teal },
   bio: {
     fontFamily: fonts.body,
     fontSize: 13,
@@ -698,4 +890,17 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: colors.dark.text2,
   },
+  overlapCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(46,196,160,0.08)',
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(46,196,160,0.2)',
+  },
+  overlapTitle: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.dark.text, lineHeight: 18 },
+  overlapCta: { fontFamily: fonts.body, fontSize: 11, color: colors.teal, marginTop: 2 },
 });

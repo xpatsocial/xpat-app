@@ -120,3 +120,26 @@ export function useModeration() {
 
   return { blockedIds, isBlocked, blockUser, unblockUser, reportContent };
 }
+
+/**
+ * Lightweight hook that returns only the Set of blocked user IDs.
+ * Use this in feeds, nearby, and chat to filter out blocked users
+ * without pulling in the full moderation API.
+ */
+export function useBlockedUsers(): Set<string> {
+  const { user } = useAuth();
+  const [blockedIds, setBlockedIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from('blocks')
+      .select('blocked_id')
+      .eq('blocker_id', user.id)
+      .then(({ data }) => {
+        if (data) setBlockedIds(new Set(data.map((b) => b.blocked_id)));
+      });
+  }, [user]);
+
+  return blockedIds;
+}

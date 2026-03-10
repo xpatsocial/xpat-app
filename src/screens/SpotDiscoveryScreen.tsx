@@ -298,14 +298,11 @@ export default function SpotDiscoveryScreen() {
       switch (direction) {
         case 'right':
           // TODO: insert into user_favorites via supabase
-          console.log(`[SpotDiscovery] Saved to favorites: ${spot.name}`);
           break;
         case 'left':
-          console.log(`[SpotDiscovery] Not interested: ${spot.name}`);
           break;
         case 'up':
           // TODO: save + navigate to spot detail
-          console.log(`[SpotDiscovery] Must-go: ${spot.name}`);
           break;
       }
     },

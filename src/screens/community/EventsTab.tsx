@@ -1,107 +1,417 @@
-import React, { useRef, useCallback, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  ScrollView,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { colors, fonts, spacing, radius, shadows } from '../../theme';
-import SwipeCardDeck, { SwipeCardDeckRef, SwipeDirection } from '../../components/SwipeCardDeck';
+import { useNavigation } from '@react-navigation/native';
+import * as Haptics from 'expo-haptics';
+import { colors, fonts, spacing, radius } from '../../theme';
+import { useAuth } from '../../hooks/useAuth';
+import { useEvents } from '../../hooks/useEvents';
+import EventCard from '../../components/EventCard';
 import { AppEvent } from '../../types';
 
-interface SwipeEvent extends AppEvent {
-  attendee_count: number;
-  creator_name: string;
-  category_emoji: string;
+// ---------------------------------------------------------------------------
+// Date strip helpers
+// ---------------------------------------------------------------------------
+
+function getNext14Days(): Date[] {
+  const dates: Date[] = [];
+  const today = new Date();
+  for (let i = 0; i < 14; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    d.setHours(0, 0, 0, 0);
+    dates.push(d);
+  }
+  return dates;
 }
 
-const MOCK_EVENTS: SwipeEvent[] = [
-  { id: 1, creator_id: 'u1', spot_id: null, title: 'Sunset Rooftop Social', description: 'Casual meetup for digital nomads. Bring your own drinks.', event_time: '2026-03-15T17:30:00Z', city: 'Chiang Mai', country: 'Thailand', lat: 18.795, lng: 98.968, created_at: '2026-03-01T00:00:00Z', attendee_count: 14, creator_name: 'Sofia M.', category_emoji: '\uD83C\uDF05' },
-  { id: 2, creator_id: 'u2', spot_id: null, title: 'Morning Surf + Breakfast', description: 'Meet at 6 AM at Echo Beach. All levels welcome.', event_time: '2026-03-16T06:00:00Z', city: 'Bali', country: 'Indonesia', lat: -8.655, lng: 115.135, created_at: '2026-03-02T00:00:00Z', attendee_count: 8, creator_name: 'Liam C.', category_emoji: '\uD83C\uDFC4' },
-  { id: 3, creator_id: 'u3', spot_id: null, title: 'Lisbon Walking Tour: Hidden Gems', description: 'Off-the-beaten-path through Alfama + Mouraria.', event_time: '2026-03-18T10:00:00Z', city: 'Lisbon', country: 'Portugal', lat: 38.704, lng: -9.178, created_at: '2026-03-05T00:00:00Z', attendee_count: 22, creator_name: 'Amara O.', category_emoji: '\uD83D\uDEB6' },
-  { id: 4, creator_id: 'u4', spot_id: null, title: 'Co-work & Chill Thursday', description: 'Reserved the big table at Punspace.', event_time: '2026-03-20T09:00:00Z', city: 'Chiang Mai', country: 'Thailand', lat: 18.795, lng: 98.968, created_at: '2026-03-08T00:00:00Z', attendee_count: 11, creator_name: 'Jonas E.', category_emoji: '\uD83D\uDCBB' },
-  { id: 5, creator_id: 'u5', spot_id: null, title: 'Salsa Night for Nomads', description: 'Beginner-friendly salsa at 7 PM.', event_time: '2026-03-22T19:00:00Z', city: 'Medell\u00EDn', country: 'Colombia', lat: 6.244, lng: -75.581, created_at: '2026-03-10T00:00:00Z', attendee_count: 19, creator_name: 'Priya P.', category_emoji: '\uD83D\uDC83' },
-];
-
-function EventCard({ event }: { event: SwipeEvent }) {
-  const d = new Date(event.event_time);
-  const date = d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
-  const time = d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
-
-  return (
-    <View style={cardStyles.card}>
-      <View style={cardStyles.hero}>
-        <Text style={cardStyles.heroEmoji}>{event.category_emoji}</Text>
-      </View>
-      <View style={cardStyles.info}>
-        <Text style={cardStyles.title}>{event.title}</Text>
-        <View style={cardStyles.row}><Feather name="calendar" size={12} color={colors.teal} /><Text style={cardStyles.meta}>{date}</Text><Feather name="clock" size={12} color={colors.teal} style={{ marginLeft: spacing.sm }} /><Text style={cardStyles.meta}>{time}</Text></View>
-        {event.city && <View style={cardStyles.row}><Feather name="map-pin" size={12} color={colors.amber} /><Text style={cardStyles.loc}>{event.city}, {event.country}</Text></View>}
-        {event.description && <Text style={cardStyles.desc} numberOfLines={3}>{event.description}</Text>}
-        <View style={cardStyles.footer}>
-          <Text style={cardStyles.host}>{event.creator_name}</Text>
-          <View style={cardStyles.row}><Feather name="users" size={12} color={colors.dark.text2} /><Text style={cardStyles.attendees}>{event.attendee_count} going</Text></View>
-        </View>
-      </View>
-    </View>
-  );
+function formatDayLabel(d: Date): string {
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return 'Today';
+  const tomorrow = new Date(now);
+  tomorrow.setDate(now.getDate() + 1);
+  if (d.toDateString() === tomorrow.toDateString()) return 'Tmrw';
+  return d.toLocaleDateString(undefined, { weekday: 'short' });
 }
 
-function OverlayBadge({ icon, label, color }: { icon: string; label: string; color: string }) {
-  return (
-    <View style={[overlayBadge, { borderColor: color }]}>
-      <Feather name={icon as any} size={28} color={color} />
-      <Text style={[overlayLabel, { color }]}>{label}</Text>
-    </View>
-  );
+function formatDayNum(d: Date): string {
+  return String(d.getDate());
 }
 
-const overlayBadge: any = { alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radius.lg, borderWidth: 3, gap: spacing.xs };
-const overlayLabel: any = { fontFamily: fonts.bodyBold, fontSize: 20, letterSpacing: 3 };
+function isSameDay(a: Date, b: Date): boolean {
+  return a.toDateString() === b.toDateString();
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
 
 export default function EventsTab() {
-  const deckRef = useRef<SwipeCardDeckRef>(null);
-  const [events] = useState<SwipeEvent[]>(MOCK_EVENTS);
+  const navigation = useNavigation<any>();
+  const { user, profile } = useAuth();
+  const { upcomingEvents, cityEvents, rsvp } = useEvents();
 
-  const handleSwipe = useCallback((event: SwipeEvent, direction: SwipeDirection) => {
-    console.log(`[Events] ${direction}: ${event.title}`);
-  }, []);
+  const [events, setEvents] = useState<AppEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    return d;
+  });
+  const [rsvpStates, setRsvpStates] = useState<Record<string, string>>({});
+
+  const dates = getNext14Days();
+
+  // -----------------------------------------------------------------------
+  // Fetch events
+  // -----------------------------------------------------------------------
+  const fetchEvents = useCallback(async () => {
+    setLoading(true);
+    try {
+      const city = profile?.current_city;
+      const data = city ? await cityEvents(city) : await upcomingEvents(50);
+      setEvents(data);
+
+      // Build local RSVP state map for current user
+      if (user) {
+        const map: Record<string, string> = {};
+        for (const e of data) {
+          const myRsvp = e.event_rsvps?.find((r) => r.user_id === user.id);
+          if (myRsvp) map[e.id] = myRsvp.status;
+        }
+        setRsvpStates(map);
+      }
+    } catch (err) {
+      console.error('[EventsTab] fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [profile?.current_city, user]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
+  // -----------------------------------------------------------------------
+  // Filter by selected date
+  // -----------------------------------------------------------------------
+  const filteredEvents = events.filter((e) => {
+    const eventDate = new Date(e.starts_at);
+    return isSameDay(eventDate, selectedDate);
+  });
+
+  // Count events per date for dot indicators
+  const eventCountByDate = new Map<string, number>();
+  for (const e of events) {
+    const key = new Date(e.starts_at).toDateString();
+    eventCountByDate.set(key, (eventCountByDate.get(key) ?? 0) + 1);
+  }
+
+  // -----------------------------------------------------------------------
+  // RSVP handler
+  // -----------------------------------------------------------------------
+  const handleRSVP = useCallback(
+    async (event: AppEvent, status: 'going' | 'interested') => {
+      if (!user) {
+        navigation.navigate('Auth');
+        return;
+      }
+
+      // Toggle off if already that status
+      const currentStatus = rsvpStates[event.id];
+      const newStatus = currentStatus === status ? 'cancelled' : status;
+
+      Haptics.selectionAsync();
+      setRsvpStates((prev) => ({ ...prev, [event.id]: newStatus }));
+
+      const { error } = await rsvp(event.id, newStatus as any);
+      if (error) {
+        Alert.alert('Error', error);
+        // Revert
+        setRsvpStates((prev) => ({
+          ...prev,
+          [event.id]: currentStatus ?? 'cancelled',
+        }));
+      } else {
+        // Refresh to get updated attendee list
+        fetchEvents();
+      }
+    },
+    [user, rsvpStates, rsvp, fetchEvents, navigation],
+  );
+
+  // -----------------------------------------------------------------------
+  // Date strip
+  // -----------------------------------------------------------------------
+  const dateStripRef = useRef<ScrollView>(null);
+
+  function handleDateSelect(d: Date) {
+    setSelectedDate(d);
+    Haptics.selectionAsync();
+  }
+
+  // -----------------------------------------------------------------------
+  // Render
+  // -----------------------------------------------------------------------
+
+  const renderEmptyState = () => (
+    <View style={styles.emptyContainer}>
+      <Feather name="calendar" size={48} color={colors.dark.text3} />
+      <Text style={styles.emptyTitle}>No events this day</Text>
+      <Text style={styles.emptySubtitle}>
+        Be the first to host! Meetups start movements.
+      </Text>
+      <TouchableOpacity
+        style={styles.emptyButton}
+        onPress={() => {
+          if (!user) {
+            navigation.navigate('Auth');
+            return;
+          }
+          navigation.navigate('CreateEvent');
+        }}
+        activeOpacity={0.7}
+      >
+        <Feather name="plus" size={16} color={colors.dark.bg} />
+        <Text style={styles.emptyButtonText}>Host Event</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
     <View style={styles.root}>
-      <SwipeCardDeck
-        ref={deckRef}
-        data={events}
-        keyExtractor={(e) => String(e.id)}
-        renderCard={(event) => <EventCard event={event} />}
-        onSwipe={handleSwipe}
-        renderRightOverlay={() => <OverlayBadge icon="check-circle" label="GOING" color={colors.teal} />}
-        renderLeftOverlay={() => <OverlayBadge icon="x" label="SKIP" color={colors.red} />}
-        renderUpOverlay={() => <OverlayBadge icon="bell" label="INTERESTED" color={colors.amber} />}
-      />
-      <View style={styles.actions}>
-        <TouchableOpacity style={[styles.btn, { borderColor: colors.red }]} onPress={() => deckRef.current?.swipeLeft()} activeOpacity={0.7}><Feather name="x" size={24} color={colors.red} /></TouchableOpacity>
-        <TouchableOpacity style={[styles.btn, styles.btnSm, { borderColor: colors.amber }]} onPress={() => deckRef.current?.swipeUp()} activeOpacity={0.7}><Feather name="bell" size={20} color={colors.amber} /></TouchableOpacity>
-        <TouchableOpacity style={[styles.btn, { borderColor: colors.teal }]} onPress={() => deckRef.current?.swipeRight()} activeOpacity={0.7}><Feather name="check-circle" size={24} color={colors.teal} /></TouchableOpacity>
-      </View>
+      {/* Date strip */}
+      <ScrollView
+        ref={dateStripRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.dateStrip}
+      >
+        {dates.map((d, i) => {
+          const isSelected = isSameDay(d, selectedDate);
+          const hasEvents = (eventCountByDate.get(d.toDateString()) ?? 0) > 0;
+
+          return (
+            <TouchableOpacity
+              key={i}
+              style={[styles.dateCell, isSelected && styles.dateCellActive]}
+              onPress={() => handleDateSelect(d)}
+              activeOpacity={0.7}
+            >
+              <Text
+                style={[
+                  styles.dateDayLabel,
+                  isSelected && styles.dateDayLabelActive,
+                ]}
+              >
+                {formatDayLabel(d)}
+              </Text>
+              <Text
+                style={[
+                  styles.dateDayNum,
+                  isSelected && styles.dateDayNumActive,
+                ]}
+              >
+                {formatDayNum(d)}
+              </Text>
+              {hasEvents && (
+                <View
+                  style={[
+                    styles.dateDot,
+                    isSelected && styles.dateDotActive,
+                  ]}
+                />
+              )}
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
+      {/* Events list */}
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={colors.teal} size="large" />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredEvents}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContent}
+          renderItem={({ item }) => (
+            <EventCard
+              event={item}
+              onPress={() => {
+                // Future: navigate to event detail
+              }}
+              onRSVP={handleRSVP}
+              myRsvpStatus={
+                (rsvpStates[item.id] as any) ?? null
+              }
+            />
+          )}
+          ListEmptyComponent={renderEmptyState}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+
+      {/* FAB: Host Event */}
+      <TouchableOpacity
+        style={styles.fab}
+        onPress={() => {
+          if (!user) {
+            navigation.navigate('Auth');
+            return;
+          }
+          navigation.navigate('CreateEvent');
+        }}
+        activeOpacity={0.8}
+      >
+        <Feather name="plus" size={22} color={colors.dark.bg} />
+        <Text style={styles.fabText}>Host</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: colors.dark.bg },
-  actions: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.lg, paddingVertical: spacing.md, paddingBottom: spacing.lg },
-  btn: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, backgroundColor: colors.dark.bg2, ...shadows.sm },
-  btnSm: { width: 46, height: 46, borderRadius: 23 },
-});
+// ---------------------------------------------------------------------------
+// Styles
+// ---------------------------------------------------------------------------
 
-const cardStyles = StyleSheet.create({
-  card: { flex: 1 },
-  hero: { flex: 0.4, backgroundColor: colors.dark.bg3, alignItems: 'center', justifyContent: 'center' },
-  heroEmoji: { fontSize: 64 },
-  info: { flex: 0.6, padding: spacing.md, gap: spacing.xs },
-  title: { fontFamily: fonts.heading, fontSize: 20, color: colors.dark.text },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  meta: { fontFamily: fonts.body, fontSize: 11, color: colors.teal },
-  loc: { fontFamily: fonts.body, fontSize: 11, color: colors.amber },
-  desc: { fontFamily: fonts.body, fontSize: 12, color: colors.dark.text2, lineHeight: 18, marginTop: spacing.xs },
-  footer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.dark.bg3 },
-  host: { fontFamily: fonts.body, fontSize: 11, color: colors.dark.text2 },
-  attendees: { fontFamily: fonts.body, fontSize: 11, color: colors.dark.text2 },
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: colors.dark.bg,
+  },
+
+  // Date strip
+  dateStrip: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  dateCell: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 50,
+    height: 64,
+    borderRadius: radius.md,
+    backgroundColor: colors.dark.bg2,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
+  dateCellActive: {
+    backgroundColor: colors.teal,
+    borderColor: colors.teal,
+  },
+  dateDayLabel: {
+    fontFamily: fonts.body,
+    fontSize: 10,
+    color: colors.dark.text2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dateDayLabelActive: {
+    color: colors.dark.bg,
+    fontFamily: fonts.bodyBold,
+  },
+  dateDayNum: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 18,
+    color: colors.dark.text,
+    marginTop: 1,
+  },
+  dateDayNumActive: {
+    color: colors.dark.bg,
+  },
+  dateDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.teal,
+    marginTop: 2,
+  },
+  dateDotActive: {
+    backgroundColor: colors.dark.bg,
+  },
+
+  // List
+  listContent: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: 100,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Empty state
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: 60,
+    paddingHorizontal: spacing.xl,
+  },
+  emptyTitle: {
+    fontFamily: fonts.heading,
+    fontSize: 20,
+    color: colors.dark.text,
+    marginTop: spacing.md,
+  },
+  emptySubtitle: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.dark.text2,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    lineHeight: 20,
+  },
+  emptyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.teal,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.lg,
+    borderRadius: radius.full,
+    marginTop: spacing.lg,
+  },
+  emptyButtonText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    color: colors.dark.bg,
+  },
+
+  // FAB
+  fab: {
+    position: 'absolute',
+    bottom: spacing.lg,
+    right: spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.teal,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.full,
+    shadowColor: colors.teal,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  fabText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    color: colors.dark.bg,
+  },
 });

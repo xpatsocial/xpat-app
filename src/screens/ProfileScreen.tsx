@@ -18,12 +18,24 @@ import { supabase } from '../lib/supabase';
 import { Spot, AFFILIATE_PARTNERS } from '../types';
 import BrandHeader from '../components/BrandHeader';
 import SwipeableRow from '../components/SwipeableRow';
+import Avatar from '../components/Avatar';
+import { useAvatar } from '../hooks/useAvatar';
 import AnimatedPressable from '../components/AnimatedPressable';
 import AvailabilityToggle from '../components/AvailabilityToggle';
+import { calculateProfileCompletion } from '../lib/profilePrompts';
 
 export default function ProfileScreen() {
-  const { user, session, profile, signOut } = useAuth();
+  const { user, session, profile, signOut, refreshProfile } = useAuth();
   const navigation = useNavigation<any>();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const { pickAndUpload, uploading: avatarUploading } = useAvatar({
+    userId: user?.id || '',
+    onUploaded: (url) => {
+      setAvatarUrl(url);
+      refreshProfile();
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    },
+  });
   const [mySpots, setMySpots] = useState<Spot[]>([]);
   const [editing, setEditing] = useState(false);
   const [displayName, setDisplayName] = useState('');
@@ -38,6 +50,7 @@ export default function ProfileScreen() {
       setDisplayName(profile.display_name || '');
       setBio(profile.bio || '');
       setCurrentCity(profile.current_city || '');
+      setAvatarUrl(profile.avatar_url || null);
     }
     if (user) {
       supabase
@@ -219,9 +232,16 @@ export default function ProfileScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <View style={styles.avatarContainer}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          <TouchableOpacity onPress={pickAndUpload} activeOpacity={0.8} disabled={avatarUploading}>
+            <Avatar uri={avatarUrl} name={profile?.display_name} userId={user?.id} size={80} />
+            <View style={styles.avatarEditBadge}>
+              {avatarUploading ? (
+                <ActivityIndicator size={10} color="#fff" />
+              ) : (
+                <Feather name="camera" size={10} color="#fff" />
+              )}
+            </View>
+          </TouchableOpacity>
 
           {editing ? (
             <>
@@ -254,16 +274,110 @@ export default function ProfileScreen() {
           ) : (
             <>
               <Text style={styles.name}>{profile?.display_name || 'Set your name'}</Text>
+              {profile?.tagline && (
+                <Text style={styles.tagline}>{profile.tagline}</Text>
+              )}
+              {(profile?.custom_status || profile?.custom_status_emoji) && (
+                <View style={styles.customStatusRow}>
+                  {profile?.custom_status_emoji && (
+                    <Text style={styles.customStatusEmoji}>{profile.custom_status_emoji}</Text>
+                  )}
+                  {profile?.custom_status && (
+                    <Text style={styles.customStatusText}>{profile.custom_status}</Text>
+                  )}
+                </View>
+              )}
               {profile?.current_city && (
                 <View style={styles.cityRow}>
                   <Feather name="map-pin" size={12} color={colors.amber} />
                   <Text style={styles.city}>{profile.current_city}</Text>
+                  {profile?.next_destination && (
+                    <>
+                      <Feather name="arrow-right" size={10} color={colors.dark.text3} style={{ marginHorizontal: 4 }} />
+                      <Feather name="navigation" size={10} color={colors.teal} />
+                      <Text style={styles.nextDest}>{profile.next_destination}</Text>
+                    </>
+                  )}
+                </View>
+              )}
+              {profile?.work_type && (
+                <View style={styles.workRow}>
+                  <Feather name="briefcase" size={11} color={colors.dark.text2} />
+                  <Text style={styles.workType}>{profile.work_type}</Text>
                 </View>
               )}
               {profile?.bio && <Text style={styles.bio}>{profile.bio}</Text>}
+
+              {/* Travel Style Tags */}
+              {(profile?.travel_style?.length ?? 0) > 0 && (
+                <View style={styles.travelStyleRow}>
+                  {profile!.travel_style!.map((style) => (
+                    <View key={style} style={styles.travelStylePill}>
+                      <Text style={styles.travelStyleText}>{style}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
             </>
           )}
         </View>
+
+        {/* Profile Completion Bar */}
+        {profile && (() => {
+          const score = calculateProfileCompletion(profile);
+          return score < 100 ? (
+            <View style={styles.completionContainer}>
+              <View style={styles.completionHeader}>
+                <Text style={styles.completionLabel}>Profile {score}% complete</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Settings' as never)}>
+                  <Text style={styles.completionAction}>Complete it</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.completionBarBg}>
+                <View style={[styles.completionBarFill, { width: `${score}%` }]} />
+              </View>
+            </View>
+          ) : null;
+        })()}
+
+        {/* Profile Prompts */}
+        {[
+          { q: profile?.prompt_1_question, a: profile?.prompt_1_answer },
+          { q: profile?.prompt_2_question, a: profile?.prompt_2_answer },
+          { q: profile?.prompt_3_question, a: profile?.prompt_3_answer },
+        ].filter(p => p.q && p.a).length > 0 && (
+          <View style={styles.promptsSection}>
+            {[
+              { q: profile?.prompt_1_question, a: profile?.prompt_1_answer },
+              { q: profile?.prompt_2_question, a: profile?.prompt_2_answer },
+              { q: profile?.prompt_3_question, a: profile?.prompt_3_answer },
+            ].filter(p => p.q && p.a).map((prompt, idx) => (
+              <View key={idx} style={styles.promptCard}>
+                <Text style={styles.promptCardQuestion}>{prompt.q}</Text>
+                <Text style={styles.promptCardAnswer}>{prompt.a}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Countries Visited */}
+        {(profile?.countries_visited?.length ?? 0) > 0 && (
+          <View style={styles.countriesSection}>
+            <View style={styles.countriesHeader}>
+              <Feather name="globe" size={14} color={colors.teal} />
+              <Text style={styles.countriesTitle}>
+                {profile!.countries_visited!.length} countries visited
+              </Text>
+            </View>
+            <View style={styles.countriesPills}>
+              {profile!.countries_visited!.map((country) => (
+                <View key={country} style={styles.countryVisitedPill}>
+                  <Text style={styles.countryVisitedText}>{country}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
 
         {/* Activity Status */}
         <AvailabilityToggle
@@ -482,9 +596,87 @@ const styles = StyleSheet.create({
     borderWidth: 3, borderColor: colors.teal,
   },
   avatarText: { fontFamily: fonts.bodyBold, fontSize: 28, color: colors.dark.bg },
+  avatarEditBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: colors.teal,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: colors.dark.bg,
+  },
   name: { fontFamily: fonts.heading, fontSize: 24, color: colors.dark.text, marginBottom: spacing.xs },
   cityRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.xs },
   city: { fontFamily: fonts.body, fontSize: 13, color: colors.amber },
+  tagline: {
+    fontFamily: fonts.body, fontSize: 12, color: colors.amber,
+    textAlign: 'center', marginBottom: spacing.xs, fontStyle: 'italic',
+  },
+  customStatusRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(46, 196, 160, 0.08)', borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 3, marginBottom: spacing.xs,
+  },
+  customStatusEmoji: { fontSize: 14 },
+  customStatusText: { fontFamily: fonts.body, fontSize: 11, color: colors.teal },
+  nextDest: { fontFamily: fonts.body, fontSize: 12, color: colors.teal, marginLeft: 2 },
+  workRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.xs,
+  },
+  workType: { fontFamily: fonts.body, fontSize: 12, color: colors.dark.text2 },
+  travelStyleRow: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
+    justifyContent: 'center', marginTop: spacing.sm,
+  },
+  travelStylePill: {
+    backgroundColor: 'rgba(232, 128, 58, 0.12)', borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: 'rgba(232, 128, 58, 0.25)',
+  },
+  travelStyleText: { fontFamily: fonts.body, fontSize: 11, color: colors.amber },
+  // Completion bar
+  completionContainer: {
+    width: '100%', marginBottom: spacing.md,
+    backgroundColor: colors.dark.bg2, borderRadius: radius.sm,
+    padding: spacing.sm + spacing.xs, borderWidth: 1, borderColor: colors.dark.border,
+  },
+  completionHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  completionLabel: { fontFamily: fonts.body, fontSize: 11, color: colors.dark.text2 },
+  completionAction: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.teal },
+  completionBarBg: {
+    height: 4, backgroundColor: colors.dark.bg3, borderRadius: 2, overflow: 'hidden',
+  },
+  completionBarFill: {
+    height: 4, backgroundColor: colors.teal, borderRadius: 2,
+  },
+  // Prompts
+  promptsSection: { width: '100%', marginBottom: spacing.md, gap: spacing.sm },
+  promptCard: {
+    backgroundColor: colors.dark.bg2, borderRadius: radius.md,
+    padding: spacing.md, borderWidth: 1, borderColor: colors.dark.border,
+    borderLeftWidth: 3, borderLeftColor: colors.amber,
+  },
+  promptCardQuestion: {
+    fontFamily: fonts.bodyBold, fontSize: 12, color: colors.amber,
+    marginBottom: spacing.xs, textTransform: 'uppercase', letterSpacing: 0.3,
+  },
+  promptCardAnswer: {
+    fontFamily: fonts.body, fontSize: 14, color: colors.dark.text, lineHeight: 21,
+  },
+  // Countries visited
+  countriesSection: { width: '100%', marginBottom: spacing.md },
+  countriesHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs, marginBottom: spacing.xs,
+  },
+  countriesTitle: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.dark.text },
+  countriesPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  countryVisitedPill: {
+    backgroundColor: 'rgba(46, 196, 160, 0.08)', borderRadius: 10,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderWidth: 1, borderColor: 'rgba(46, 196, 160, 0.2)',
+  },
+  countryVisitedText: { fontFamily: fonts.body, fontSize: 10, color: colors.teal },
   bio: { fontFamily: fonts.body, fontSize: 13, color: colors.dark.text2, textAlign: 'center' },
   editInput: {
     backgroundColor: colors.dark.bg2, borderRadius: radius.md, padding: spacing.sm + spacing.xs,

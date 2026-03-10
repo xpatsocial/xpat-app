@@ -61,7 +61,7 @@ export default function DiscoverTab() {
   const [nomads] = useState<NomadProfile[]>(MOCK_NOMADS);
 
   const handleSwipe = useCallback((nomad: NomadProfile, direction: SwipeDirection) => {
-    console.log(`[Discover] ${direction}: ${nomad.display_name}`);
+    // swipe action — persistence wired in v1.3
   }, []);
 
   return (

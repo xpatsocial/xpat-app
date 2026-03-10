@@ -18,8 +18,20 @@ import { Spot, SpotCategory, NeighborhoodTag, SAFETY_TAGS } from '../types';
 import SpotBottomSheet from '../components/SpotBottomSheet';
 import NeighborhoodPulseSheet from '../components/NeighborhoodPulseSheet';
 import NeighborhoodPulseCard from '../components/NeighborhoodPulseCard';
+import CityPresenceBadge from '../components/CityPresenceBadge';
+import NomadListSheet from '../components/NomadListSheet';
+import { useCityPresence } from '../hooks/useCityPresence';
 import { usePostHog } from '../lib/posthog';
 import { clusterSpots, Cluster } from '../utils/mapClustering';
+
+// City -> coords lookup for launch cities (auto-zoom)
+const CITY_COORDS: Record<string, { latitude: number; longitude: number }> = {
+  bangkok: { latitude: 13.7563, longitude: 100.5018 },
+  lisbon: { latitude: 38.7223, longitude: -9.1393 },
+  'mexico city': { latitude: 19.4326, longitude: -99.1332 },
+  cdmx: { latitude: 19.4326, longitude: -99.1332 },
+  'ciudad de mexico': { latitude: 19.4326, longitude: -99.1332 },
+};
 
 const CATEGORIES: Array<SpotCategory | 'all'> = ['all', 'cafe', 'eat', 'cowork', 'colive', 'experience', 'stay'];
 
@@ -84,7 +96,7 @@ const ZONE_COLORS: Record<string, { fill: string; stroke: string }> = {
 };
 
 export default function ExploreScreen({ navigation }: any) {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const posthog = usePostHog();
   const insets = useSafeAreaInsets();
   const mapRef = useRef<MapView>(null);
@@ -113,18 +125,46 @@ export default function ExploreScreen({ navigation }: any) {
   // Neighborhood zone circles
   const [pulseZones, setPulseZones] = useState<PulseZone[]>([]);
 
+  // City presence state
+  const [nomadListVisible, setNomadListVisible] = useState(false);
+  const currentCity = profile?.current_city ?? null;
+  const currentCountry = profile?.current_country ?? null;
+  const {
+    nomadsInCity,
+    nearbyNomads,
+    isJustArrived,
+  } = useCityPresence(currentCity, currentCountry);
+
   // Onboarding tooltip state
   const [showPulseTooltip, setShowPulseTooltip] = useState(false);
+
+  // Fall back to profile city if GPS unavailable
+  function animateToCityFallback() {
+    if (!currentCity) return;
+    const coords = CITY_COORDS[currentCity.toLowerCase()];
+    if (coords) {
+      mapRef.current?.animateToRegion(
+        { ...coords, latitudeDelta: 0.08, longitudeDelta: 0.08 },
+        1000,
+      );
+    }
+  }
 
   // Detect user location on mount and center map
   useEffect(() => {
     (async () => {
       try {
         const gdprStatus = await AsyncStorage.getItem('gdpr_accepted');
-        if (gdprStatus === 'declined') return;
+        if (gdprStatus === 'declined') {
+          animateToCityFallback();
+          return;
+        }
 
         const { status } = await Location.getForegroundPermissionsAsync();
-        if (status !== 'granted') return;
+        if (status !== 'granted') {
+          animateToCityFallback();
+          return;
+        }
 
         const loc = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         const coord = { latitude: loc.coords.latitude, longitude: loc.coords.longitude };
@@ -134,7 +174,7 @@ export default function ExploreScreen({ navigation }: any) {
           1000,
         );
       } catch {
-        // Silently fall back to default region
+        animateToCityFallback();
       }
     })();
   }, []);
@@ -504,81 +544,80 @@ export default function ExploreScreen({ navigation }: any) {
           ))}
       </MapView>
 
-      {/* Floating header */}
+      {/* Floating header — search pill */}
       <View style={styles.floatingHeader}>
         <BlurView tint="dark" intensity={70} style={[styles.headerBlur, { paddingTop: insets.top + 8 }]}>
           <View style={styles.headerContent}>
-            <Text style={styles.wordmark}>
-              <Text style={styles.wX}>x</Text>
-              <Text style={styles.wSlash}>/</Text>
-              <Text style={styles.wPat}>pat</Text>
-            </Text>
-            <View style={styles.headerRight}>
-              <TouchableOpacity
-                style={styles.searchToggleBtn}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  setSearchVisible((v) => !v);
-                  if (searchVisible) {
-                    setSearchQuery('');
-                    Keyboard.dismiss();
-                  }
-                }}
-              >
-                <Feather name={searchVisible ? 'x' : 'search'} size={18} color={colors.dark.text} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.addBtn}
-                onPress={() => {
-                  if (!user) {
-                    Alert.alert(
-                      'Sign in required',
-                      'Sign in to add spots to the map.',
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        { text: 'Sign In', onPress: () => navigation.navigate('Auth') },
-                      ],
-                    );
-                    return;
-                  }
-                  navigation.navigate('AddSpot');
-                }}
-              >
-                <Feather name="plus" size={18} color={colors.dark.bg} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Collapsible search bar */}
-          {searchVisible && (
-            <View style={styles.searchBar}>
-              <Feather name="search" size={14} color={colors.dark.text2} style={styles.searchIcon} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Search spots, cities, countries..."
-                placeholderTextColor={colors.dark.text2}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                autoFocus
-                returnKeyType="search"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-              {searchQuery.length > 0 && (
+            <TouchableOpacity
+              style={styles.searchPill}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setSearchVisible(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <Feather name="search" size={15} color={colors.dark.text2} />
+              {searchVisible ? (
+                <TextInput
+                  style={styles.searchPillInput}
+                  placeholder="Search cities, spots..."
+                  placeholderTextColor={colors.dark.text3}
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  autoFocus
+                  returnKeyType="search"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                />
+              ) : (
+                <Text style={styles.searchPillPlaceholder}>Search cities, spots...</Text>
+              )}
+              {searchVisible && searchQuery.length > 0 ? (
                 <TouchableOpacity
                   onPress={() => setSearchQuery('')}
                   hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 >
-                  <Feather name="x-circle" size={14} color={colors.dark.text2} />
+                  <Feather name="x-circle" size={14} color={colors.dark.text3} />
                 </TouchableOpacity>
-              )}
-            </View>
-          )}
+              ) : searchVisible ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearchVisible(false);
+                    setSearchQuery('');
+                    Keyboard.dismiss();
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather name="x" size={14} color={colors.dark.text2} />
+                </TouchableOpacity>
+              ) : null}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => {
+                if (!user) {
+                  Alert.alert(
+                    'Sign in required',
+                    'Sign in to add spots to the map.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Sign In', onPress: () => navigation.navigate('Auth') },
+                    ],
+                  );
+                  return;
+                }
+                navigation.navigate('AddSpot');
+              }}
+            >
+              <Feather name="plus" size={18} color={colors.dark.bg} />
+            </TouchableOpacity>
+          </View>
         </BlurView>
       </View>
 
       {/* Floating category pills */}
-      <View style={[styles.filterContainer, searchVisible && styles.filterContainerShifted]}>
+      <View style={styles.filterContainer}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -616,8 +655,17 @@ export default function ExploreScreen({ navigation }: any) {
         />
       )}
 
-      {/* Spot count badge */}
-      {!loading && filteredSpots.length > 0 && !selectedSpot && !showPulseCard && !pulseSheetVisible && (
+      {/* City presence badge — "23 nomads in Bangkok" */}
+      {nomadsInCity > 0 && currentCity && !selectedSpot && !pulseSheetVisible && !nomadListVisible && (
+        <CityPresenceBadge
+          city={currentCity}
+          count={nomadsInCity}
+          onPress={() => setNomadListVisible(true)}
+        />
+      )}
+
+      {/* Spot count badge (hidden when presence badge is shown) */}
+      {!loading && filteredSpots.length > 0 && !selectedSpot && !showPulseCard && !pulseSheetVisible && nomadsInCity === 0 && (
         <View style={styles.countBadge}>
           <BlurView tint="dark" intensity={80} style={styles.countBlur}>
             <Feather name="map-pin" size={12} color={colors.teal} />
@@ -707,6 +755,19 @@ export default function ExploreScreen({ navigation }: any) {
         }}
         onSubmit={handlePulseSubmit}
       />
+
+      {/* Nomad list sheet */}
+      <NomadListSheet
+        visible={nomadListVisible}
+        city={currentCity || ''}
+        nomads={nearbyNomads}
+        isJustArrived={isJustArrived}
+        onClose={() => setNomadListVisible(false)}
+        onProfilePress={(userId) => {
+          setNomadListVisible(false);
+          navigation.navigate('UserProfile', { userId });
+        }}
+      />
     </View>
   );
 }
@@ -742,66 +803,52 @@ const styles = StyleSheet.create({
   headerBlur: {
     paddingTop: Platform.OS === 'ios' ? 54 : 40,
     paddingBottom: spacing.sm,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerRight: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
-  wordmark: { fontFamily: fonts.heading, fontSize: 28 },
-  wX: { color: colors.amber },
-  wSlash: { color: colors.teal },
-  wPat: { color: colors.dark.text },
-  addBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.amber,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  searchToggleBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.dark.bg2,
-    alignItems: 'center', justifyContent: 'center',
+  searchPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    backgroundColor: 'rgba(44,44,46,0.9)',
+    borderRadius: 24,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
     borderWidth: 0.5,
     borderColor: colors.dark.border,
   },
-
-  // Search bar
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.dark.bg2,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.dark.border,
-    marginTop: spacing.sm,
-    paddingHorizontal: spacing.sm + spacing.xs,
-    height: 40,
-  },
-  searchIcon: {
-    marginRight: spacing.sm,
-  },
-  searchInput: {
+  searchPillPlaceholder: {
     flex: 1,
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
+    color: colors.dark.text3,
+  },
+  searchPillInput: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: 14,
     color: colors.dark.text,
     paddingVertical: 0,
+  },
+  addBtn: {
+    width: 48, height: 48, borderRadius: 24,
+    backgroundColor: colors.amber,
+    alignItems: 'center', justifyContent: 'center',
   },
 
   filterContainer: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 105 : 90,
+    top: Platform.OS === 'ios' ? 110 : 96,
     left: 0,
     right: 0,
   },
   filterContainerShifted: {
-    top: Platform.OS === 'ios' ? 155 : 140,
+    // search pill is inline now — no extra shift needed
   },
   filterContent: { paddingHorizontal: spacing.lg, gap: spacing.sm },
   filterPill: {
@@ -835,7 +882,7 @@ const styles = StyleSheet.create({
 
   hintContainer: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 140 : 125,
+    top: Platform.OS === 'ios' ? 150 : 135,
     alignSelf: 'center',
   },
   hintBlur: {

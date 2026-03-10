@@ -233,14 +233,11 @@ export default function NomadDiscoveryScreen() {
     switch (direction) {
       case 'right':
         // TODO: send connection request via supabase
-        console.log(`[NomadDiscovery] Connect request -> ${nomad.display_name}`);
         break;
       case 'left':
-        console.log(`[NomadDiscovery] Skipped ${nomad.display_name}`);
         break;
       case 'up':
         // TODO: send connection request with message prompt
-        console.log(`[NomadDiscovery] Super-like -> ${nomad.display_name}`);
         break;
     }
   }, []);

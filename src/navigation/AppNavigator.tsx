@@ -4,10 +4,12 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../theme';
 import GlassTabBar from '../components/GlassTabBar';
+import ErrorBoundary from '../components/ErrorBoundary';
 
-import ExploreScreen from '../screens/ExploreScreen';
-import CommunityScreen from '../screens/CommunityScreen';
+import PlacesScreen from '../screens/PlacesScreen';
+import PeopleScreen from '../screens/PeopleScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import CreateEventScreen from '../screens/CreateEventScreen';
 import AddSpotScreen from '../screens/AddSpotScreen';
 import SpotDetailScreen from '../screens/SpotDetailScreen';
 import AuthScreen from '../screens/AuthScreen';
@@ -36,9 +38,9 @@ function MainTabs() {
         headerShown: false,
       }}
     >
-      <Tab.Screen name="Explore" component={ExploreScreen} />
-      <Tab.Screen name="Community" component={CommunityScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen name="Places">{() => <ErrorBoundary><PlacesScreen /></ErrorBoundary>}</Tab.Screen>
+      <Tab.Screen name="People">{() => <ErrorBoundary><PeopleScreen /></ErrorBoundary>}</Tab.Screen>
+      <Tab.Screen name="Profile">{() => <ErrorBoundary><ProfileScreen /></ErrorBoundary>}</Tab.Screen>
     </Tab.Navigator>
   );
 }
@@ -147,6 +149,11 @@ export default function AppNavigator() {
           name="BlockedUsers"
           component={BlockedUsersScreen}
           options={{ presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="CreateEvent"
+          component={CreateEventScreen}
+          options={{ presentation: 'modal' }}
         />
       </Stack.Navigator>
 

@@ -11,6 +11,7 @@ import { useCityChat } from '../../hooks/useCityChat';
 import { useTranslate } from '../../hooks/useTranslate';
 import { usePreferences } from '../../hooks/usePreferences';
 import { ChatMessage } from '../../types';
+import Avatar from '../../components/Avatar';
 
 export default function ChatTab() {
   const { user, session, profile } = useAuth();
@@ -100,7 +101,6 @@ function CityChat({ city, country, userId }: CityChatProps) {
   function renderMessage({ item }: { item: ChatMessage }) {
     const isMe = item.sender_id === userId;
     const senderName = item.profiles?.display_name || 'Anonymous';
-    const initial = senderName.charAt(0).toUpperCase();
     const time = new Date(item.created_at).toLocaleTimeString(undefined, {
       hour: 'numeric',
       minute: '2-digit',
@@ -111,9 +111,12 @@ function CityChat({ city, country, userId }: CityChatProps) {
     return (
       <View style={[msgStyles.row, isMe && msgStyles.rowMe]}>
         {!isMe && (
-          <View style={msgStyles.avatar}>
-            <Text style={msgStyles.avatarText}>{initial}</Text>
-          </View>
+          <Avatar
+            uri={item.profiles?.avatar_url}
+            name={senderName}
+            userId={item.sender_id}
+            size={28}
+          />
         )}
         <View style={[msgStyles.bubble, isMe ? msgStyles.bubbleMe : msgStyles.bubbleOther]}>
           {!isMe && <Text style={msgStyles.senderName}>{senderName}</Text>}

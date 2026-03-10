@@ -306,6 +306,12 @@ export default function NomadToolkitScreen() {
           <Text style={styles.sectionTitle}>Partner Tools</Text>
         </View>
 
+        <View style={styles.disclosureCard}>
+          <Text style={styles.disclosureText}>
+            These partnerships keep x/pat free forever. We earn a small commission when you sign up.
+          </Text>
+        </View>
+
         <Text style={styles.partnerIntro}>
           Essential tools for the nomad lifestyle. Partner integrations launching soon.
         </Text>
@@ -707,6 +713,20 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.dark.text2,
     marginTop: 1,
+  },
+  disclosureCard: {
+    backgroundColor: colors.dark.bg2,
+    borderRadius: radius.sm,
+    padding: spacing.sm + spacing.xs,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
+  disclosureText: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.dark.text2,
+    lineHeight: 17,
   },
   affiliateDisclosure: {
     fontFamily: fonts.body,

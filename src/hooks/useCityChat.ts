@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import { ChatMessage, ChatChannel } from '../types';
 import { useAuth } from './useAuth';
+import { captureException } from '../lib/sentry';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface UseCityChatOptions {
@@ -28,7 +29,7 @@ export function useCityChat({ city, country }: UseCityChatOptions) {
       .rpc('join_city_channel', { p_city: city, p_country: country });
 
     if (joinError || !channelId) {
-      console.error('[CityChat] join error:', joinError?.message);
+      captureException(joinError, { context: 'CityChat join', city, country });
       setLoading(false);
       return;
     }
@@ -140,7 +141,7 @@ export function useCityChat({ city, country }: UseCityChatOptions) {
     if (error) {
       // Remove optimistic message on failure
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      console.error('[CityChat] send error:', error.message);
+      captureException(error, { context: 'CityChat send', channelId: channel?.id });
     } else if (data) {
       // Replace optimistic with real message
       setMessages((prev) =>

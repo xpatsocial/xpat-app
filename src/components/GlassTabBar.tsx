@@ -12,10 +12,8 @@ import Animated, {
 import { colors, fonts } from '../theme';
 
 const TAB_ICONS: Record<string, string> = {
-  Explore: 'compass',
-  Community: 'users',
-  Feed: 'rss',
-  Chat: 'message-circle',
+  Places: 'map-pin',
+  People: 'users',
   Profile: 'user',
 };
 

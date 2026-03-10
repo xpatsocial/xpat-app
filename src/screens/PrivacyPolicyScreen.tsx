@@ -64,24 +64,113 @@ export default function PrivacyPolicyScreen() {
           </View>
         </View>
 
+        {/* Service Providers */}
+        <Text style={styles.sectionTitle}>Service Providers</Text>
+        <View style={styles.card}>
+          <Text style={styles.bodyText}>
+            We work with trusted third-party providers to operate and improve x/pat. Each provider only receives the minimum data necessary for their function:
+          </Text>
+          <View style={[styles.bulletRow, { marginTop: spacing.sm }]}>
+            <Feather name="database" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Supabase</Text> — authentication, database, and file storage. Receives your email, profile data, and user-generated content.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="alert-triangle" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Sentry</Text> — error tracking and crash reporting. Receives your user ID, email, and device/OS info to help us diagnose and fix bugs.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="bar-chart" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>PostHog</Text> — product analytics. Receives anonymized usage events, feature interaction data, and session metadata to help us improve the app experience.
+            </Text>
+          </View>
+        </View>
+
+        {/* Analytics & Error Tracking */}
+        <Text style={styles.sectionTitle}>Analytics & Error Tracking</Text>
+        <View style={styles.card}>
+          <Text style={styles.bodyText}>
+            To maintain app stability and improve the user experience, we use:
+          </Text>
+          <View style={[styles.bulletRow, { marginTop: spacing.sm }]}>
+            <Feather name="activity" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>
+              Sentry captures your user ID and email when errors occur so we can investigate and resolve issues quickly. Crash reports include device type, OS version, and stack traces but never include passwords or payment data.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="pie-chart" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>
+              PostHog tracks feature usage (e.g. which screens you visit, spots you view) to guide product development. Events are associated with an anonymous identifier and do not include your name or profile details.
+            </Text>
+          </View>
+        </View>
+
+        {/* Data Retention */}
+        <Text style={styles.sectionTitle}>Data Retention</Text>
+        <View style={styles.card}>
+          <View style={styles.bulletRow}>
+            <Feather name="clock" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Account data</Text> — retained for the lifetime of your account. Deleted within 7 days of an account deletion request.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="clock" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Error logs (Sentry)</Text> — automatically purged after 90 days.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="clock" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Analytics events (PostHog)</Text> — retained for 12 months, then automatically deleted.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="clock" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Push notification tokens</Text> — removed immediately upon sign-out or account deletion.
+            </Text>
+          </View>
+        </View>
+
         {/* Your Rights */}
         <Text style={styles.sectionTitle}>Your Rights</Text>
         <View style={styles.card}>
           <View style={styles.bulletRow}>
             <Feather name="eye" size={14} color={colors.amber} />
-            <Text style={styles.bulletText}>Access your data at any time</Text>
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Right of Access</Text> — view and export all your personal data at any time from Settings.
+            </Text>
           </View>
           <View style={styles.bulletRow}>
             <Feather name="trash-2" size={14} color={colors.amber} />
-            <Text style={styles.bulletText}>Delete your account and all associated data</Text>
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Right to Erasure (GDPR Art. 17)</Text> — request complete deletion of your account and all associated data. Deletion is processed within 7 days, during which you can cancel by signing back in.
+            </Text>
           </View>
           <View style={styles.bulletRow}>
             <Feather name="download" size={14} color={colors.amber} />
-            <Text style={styles.bulletText}>Export your data</Text>
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Right to Data Portability (GDPR Art. 20)</Text> — export your data in a structured, machine-readable JSON format via the "Export My Data" option in Settings.
+            </Text>
           </View>
           <View style={styles.bulletRow}>
             <Feather name="x-circle" size={14} color={colors.amber} />
-            <Text style={styles.bulletText}>Opt out of location tracking</Text>
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Right to Object</Text> — opt out of location tracking, analytics, and notifications at any time through in-app settings.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="edit" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Right to Rectification</Text> — update or correct your personal information at any time from your profile.
+            </Text>
           </View>
         </View>
 
@@ -175,6 +264,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: colors.dark.text,
     lineHeight: 20,
+  },
+  providerName: {
+    fontFamily: fonts.bodyBold,
+    color: colors.dark.text,
   },
   contactEmail: {
     fontFamily: fonts.bodyBold,

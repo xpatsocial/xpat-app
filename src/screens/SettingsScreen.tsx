@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, Alert, Switch, ActivityIndicator, Share,
+  TextInput, Alert, Switch, ActivityIndicator, Share, Modal,
+  FlatList, Pressable, Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -9,11 +10,19 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import Constants from 'expo-constants';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { colors, fonts, spacing, radius } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { usePreferences } from '../hooks/usePreferences';
+import { useTravelPlans } from '../hooks/useTravelPlans';
 import { LANGUAGES } from '../hooks/useTranslate';
+import { requestNotificationConsent } from '../lib/notifications';
+import {
+  PROFILE_PROMPTS, TRAVEL_STYLE_OPTIONS, STATUS_EMOJIS,
+  calculateProfileCompletion,
+} from '../lib/profilePrompts';
+import FeedbackSheet from '../components/FeedbackSheet';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -32,8 +41,22 @@ interface SettingsState {
   languages: string[];
   skills: string[];
   openTo: string[];
+  tagline: string;
+  travelStyle: string[];
+  workType: string;
+  prompt1Question: string;
+  prompt1Answer: string;
+  prompt2Question: string;
+  prompt2Answer: string;
+  prompt3Question: string;
+  prompt3Answer: string;
+  countriesVisited: string[];
+  nextDestination: string;
+  customStatus: string;
+  customStatusEmoji: string;
   profileVisibility: ProfileVisibility;
   showLocationOnMap: boolean;
+  locationPrecision: 'city' | 'exact';
   notifyConnections: boolean;
   notifyMessages: boolean;
   notifyNearbyNomads: boolean;
@@ -54,8 +77,22 @@ const DEFAULT_SETTINGS: SettingsState = {
   languages: [],
   skills: [],
   openTo: [],
+  tagline: '',
+  travelStyle: [],
+  workType: '',
+  prompt1Question: '',
+  prompt1Answer: '',
+  prompt2Question: '',
+  prompt2Answer: '',
+  prompt3Question: '',
+  prompt3Answer: '',
+  countriesVisited: [],
+  nextDestination: '',
+  customStatus: '',
+  customStatusEmoji: '',
   profileVisibility: 'public',
-  showLocationOnMap: true,
+  showLocationOnMap: false,
+  locationPrecision: 'city',
   notifyConnections: true,
   notifyMessages: true,
   notifyNearbyNomads: true,
@@ -89,6 +126,21 @@ export default function SettingsScreen() {
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [promptPickerSlot, setPromptPickerSlot] = useState<1 | 2 | 3 | null>(null);
+  const [countryInput, setCountryInput] = useState('');
+
+  // Travel plans (Agent 2 - Product)
+  const { myPlans, addPlan, removePlan } = useTravelPlans();
+  const [showAddPlan, setShowAddPlan] = useState(false);
+  const [planCity, setPlanCity] = useState('');
+  const [planCountry, setPlanCountry] = useState('');
+  const [planArrival, setPlanArrival] = useState(new Date());
+  const [planDeparture, setPlanDeparture] = useState<Date | null>(null);
+  const [hasDeparture, setHasDeparture] = useState(false);
+  const [addingPlan, setAddingPlan] = useState(false);
+  const [showArrivalPicker, setShowArrivalPicker] = useState(false);
+  const [showDeparturePicker, setShowDeparturePicker] = useState(false);
+  const [feedbackVisible, setFeedbackVisible] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -103,6 +155,19 @@ export default function SettingsScreen() {
         languages: profile.languages || [],
         skills: profile.skills || [],
         openTo: profile.open_to || [],
+        tagline: profile.tagline || '',
+        travelStyle: profile.travel_style || [],
+        workType: profile.work_type || '',
+        prompt1Question: profile.prompt_1_question || '',
+        prompt1Answer: profile.prompt_1_answer || '',
+        prompt2Question: profile.prompt_2_question || '',
+        prompt2Answer: profile.prompt_2_answer || '',
+        prompt3Question: profile.prompt_3_question || '',
+        prompt3Answer: profile.prompt_3_answer || '',
+        countriesVisited: profile.countries_visited || [],
+        nextDestination: profile.next_destination || '',
+        customStatus: profile.custom_status || '',
+        customStatusEmoji: profile.custom_status_emoji || '',
       }));
     }
   }, [profile]);
@@ -115,6 +180,7 @@ export default function SettingsScreen() {
       autoLoadImages: preferences.auto_load_images,
       profileVisibility: preferences.profile_visibility === 'private' ? 'hidden' as ProfileVisibility : preferences.profile_visibility as ProfileVisibility,
       showLocationOnMap: preferences.show_on_map,
+      locationPrecision: preferences.location_precision,
       notifyConnections: preferences.notify_connections,
       notifyMessages: preferences.notify_messages,
       notifyNearbyNomads: preferences.notify_nearby,
@@ -165,19 +231,53 @@ export default function SettingsScreen() {
   async function handleSave() {
     if (!user) return;
     setSaving(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({
+
+    const profileData = {
+      display_name: settings.displayName.trim(),
+      username: settings.username.trim() || null,
+      bio: settings.bio.trim() || null,
+      current_city: settings.currentCity.trim() || null,
+      home_city: settings.homeCity.trim() || null,
+      nationality: settings.nationality.trim() || null,
+      languages: settings.languages,
+      skills: settings.skills,
+      open_to: settings.openTo,
+      tagline: settings.tagline.trim() || null,
+      travel_style: settings.travelStyle,
+      work_type: settings.workType.trim() || null,
+      prompt_1_question: settings.prompt1Question || null,
+      prompt_1_answer: settings.prompt1Answer.trim() || null,
+      prompt_2_question: settings.prompt2Question || null,
+      prompt_2_answer: settings.prompt2Answer.trim() || null,
+      prompt_3_question: settings.prompt3Question || null,
+      prompt_3_answer: settings.prompt3Answer.trim() || null,
+      countries_visited: settings.countriesVisited,
+      next_destination: settings.nextDestination.trim() || null,
+      custom_status: settings.customStatus.trim() || null,
+      custom_status_emoji: settings.customStatusEmoji || null,
+      profile_completion_score: calculateProfileCompletion({
         display_name: settings.displayName.trim(),
-        username: settings.username.trim() || null,
-        bio: settings.bio.trim() || null,
-        current_city: settings.currentCity.trim() || null,
-        home_city: settings.homeCity.trim() || null,
-        nationality: settings.nationality.trim() || null,
+        bio: settings.bio.trim(),
+        avatar_url: profile?.avatar_url,
+        current_city: settings.currentCity.trim(),
+        home_city: settings.homeCity.trim(),
+        nationality: settings.nationality.trim(),
+        tagline: settings.tagline.trim(),
+        travel_style: settings.travelStyle,
+        work_type: settings.workType.trim(),
+        prompt_1_answer: settings.prompt1Answer.trim(),
+        prompt_2_answer: settings.prompt2Answer.trim(),
+        prompt_3_answer: settings.prompt3Answer.trim(),
+        countries_visited: settings.countriesVisited,
         languages: settings.languages,
         skills: settings.skills,
         open_to: settings.openTo,
-      })
+      }),
+    };
+
+    const { error } = await supabase
+      .from('profiles')
+      .update(profileData)
       .eq('id', user.id);
 
     // Batch sync all preferences to Supabase in single call
@@ -185,6 +285,7 @@ export default function SettingsScreen() {
       distance_unit: settings.distanceUnit,
       profile_visibility: settings.profileVisibility === 'hidden' ? 'private' : settings.profileVisibility,
       show_on_map: settings.showLocationOnMap,
+      location_precision: settings.locationPrecision,
       notify_connections: settings.notifyConnections,
       notify_messages: settings.notifyMessages,
       notify_nearby: settings.notifyNearbyNomads,
@@ -229,17 +330,40 @@ export default function SettingsScreen() {
   function handleDeleteAccount() {
     Alert.alert(
       'Delete Account',
-      'This will permanently delete your account and all data. This cannot be undone.',
+      'Your account and all associated data (profile, spots, posts, messages) will be permanently deleted within 7 days. You can cancel the deletion by signing back in during that period.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
+          text: 'Delete My Account',
           style: 'destructive',
-          onPress: async () => {
-            await signOut();
+          onPress: () => {
+            // Second confirmation to prevent accidental deletion
             Alert.alert(
-              'Account Deletion Requested',
-              'You have been signed out. Email alex@xpat.social to complete deletion.',
+              'Are you sure?',
+              'This action schedules your account for permanent deletion in 7 days.',
+              [
+                { text: 'Go Back', style: 'cancel' },
+                {
+                  text: 'Yes, Delete',
+                  style: 'destructive',
+                  onPress: async () => {
+                    try {
+                      const { error } = await supabase.rpc('delete_user_account');
+                      if (error) {
+                        Alert.alert('Error', error.message || 'Could not process deletion request. Please try again.');
+                        return;
+                      }
+                      await signOut();
+                      Alert.alert(
+                        'Deletion Scheduled',
+                        'Your account will be deleted within 7 days. You can cancel by signing in again.',
+                      );
+                    } catch {
+                      Alert.alert('Error', 'Something went wrong. Please try again later.');
+                    }
+                  },
+                },
+              ],
             );
           },
         },
@@ -527,6 +651,285 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* TAGLINE & IDENTITY */}
+        <SectionHeader icon="zap" title="Identity" tint={colors.amber} />
+        <View style={styles.card}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Tagline</Text>
+            <TextInput
+              style={styles.fieldInput}
+              value={settings.tagline}
+              onChangeText={(v) => updateField('tagline', v)}
+              placeholder="Frontend dev slow-traveling Southeast Asia"
+              placeholderTextColor={colors.dark.text3}
+              maxLength={80}
+            />
+            <Text style={styles.charCount}>{settings.tagline.length}/80</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>What I Do</Text>
+            <TextInput
+              style={styles.fieldInput}
+              value={settings.workType}
+              onChangeText={(v) => updateField('workType', v)}
+              placeholder="Freelance designer, startup founder, teacher..."
+              placeholderTextColor={colors.dark.text3}
+            />
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Next Destination</Text>
+            <TextInput
+              style={styles.fieldInput}
+              value={settings.nextDestination}
+              onChangeText={(v) => updateField('nextDestination', v)}
+              placeholder="Where are you headed next?"
+              placeholderTextColor={colors.dark.text3}
+            />
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Custom Status</Text>
+            <View style={styles.statusRow}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.emojiScroll}>
+                {STATUS_EMOJIS.map((emoji) => (
+                  <TouchableOpacity
+                    key={emoji}
+                    style={[
+                      styles.emojiBtn,
+                      settings.customStatusEmoji === emoji && styles.emojiBtnActive,
+                    ]}
+                    onPress={() => {
+                      updateField('customStatusEmoji', settings.customStatusEmoji === emoji ? '' : emoji);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.emojiText}>{emoji}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+            <TextInput
+              style={[styles.fieldInput, { marginTop: spacing.xs }]}
+              value={settings.customStatus}
+              onChangeText={(v) => updateField('customStatus', v)}
+              placeholder="Exploring Chiang Mai old city..."
+              placeholderTextColor={colors.dark.text3}
+              maxLength={60}
+            />
+            <Text style={styles.charCount}>{settings.customStatus.length}/60</Text>
+          </View>
+        </View>
+
+        {/* TRAVEL STYLE */}
+        <SectionHeader icon="compass" title="Travel Style" tint={colors.amber} />
+        <View style={styles.card}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Pick up to 3</Text>
+            <View style={styles.chipGrid}>
+              {TRAVEL_STYLE_OPTIONS.map((style) => {
+                const active = settings.travelStyle.includes(style);
+                const atMax = settings.travelStyle.length >= 3 && !active;
+                return (
+                  <TouchableOpacity
+                    key={style}
+                    style={[
+                      styles.chip,
+                      active && styles.chipActiveAmber,
+                      atMax && { opacity: 0.4 },
+                    ]}
+                    onPress={() => {
+                      if (atMax) return;
+                      const next = active
+                        ? settings.travelStyle.filter((s) => s !== style)
+                        : [...settings.travelStyle, style];
+                      updateField('travelStyle', next);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    activeOpacity={0.7}
+                    disabled={atMax}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActiveAmber]}>{style}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
+        {/* PROFILE PROMPTS */}
+        <SectionHeader icon="message-circle" title="Profile Prompts" tint={colors.amber} />
+        <Text style={styles.promptHint}>
+          Pick up to 3 prompts and write your answers. Profiles with prompts get 3x more engagement.
+        </Text>
+        <View style={styles.card}>
+          {([1, 2, 3] as const).map((slot) => {
+            const qKey = `prompt${slot}Question` as keyof SettingsState;
+            const aKey = `prompt${slot}Answer` as keyof SettingsState;
+            const question = settings[qKey] as string;
+            const answer = settings[aKey] as string;
+            return (
+              <React.Fragment key={slot}>
+                {slot > 1 && <View style={styles.divider} />}
+                <View style={styles.fieldGroup}>
+                  <TouchableOpacity
+                    style={styles.promptSelector}
+                    onPress={() => {
+                      setPromptPickerSlot(slot);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.promptQuestion, !question && { color: colors.dark.text3 }]}>
+                      {question || `Tap to pick prompt ${slot}`}
+                    </Text>
+                    <Feather name="chevron-down" size={14} color={colors.dark.text3} />
+                  </TouchableOpacity>
+                  {question ? (
+                    <>
+                      <TextInput
+                        style={[styles.fieldInput, { minHeight: 60, marginTop: spacing.xs }]}
+                        value={answer}
+                        onChangeText={(v) => updateField(aKey as any, v)}
+                        placeholder="Write your answer..."
+                        placeholderTextColor={colors.dark.text3}
+                        multiline
+                        maxLength={300}
+                      />
+                      <Text style={styles.charCount}>{answer.length}/300</Text>
+                    </>
+                  ) : null}
+                </View>
+              </React.Fragment>
+            );
+          })}
+        </View>
+
+        {/* COUNTRIES VISITED */}
+        <SectionHeader icon="globe" title="Countries Visited" />
+        <View style={styles.card}>
+          <View style={styles.fieldGroup}>
+            <View style={styles.countryInputRow}>
+              <TextInput
+                style={[styles.fieldInput, { flex: 1 }]}
+                value={countryInput}
+                onChangeText={setCountryInput}
+                placeholder="Add a country..."
+                placeholderTextColor={colors.dark.text3}
+                onSubmitEditing={() => {
+                  const trimmed = countryInput.trim();
+                  if (trimmed && !settings.countriesVisited.includes(trimmed)) {
+                    updateField('countriesVisited', [...settings.countriesVisited, trimmed]);
+                    setCountryInput('');
+                  }
+                }}
+                returnKeyType="done"
+              />
+              <TouchableOpacity
+                style={styles.addCountryBtn}
+                onPress={() => {
+                  const trimmed = countryInput.trim();
+                  if (trimmed && !settings.countriesVisited.includes(trimmed)) {
+                    updateField('countriesVisited', [...settings.countriesVisited, trimmed]);
+                    setCountryInput('');
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Feather name="plus" size={16} color={colors.teal} />
+              </TouchableOpacity>
+            </View>
+            {settings.countriesVisited.length > 0 && (
+              <View style={[styles.chipGrid, { marginTop: spacing.sm }]}>
+                {settings.countriesVisited.map((country) => (
+                  <TouchableOpacity
+                    key={country}
+                    style={[styles.chip, styles.chipActive]}
+                    onPress={() => {
+                      updateField('countriesVisited', settings.countriesVisited.filter((c) => c !== country));
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.chipTextActive}>{country}</Text>
+                    <Feather name="x" size={10} color={colors.teal} style={{ marginLeft: 4 }} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* TRAVEL PLANS */}
+        <SectionHeader icon="navigation" title="Where are you going next?" tint={colors.amber} />
+        <View style={styles.card}>
+          {myPlans.length === 0 ? (
+            <View style={styles.fieldGroup}>
+              <Text style={styles.settingSublabel}>No travel plans yet. Add your next destination to find overlapping nomads!</Text>
+            </View>
+          ) : (
+            myPlans.map((plan, idx) => (
+              <React.Fragment key={plan.id}>
+                {idx > 0 && <View style={styles.divider} />}
+                <View style={styles.settingRow}>
+                  <View style={[styles.settingIcon, { backgroundColor: 'rgba(232,128,58,0.12)' }]}>
+                    <Feather name="map-pin" size={16} color={colors.amber} />
+                  </View>
+                  <View style={styles.settingContent}>
+                    <Text style={styles.settingLabel}>{plan.city}, {plan.country}</Text>
+                    <Text style={styles.settingSublabel}>
+                      {new Date(plan.arrives_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      {plan.departs_at
+                        ? ` - ${new Date(plan.departs_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`
+                        : ' onwards'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      Alert.alert('Remove Plan', `Remove ${plan.city} from your travel plans?`, [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Remove',
+                          style: 'destructive',
+                          onPress: () => removePlan(plan.id),
+                        },
+                      ]);
+                    }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Feather name="x" size={16} color={colors.dark.text3} />
+                  </TouchableOpacity>
+                </View>
+              </React.Fragment>
+            ))
+          )}
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.settingRow}
+            activeOpacity={0.7}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              setPlanCity('');
+              setPlanCountry('');
+              setPlanArrival(new Date());
+              setPlanDeparture(null);
+              setHasDeparture(false);
+              setShowAddPlan(true);
+            }}
+          >
+            <View style={[styles.settingIcon, { backgroundColor: 'rgba(46,196,160,0.1)' }]}>
+              <Feather name="plus" size={16} color={colors.teal} />
+            </View>
+            <View style={styles.settingContent}>
+              <Text style={[styles.settingLabel, { color: colors.teal }]}>Add destination</Text>
+            </View>
+          </TouchableOpacity>
+        </View>
+
         {/* PRIVACY & SAFETY */}
         <SectionHeader icon="shield" title="Privacy & Safety" />
         <View style={styles.card}>
@@ -559,6 +962,25 @@ export default function SettingsScreen() {
           />
           <View style={styles.divider} />
           <SettingRow
+            icon="crosshair"
+            label="Location Precision"
+            sublabel="How precisely your location is shared"
+            right={
+              <SegmentedControl
+                options={[
+                  { label: 'City only', value: 'city' },
+                  { label: 'Exact', value: 'exact' },
+                ]}
+                value={settings.locationPrecision}
+                onSelect={(v) => {
+                  updateField('locationPrecision', v as 'city' | 'exact');
+                  updatePreference('location_precision', v as any);
+                }}
+              />
+            }
+          />
+          <View style={styles.divider} />
+          <SettingRow
             icon="slash"
             label="Blocked Users"
             sublabel="Manage your block list"
@@ -569,6 +991,13 @@ export default function SettingsScreen() {
         {/* NOTIFICATIONS */}
         <SectionHeader icon="bell" title="Notifications" />
         <View style={styles.card}>
+          <SettingRow
+            icon="bell"
+            label="Push Notifications"
+            sublabel="Enable device notifications"
+            onPress={() => requestNotificationConsent(user?.id)}
+          />
+          <View style={styles.divider} />
           <ToggleRow icon="user-plus" label="New Connections" value={settings.notifyConnections} storageKey="pref_notify_connections" settingKey="notifyConnections" />
           <View style={styles.divider} />
           <ToggleRow icon="message-circle" label="Messages" value={settings.notifyMessages} storageKey="pref_notify_messages" settingKey="notifyMessages" />
@@ -645,6 +1074,16 @@ export default function SettingsScreen() {
           <SettingRow icon="file-text" label="Terms of Service" onPress={() => navigation.navigate('Terms')} />
         </View>
 
+        {/* BETA FEEDBACK */}
+        <View style={styles.card}>
+          <SettingRow
+            icon="message-square"
+            label="Send Feedback"
+            sublabel="Help us improve x/pat"
+            onPress={() => setFeedbackVisible(true)}
+          />
+        </View>
+
         {/* DANGER ZONE */}
         <View style={[styles.card, { marginTop: spacing.lg, borderColor: 'rgba(255,107,107,0.15)' }]}>
           <SettingRow
@@ -662,6 +1101,195 @@ export default function SettingsScreen() {
 
         <Text style={styles.version}>x/pat v{appVersion} beta</Text>
       </ScrollView>
+
+      {/* Add Travel Plan Modal */}
+      <Modal visible={showAddPlan} transparent animationType="slide">
+        <View style={styles.travelModalOverlay}>
+          <View style={styles.travelModalContent}>
+            <View style={styles.travelModalHeader}>
+              <Text style={styles.travelModalTitle}>Add Destination</Text>
+              <TouchableOpacity onPress={() => setShowAddPlan(false)}>
+                <Feather name="x" size={20} color={colors.dark.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>City</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={planCity}
+                onChangeText={setPlanCity}
+                placeholder="e.g. Bangkok"
+                placeholderTextColor={colors.dark.text3}
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Country</Text>
+              <TextInput
+                style={styles.fieldInput}
+                value={planCountry}
+                onChangeText={setPlanCountry}
+                placeholder="e.g. Thailand"
+                placeholderTextColor={colors.dark.text3}
+              />
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <Text style={styles.fieldLabel}>Arrival Date</Text>
+              <TouchableOpacity
+                style={styles.fieldInput}
+                onPress={() => setShowArrivalPicker(true)}
+              >
+                <Text style={{ color: colors.dark.text, fontFamily: fonts.body, fontSize: 14 }}>
+                  {planArrival.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                </Text>
+              </TouchableOpacity>
+              {showArrivalPicker && (
+                <DateTimePicker
+                  value={planArrival}
+                  mode="date"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  minimumDate={new Date()}
+                  themeVariant="dark"
+                  onChange={(_, date) => {
+                    setShowArrivalPicker(Platform.OS === 'ios');
+                    if (date) setPlanArrival(date);
+                  }}
+                />
+              )}
+            </View>
+
+            <View style={styles.fieldGroup}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: spacing.xs }}>
+                <Text style={styles.fieldLabel}>Departure Date</Text>
+                <Switch
+                  value={hasDeparture}
+                  onValueChange={(v) => {
+                    setHasDeparture(v);
+                    if (v && !planDeparture) {
+                      const dep = new Date(planArrival);
+                      dep.setDate(dep.getDate() + 14);
+                      setPlanDeparture(dep);
+                    }
+                  }}
+                  trackColor={{ false: colors.dark.bg3, true: 'rgba(46,196,160,0.4)' }}
+                  thumbColor={hasDeparture ? colors.teal : colors.dark.text2}
+                  ios_backgroundColor={colors.dark.bg3}
+                />
+              </View>
+              {hasDeparture && (
+                <>
+                  <TouchableOpacity
+                    style={styles.fieldInput}
+                    onPress={() => setShowDeparturePicker(true)}
+                  >
+                    <Text style={{ color: colors.dark.text, fontFamily: fonts.body, fontSize: 14 }}>
+                      {planDeparture
+                        ? planDeparture.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                        : 'Select date'}
+                    </Text>
+                  </TouchableOpacity>
+                  {showDeparturePicker && (
+                    <DateTimePicker
+                      value={planDeparture || planArrival}
+                      mode="date"
+                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                      minimumDate={planArrival}
+                      themeVariant="dark"
+                      onChange={(_, date) => {
+                        setShowDeparturePicker(Platform.OS === 'ios');
+                        if (date) setPlanDeparture(date);
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.travelModalSaveBtn,
+                (!planCity.trim() || !planCountry.trim()) && { opacity: 0.4 },
+              ]}
+              disabled={!planCity.trim() || !planCountry.trim() || addingPlan}
+              onPress={async () => {
+                setAddingPlan(true);
+                const arrStr = planArrival.toISOString().split('T')[0];
+                const depStr = hasDeparture && planDeparture
+                  ? planDeparture.toISOString().split('T')[0]
+                  : null;
+                const { error } = await addPlan(planCity.trim(), planCountry.trim(), arrStr, depStr);
+                setAddingPlan(false);
+                if (error) {
+                  Alert.alert('Error', error.message);
+                } else {
+                  await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  setShowAddPlan(false);
+                }
+              }}
+            >
+              {addingPlan ? (
+                <ActivityIndicator size="small" color={colors.dark.bg} />
+              ) : (
+                <Text style={styles.travelModalSaveBtnText}>Add Destination</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Prompt Picker Modal */}
+      <Modal
+        visible={promptPickerSlot !== null}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setPromptPickerSlot(null)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setPromptPickerSlot(null)}>
+          <Pressable style={[styles.modalContent, { paddingBottom: insets.bottom + spacing.lg }]}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Pick a Prompt</Text>
+            <FlatList
+              data={PROFILE_PROMPTS}
+              keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => {
+                const isSelected =
+                  (promptPickerSlot === 1 && settings.prompt1Question === item.question) ||
+                  (promptPickerSlot === 2 && settings.prompt2Question === item.question) ||
+                  (promptPickerSlot === 3 && settings.prompt3Question === item.question);
+                return (
+                  <TouchableOpacity
+                    style={[styles.promptOption, isSelected && styles.promptOptionSelected]}
+                    onPress={() => {
+                      if (promptPickerSlot) {
+                        const qKey = `prompt${promptPickerSlot}Question` as keyof SettingsState;
+                        updateField(qKey as any, item.question);
+                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      }
+                      setPromptPickerSlot(null);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.promptCategoryBadge}>
+                      <Text style={styles.promptCategoryText}>{item.category}</Text>
+                    </View>
+                    <Text style={styles.promptOptionText}>{item.question}</Text>
+                    {isSelected && <Feather name="check" size={16} color={colors.teal} />}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      <FeedbackSheet
+        visible={feedbackVisible}
+        onClose={() => setFeedbackVisible(false)}
+        screenContext="settings"
+      />
     </View>
   );
 }
@@ -822,11 +1450,184 @@ const styles = StyleSheet.create({
     color: colors.dark.text,
   },
 
+  // Amber chip variant for travel style
+  chipActiveAmber: {
+    backgroundColor: 'rgba(232,128,58,0.15)',
+    borderColor: colors.amber,
+  },
+  chipTextActiveAmber: {
+    color: colors.amber,
+    fontFamily: fonts.bodyBold,
+  },
+
+  // Status row
+  statusRow: { flexDirection: 'row' as const, alignItems: 'center' as const },
+  emojiScroll: { flexGrow: 0 },
+  emojiBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.dark.bg,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    marginRight: 6,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
+  emojiBtnActive: {
+    borderColor: colors.teal,
+    backgroundColor: 'rgba(46,196,160,0.12)',
+  },
+  emojiText: { fontSize: 18 },
+
+  // Prompt hint
+  promptHint: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.dark.text2,
+    marginBottom: spacing.sm,
+    lineHeight: 16,
+  },
+
+  // Prompt selector
+  promptSelector: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'space-between' as const,
+    backgroundColor: colors.dark.bg,
+    borderRadius: radius.sm,
+    padding: spacing.sm + 2,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
+  promptQuestion: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.amber,
+    flex: 1,
+  },
+
+  // Country input
+  countryInputRow: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    gap: spacing.xs,
+  },
+  addCountryBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: 'rgba(46,196,160,0.12)',
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+    borderWidth: 1,
+    borderColor: 'rgba(46,196,160,0.3)',
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end' as const,
+  },
+  modalContent: {
+    backgroundColor: colors.dark.bg2,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    maxHeight: '70%' as any,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  modalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.dark.bg4,
+    alignSelf: 'center' as const,
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    fontFamily: fonts.heading,
+    fontSize: 20,
+    color: colors.dark.text,
+    marginBottom: spacing.md,
+  },
+  promptOption: {
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingVertical: spacing.sm + 4,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.sm,
+    marginBottom: spacing.xs,
+    gap: spacing.sm,
+  },
+  promptOptionSelected: {
+    backgroundColor: 'rgba(46,196,160,0.08)',
+  },
+  promptOptionText: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.dark.text,
+    flex: 1,
+  },
+  promptCategoryBadge: {
+    backgroundColor: colors.dark.bg3,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  promptCategoryText: {
+    fontFamily: fonts.body,
+    fontSize: 9,
+    color: colors.dark.text2,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  },
+
   version: {
     fontFamily: fonts.body,
     fontSize: 11,
     color: colors.dark.text3,
     textAlign: 'center',
     marginTop: spacing.xl,
+  },
+
+  // Add Travel Plan Modal
+  travelModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'flex-end' as const,
+  },
+  travelModalContent: {
+    backgroundColor: colors.dark.bg2,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
+  travelModalHeader: {
+    flexDirection: 'row' as const,
+    justifyContent: 'space-between' as const,
+    alignItems: 'center' as const,
+    marginBottom: spacing.lg,
+  },
+  travelModalTitle: {
+    fontFamily: fonts.heading,
+    fontSize: 22,
+    color: colors.dark.text,
+  },
+  travelModalSaveBtn: {
+    backgroundColor: colors.teal,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm + 4,
+    alignItems: 'center' as const,
+    marginTop: spacing.md,
+  },
+  travelModalSaveBtnText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 14,
+    color: colors.dark.bg,
   },
 });

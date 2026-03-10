@@ -5,7 +5,6 @@ import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
-import { registerForPushNotifications } from '../lib/notifications';
 import { setUser as setSentryUser, clearUser as clearSentryUser } from '../lib/sentry';
 
 interface AuthContextType {
@@ -14,9 +13,10 @@ interface AuthContextType {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, name: string, birthdate?: string) => Promise<{ error: any }>;
   signInWithApple: () => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -41,8 +41,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         fetchProfile(session.user.id);
         setSentryUser(session.user.id, session.user.email);
-        // Register for push notifications after sign-in (deferred, non-blocking)
-        registerForPushNotifications(session.user.id);
       } else {
         setProfile(null);
         clearSentryUser();
@@ -61,16 +59,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (data) setProfile(data);
   }
 
+  async function refreshProfile() {
+    if (user) await fetchProfile(user.id);
+  }
+
   async function signIn(email: string, password: string) {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     return { error };
   }
 
-  async function signUp(email: string, password: string, name: string) {
+  async function signUp(email: string, password: string, name: string, birthdate?: string) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name } },
+      options: { data: { full_name: name, ...(birthdate ? { birthdate } : {}) } },
     });
     return { error };
   }
@@ -127,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signInWithApple, signOut }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signInWithApple, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

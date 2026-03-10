@@ -52,24 +52,31 @@ export default function TermsOfServiceScreen() {
         <View style={styles.card}>
           <View style={styles.bulletRow}>
             <Feather name="x" size={14} color={colors.amber} />
-            <Text style={styles.bulletText}>No harassment, hate speech, or bullying</Text>
-          </View>
-          <View style={styles.bulletRow}>
-            <Feather name="x" size={14} color={colors.amber} />
             <Text style={styles.bulletText}>No spam or unsolicited advertising</Text>
           </View>
           <View style={styles.bulletRow}>
             <Feather name="x" size={14} color={colors.amber} />
-            <Text style={styles.bulletText}>No fake reviews or misleading content</Text>
+            <Text style={styles.bulletText}>No harassment, hate speech, or bullying</Text>
           </View>
           <View style={styles.bulletRow}>
             <Feather name="x" size={14} color={colors.amber} />
-            <Text style={styles.bulletText}>No illegal content or activity</Text>
+            <Text style={styles.bulletText}>No child sexual abuse material (CSAM) — reported to authorities immediately</Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="x" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>No intellectual property infringement</Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="x" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>No scams, fraud, or misleading content</Text>
           </View>
           <View style={styles.bulletRow}>
             <Feather name="heart" size={14} color={colors.teal} />
             <Text style={styles.bulletText}>Respect other cultures and communities</Text>
           </View>
+          <Text style={[styles.bodyText, { marginTop: spacing.sm }]}>
+            Reports are reviewed within 24 hours. If your content is removed, you may appeal the decision by emailing alex@xpat.social.
+          </Text>
         </View>
 
         {/* User Content */}
@@ -89,12 +96,37 @@ export default function TermsOfServiceScreen() {
           </View>
         </View>
 
-        {/* Affiliate Links */}
-        <Text style={styles.sectionTitle}>Affiliate Links</Text>
+        {/* Affiliate Relationships */}
+        <Text style={styles.sectionTitle}>Affiliate Relationships</Text>
         <View style={styles.card}>
           <Text style={styles.bodyText}>
-            Some links within x/pat may be affiliate links that earn us a commission at no additional cost to you. Affiliate links are clearly marked so you always know when a link is sponsored.
+            x/pat partners with travel and lifestyle companies to recommend services we believe are valuable to digital nomads. When you interact with partner links, x/pat may earn a commission at no additional cost to you. All affiliate links are clearly marked as "Sponsored." Partner terms and conditions apply separately — please review them before completing any transaction. x/pat does not control partner pricing, availability, or service quality.
           </Text>
+        </View>
+
+        {/* Content Takedown (DMCA) */}
+        <Text style={styles.sectionTitle}>Content Takedown (DMCA)</Text>
+        <View style={styles.card}>
+          <Text style={styles.bodyText}>
+            If you believe content on x/pat infringes your copyright or intellectual property rights, please submit a takedown request to alex@xpat.social with the following details: a description of the copyrighted work, the location of the infringing content within the app, your contact information, and a statement that you have a good-faith belief the use is unauthorized. We will review and respond to valid claims within 10 business days.
+          </Text>
+        </View>
+
+        {/* Age Requirements */}
+        <Text style={styles.sectionTitle}>Age Requirements</Text>
+        <View style={styles.card}>
+          <View style={styles.bulletRow}>
+            <Feather name="alert-circle" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>You must be at least 13 years old to create an account and use x/pat</Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="alert-circle" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>Users aged 13–16 in the European Union require verifiable parental or guardian consent</Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="alert-circle" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>Accounts found to violate age requirements may be terminated without notice</Text>
+          </View>
         </View>
 
         {/* Disclaimers */}
