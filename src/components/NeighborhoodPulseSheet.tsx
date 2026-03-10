@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated,
-  PanResponder, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Feather } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { colors, fonts, spacing, radius } from '../theme';
 import { NeighborhoodTag, SAFETY_TAGS, VIBE_TAGS } from '../types';
 
@@ -16,6 +23,13 @@ interface NeighborhoodPulseSheetProps {
 }
 
 const SHEET_HEIGHT = 420;
+const DISMISS_THRESHOLD = 80;
+
+const SPRING_CONFIG = {
+  damping: 20,
+  stiffness: 200,
+  mass: 0.8,
+};
 
 const TAG_ICONS: Partial<Record<NeighborhoodTag, string>> = {
   'feels safe': 'shield',
@@ -40,48 +54,39 @@ const TAG_ICONS: Partial<Record<NeighborhoodTag, string>> = {
 export default function NeighborhoodPulseSheet({
   visible, coordinate, onClose, onSubmit,
 }: NeighborhoodPulseSheetProps) {
-  const translateY = React.useRef(new Animated.Value(SHEET_HEIGHT)).current;
+  const translateY = useSharedValue(SHEET_HEIGHT);
+  const context = useSharedValue(0);
   const [selectedTags, setSelectedTags] = useState<NeighborhoodTag[]>([]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible) {
       setSelectedTags([]);
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 65,
-        friction: 11,
-      }).start();
+      translateY.value = withSpring(0, SPRING_CONFIG);
     } else {
-      Animated.timing(translateY, {
-        toValue: SHEET_HEIGHT,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      translateY.value = withTiming(SHEET_HEIGHT, { duration: 200 });
     }
   }, [visible]);
 
-  const panResponder = React.useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 10 && Math.abs(g.dx) < g.dy,
-      onPanResponderMove: (_, g) => {
-        if (g.dy > 0) translateY.setValue(g.dy);
-      },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) {
-          onClose();
-        } else {
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 65,
-            friction: 11,
-          }).start();
-        }
-      },
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      context.value = translateY.value;
     })
-  ).current;
+    .onUpdate((e) => {
+      const newY = context.value + e.translationY;
+      translateY.value = Math.max(0, newY);
+    })
+    .onEnd((e) => {
+      if (e.translationY > DISMISS_THRESHOLD || e.velocityY > 500) {
+        translateY.value = withTiming(SHEET_HEIGHT, { duration: 200 });
+        runOnJS(onClose)();
+      } else {
+        translateY.value = withSpring(0, SPRING_CONFIG);
+      }
+    });
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   function toggleTag(tag: NeighborhoodTag) {
     setSelectedTags((prev) =>
@@ -96,139 +101,131 @@ export default function NeighborhoodPulseSheet({
 
   if (!visible || !coordinate) return null;
 
-  const safetySelected = selectedTags.filter((t) =>
-    (SAFETY_TAGS as string[]).includes(t)
-  );
-  const vibeSelected = selectedTags.filter((t) =>
-    (VIBE_TAGS as string[]).includes(t)
-  );
-
   return (
-    <Animated.View
-      style={[styles.container, { transform: [{ translateY }] }]}
-      {...panResponder.panHandlers}
-    >
-      <BlurView tint="dark" intensity={90} style={styles.blur}>
-        <View style={styles.handle} />
+    <GestureDetector gesture={panGesture}>
+      <Animated.View style={[styles.container, sheetStyle]}>
+        <BlurView tint="dark" intensity={90} style={styles.blur}>
+          <View style={styles.handle} />
 
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.title}>Rate this neighborhood</Text>
-            <Text style={styles.subtitle}>
-              {coordinate.latitude.toFixed(4)}, {coordinate.longitude.toFixed(4)}
-            </Text>
+          <View style={styles.header}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.title}>Rate this neighborhood</Text>
+              <Text style={styles.subtitle}>
+                {coordinate.latitude.toFixed(4)}, {coordinate.longitude.toFixed(4)}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+              <Feather name="x" size={18} color={colors.dark.text2} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Feather name="x" size={18} color={colors.dark.text2} />
-          </TouchableOpacity>
-        </View>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          style={styles.scrollArea}
-          contentContainerStyle={styles.scrollContent}
-        >
-          <Text style={styles.sectionLabel}>
-            <Feather name="shield" size={11} color={colors.teal} /> Safety
-          </Text>
-          <View style={styles.tagGrid}>
-            {SAFETY_TAGS.map((tag) => {
-              const active = selectedTags.includes(tag);
-              const isCaution = tag === 'stay alert' || tag === 'avoid at night';
-              return (
-                <TouchableOpacity
-                  key={tag}
-                  style={[
-                    styles.tag,
-                    active && {
-                      backgroundColor: isCaution
-                        ? 'rgba(232,128,58,0.15)'
-                        : 'rgba(46,196,160,0.15)',
-                      borderColor: isCaution
-                        ? 'rgba(232,128,58,0.4)'
-                        : 'rgba(46,196,160,0.4)',
-                    },
-                  ]}
-                  onPress={() => toggleTag(tag)}
-                >
-                  <Feather
-                    name={(TAG_ICONS[tag] || 'tag') as any}
-                    size={12}
-                    color={
-                      active
-                        ? isCaution
-                          ? colors.amber
-                          : colors.teal
-                        : colors.dark.text2
-                    }
-                  />
-                  <Text
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={styles.scrollArea}
+            contentContainerStyle={styles.scrollContent}
+          >
+            <Text style={styles.sectionLabel}>
+              <Feather name="shield" size={11} color={colors.teal} /> Safety
+            </Text>
+            <View style={styles.tagGrid}>
+              {SAFETY_TAGS.map((tag) => {
+                const active = selectedTags.includes(tag);
+                const isCaution = tag === 'stay alert' || tag === 'avoid at night';
+                return (
+                  <TouchableOpacity
+                    key={tag}
                     style={[
-                      styles.tagText,
+                      styles.tag,
                       active && {
-                        color: isCaution ? colors.amber : colors.teal,
+                        backgroundColor: isCaution
+                          ? 'rgba(232,128,58,0.15)'
+                          : 'rgba(46,196,160,0.15)',
+                        borderColor: isCaution
+                          ? 'rgba(232,128,58,0.4)'
+                          : 'rgba(46,196,160,0.4)',
                       },
                     ]}
+                    onPress={() => toggleTag(tag)}
                   >
-                    {tag}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                    <Feather
+                      name={(TAG_ICONS[tag] || 'tag') as any}
+                      size={12}
+                      color={
+                        active
+                          ? isCaution
+                            ? colors.amber
+                            : colors.teal
+                          : colors.dark.text2
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.tagText,
+                        active && {
+                          color: isCaution ? colors.amber : colors.teal,
+                        },
+                      ]}
+                    >
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
-          <Text style={[styles.sectionLabel, { marginTop: spacing.md }]}>
-            <Feather name="zap" size={11} color={colors.amber} /> Vibes
-          </Text>
-          <View style={styles.tagGrid}>
-            {VIBE_TAGS.map((tag) => {
-              const active = selectedTags.includes(tag);
-              return (
-                <TouchableOpacity
-                  key={tag}
-                  style={[
-                    styles.tag,
-                    active && {
-                      backgroundColor: 'rgba(232,128,58,0.15)',
-                      borderColor: 'rgba(232,128,58,0.4)',
-                    },
-                  ]}
-                  onPress={() => toggleTag(tag)}
-                >
-                  <Feather
-                    name={(TAG_ICONS[tag] || 'tag') as any}
-                    size={12}
-                    color={active ? colors.amber : colors.dark.text2}
-                  />
-                  <Text
+            <Text style={[styles.sectionLabel, { marginTop: spacing.md }]}>
+              <Feather name="zap" size={11} color={colors.amber} /> Vibes
+            </Text>
+            <View style={styles.tagGrid}>
+              {VIBE_TAGS.map((tag) => {
+                const active = selectedTags.includes(tag);
+                return (
+                  <TouchableOpacity
+                    key={tag}
                     style={[
-                      styles.tagText,
-                      active && { color: colors.amber },
+                      styles.tag,
+                      active && {
+                        backgroundColor: 'rgba(232,128,58,0.15)',
+                        borderColor: 'rgba(232,128,58,0.4)',
+                      },
                     ]}
+                    onPress={() => toggleTag(tag)}
                   >
-                    {tag}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-        </ScrollView>
+                    <Feather
+                      name={(TAG_ICONS[tag] || 'tag') as any}
+                      size={12}
+                      color={active ? colors.amber : colors.dark.text2}
+                    />
+                    <Text
+                      style={[
+                        styles.tagText,
+                        active && { color: colors.amber },
+                      ]}
+                    >
+                      {tag}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </ScrollView>
 
-        <TouchableOpacity
-          style={[
-            styles.submitBtn,
-            selectedTags.length === 0 && styles.submitBtnDisabled,
-          ]}
-          onPress={handleSubmit}
-          disabled={selectedTags.length === 0}
-        >
-          <Feather name="check" size={16} color={colors.dark.bg} />
-          <Text style={styles.submitText}>
-            Share pulse{selectedTags.length > 0 ? ` (${selectedTags.length})` : ''}
-          </Text>
-        </TouchableOpacity>
-      </BlurView>
-    </Animated.View>
+          <TouchableOpacity
+            style={[
+              styles.submitBtn,
+              selectedTags.length === 0 && styles.submitBtnDisabled,
+            ]}
+            onPress={handleSubmit}
+            disabled={selectedTags.length === 0}
+          >
+            <Feather name="check" size={16} color={colors.dark.bg} />
+            <Text style={styles.submitText}>
+              Share pulse{selectedTags.length > 0 ? ` (${selectedTags.length})` : ''}
+            </Text>
+          </TouchableOpacity>
+        </BlurView>
+      </Animated.View>
+    </GestureDetector>
   );
 }
 

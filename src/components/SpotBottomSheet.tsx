@@ -1,16 +1,31 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated,
-  PanResponder, Linking, Share,
+  View, Text, StyleSheet, TouchableOpacity,
+  Linking, Share,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Feather } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { colors, fonts, spacing, radius } from '../theme';
 import { Spot } from '../types';
 import CheckInButton from './CheckInButton';
 import AffiliateCard from './AffiliateCard';
 
 const SHEET_HEIGHT = 380;
+const DISMISS_THRESHOLD = 80;
+
+const SPRING_CONFIG = {
+  damping: 20,
+  stiffness: 200,
+  mass: 0.8,
+};
 
 const CATEGORY_EMOJI: Record<string, string> = {
   cafe: '☕',
@@ -38,149 +53,157 @@ function formatDistance(km: number): string {
 }
 
 export default function SpotBottomSheet({ spot, onClose, onSave, onAddNote, distanceKm, userId }: SpotBottomSheetProps) {
-  const translateY = React.useRef(new Animated.Value(SHEET_HEIGHT)).current;
+  const translateY = useSharedValue(SHEET_HEIGHT);
+  const context = useSharedValue(0);
+  const opacity = useSharedValue(0);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (spot) {
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 65,
-        friction: 11,
-      }).start();
+      translateY.value = withSpring(0, SPRING_CONFIG);
+      opacity.value = withTiming(1, { duration: 200 });
     } else {
-      Animated.timing(translateY, {
-        toValue: SHEET_HEIGHT,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      translateY.value = withTiming(SHEET_HEIGHT, { duration: 200 });
+      opacity.value = withTiming(0, { duration: 150 });
     }
   }, [spot]);
 
-  const panResponder = React.useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 5,
-      onPanResponderMove: (_, g) => {
-        if (g.dy > 0) translateY.setValue(g.dy);
-      },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) {
-          onClose();
-        } else {
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 65,
-            friction: 11,
-          }).start();
-        }
-      },
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      context.value = translateY.value;
     })
-  ).current;
+    .onUpdate((e) => {
+      // Only allow dragging down
+      const newY = context.value + e.translationY;
+      translateY.value = Math.max(0, newY);
+    })
+    .onEnd((e) => {
+      if (e.translationY > DISMISS_THRESHOLD || e.velocityY > 500) {
+        translateY.value = withTiming(SHEET_HEIGHT, { duration: 200 });
+        opacity.value = withTiming(0, { duration: 150 });
+        runOnJS(onClose)();
+      } else {
+        translateY.value = withSpring(0, SPRING_CONFIG);
+      }
+    });
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  const backdropStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value * 0.3,
+  }));
 
   if (!spot) return null;
 
   const isCommunity = !!spot.created_by;
 
   return (
-    <Animated.View
-      style={[styles.container, { transform: [{ translateY }] }]}
-      {...panResponder.panHandlers}
-    >
-      <BlurView tint="dark" intensity={90} style={styles.blur}>
-        <View style={styles.handle} />
+    <>
+      {/* Backdrop dim */}
+      <Animated.View style={[styles.backdrop, backdropStyle]} pointerEvents="none" />
 
-        <View style={styles.header}>
-          <View style={{ flex: 1 }}>
-            <View style={styles.titleRow}>
-              <Text style={styles.name}>{spot.name}</Text>
-              {isCommunity && (
-                <View style={styles.communityBadge}>
-                  <Feather name="users" size={10} color={colors.teal} />
-                  <Text style={styles.badgeText}>community</Text>
+      <GestureDetector gesture={panGesture}>
+        <Animated.View style={[styles.container, sheetStyle]}>
+          <BlurView tint="dark" intensity={90} style={styles.blur}>
+            <View style={styles.handle} />
+
+            <View style={styles.header}>
+              <View style={{ flex: 1 }}>
+                <View style={styles.titleRow}>
+                  <Text style={styles.name}>{spot.name}</Text>
+                  {isCommunity && (
+                    <View style={styles.communityBadge}>
+                      <Feather name="users" size={10} color={colors.teal} />
+                      <Text style={styles.badgeText}>community</Text>
+                    </View>
+                  )}
                 </View>
-              )}
-            </View>
-            <View style={styles.metaRow}>
-              <Text style={styles.category}>
-                {CATEGORY_EMOJI[spot.category]} {spot.category}
-              </Text>
-              <Text style={styles.dot}>·</Text>
-              <Text style={styles.location}>{spot.city}, {spot.country}</Text>
-              {distanceKm != null && (
-                <>
+                <View style={styles.metaRow}>
+                  <Text style={styles.category}>
+                    {CATEGORY_EMOJI[spot.category]} {spot.category}
+                  </Text>
                   <Text style={styles.dot}>·</Text>
-                  <Text style={styles.distance}>{formatDistance(distanceKm)}</Text>
-                </>
-              )}
+                  <Text style={styles.location}>{spot.city}, {spot.country}</Text>
+                  {distanceKm != null && (
+                    <>
+                      <Text style={styles.dot}>·</Text>
+                      <Text style={styles.distance}>{formatDistance(distanceKm)}</Text>
+                    </>
+                  )}
+                </View>
+              </View>
+              <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+                <Feather name="x" size={18} color={colors.dark.text2} />
+              </TouchableOpacity>
             </View>
-          </View>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Feather name="x" size={18} color={colors.dark.text2} />
-          </TouchableOpacity>
-        </View>
 
-        {spot.note && (
-          <View style={styles.noteSection}>
-            <Feather name="message-circle" size={12} color={colors.teal} />
-            <Text style={styles.noteText}>"{spot.note}"</Text>
-          </View>
-        )}
+            {spot.note && (
+              <View style={styles.noteSection}>
+                <Feather name="message-circle" size={12} color={colors.teal} />
+                <Text style={styles.noteText}>"{spot.note}"</Text>
+              </View>
+            )}
 
-        {spot.profiles?.display_name && (
-          <View style={styles.sharedBy}>
-            <View style={styles.miniAvatar}>
-              <Text style={styles.miniAvatarText}>
-                {spot.profiles?.display_name?.[0]?.toUpperCase() ?? '?'}
-              </Text>
+            {spot.profiles?.display_name && (
+              <View style={styles.sharedBy}>
+                <View style={styles.miniAvatar}>
+                  <Text style={styles.miniAvatarText}>
+                    {spot.profiles?.display_name?.[0]?.toUpperCase() ?? '?'}
+                  </Text>
+                </View>
+                <Text style={styles.sharedText}>
+                  Shared by <Text style={{ color: colors.dark.text }}>{spot.profiles.display_name}</Text>
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.actions}>
+              <TouchableOpacity style={styles.actionPrimary} onPress={() => onSave?.(spot)}>
+                <Feather name="bookmark" size={16} color={colors.dark.bg} />
+                <Text style={styles.actionPrimaryText}>Save</Text>
+              </TouchableOpacity>
+              <CheckInButton
+                spotId={spot.id}
+                spotName={spot.name}
+                userId={userId}
+                onCheckIn={() => {}}
+              />
+              <TouchableOpacity style={styles.actionIcon} onPress={() => {
+                Share.share({
+                  message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!`,
+                  title: spot.name,
+                });
+              }}>
+                <Feather name="share" size={16} color={colors.dark.text2} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.actionIcon} onPress={() => {
+                if (spot.lat && spot.lng) {
+                  Linking.openURL(`https://maps.apple.com/?daddr=${spot.lat},${spot.lng}`);
+                }
+              }}>
+                <Feather name="navigation" size={16} color={colors.dark.text2} />
+              </TouchableOpacity>
             </View>
-            <Text style={styles.sharedText}>
-              Shared by <Text style={{ color: colors.dark.text }}>{spot.profiles.display_name}</Text>
-            </Text>
-          </View>
-        )}
 
-        <View style={styles.actions}>
-          <TouchableOpacity style={styles.actionPrimary} onPress={() => onSave?.(spot)}>
-            <Feather name="bookmark" size={16} color={colors.dark.bg} />
-            <Text style={styles.actionPrimaryText}>Save</Text>
-          </TouchableOpacity>
-          <CheckInButton
-            spotId={spot.id}
-            spotName={spot.name}
-            userId={userId}
-            onCheckIn={() => {}}
-          />
-          <TouchableOpacity style={styles.actionIcon} onPress={() => {
-            Share.share({
-              message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!`,
-              title: spot.name,
-            });
-          }}>
-            <Feather name="share" size={16} color={colors.dark.text2} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionIcon} onPress={() => {
-            if (spot.lat && spot.lng) {
-              Linking.openURL(`https://maps.apple.com/?daddr=${spot.lat},${spot.lng}`);
-            }
-          }}>
-            <Feather name="navigation" size={16} color={colors.dark.text2} />
-          </TouchableOpacity>
-        </View>
-
-        <AffiliateCard
-          category={spot.category}
-          city={spot.city}
-          country={spot.country}
-          onPress={(_partner, url) => Linking.openURL(url)}
-        />
-      </BlurView>
-    </Animated.View>
+            <AffiliateCard
+              category={spot.category}
+              city={spot.city}
+              country={spot.country}
+              onPress={(_partner, url) => Linking.openURL(url)}
+            />
+          </BlurView>
+        </Animated.View>
+      </GestureDetector>
+    </>
   );
 }
 
 const styles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#000',
+  },
   container: {
     position: 'absolute',
     bottom: 90,

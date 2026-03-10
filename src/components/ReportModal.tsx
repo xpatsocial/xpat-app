@@ -1,10 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Animated,
-  PanResponder,
+  View, Text, StyleSheet, TouchableOpacity,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Feather } from '@expo/vector-icons';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+  withTiming,
+  runOnJS,
+} from 'react-native-reanimated';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { colors, fonts, spacing, radius } from '../theme';
 
 interface ReportModalProps {
@@ -17,6 +24,13 @@ interface ReportModalProps {
 
 const REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Misinformation'];
 const SHEET_HEIGHT = 340;
+const DISMISS_THRESHOLD = 80;
+
+const SPRING_CONFIG = {
+  damping: 20,
+  stiffness: 200,
+  mass: 0.8,
+};
 
 export default function ReportModal({
   visible,
@@ -25,48 +39,39 @@ export default function ReportModal({
   onClose,
   onSubmit,
 }: ReportModalProps) {
-  const translateY = React.useRef(new Animated.Value(SHEET_HEIGHT)).current;
+  const translateY = useSharedValue(SHEET_HEIGHT);
+  const context = useSharedValue(0);
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (visible) {
       setSelectedReason(null);
-      Animated.spring(translateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 65,
-        friction: 11,
-      }).start();
+      translateY.value = withSpring(0, SPRING_CONFIG);
     } else {
-      Animated.timing(translateY, {
-        toValue: SHEET_HEIGHT,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      translateY.value = withTiming(SHEET_HEIGHT, { duration: 200 });
     }
   }, [visible]);
 
-  const panResponder = React.useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => false,
-      onMoveShouldSetPanResponder: (_, g) => g.dy > 10 && Math.abs(g.dx) < g.dy,
-      onPanResponderMove: (_, g) => {
-        if (g.dy > 0) translateY.setValue(g.dy);
-      },
-      onPanResponderRelease: (_, g) => {
-        if (g.dy > 80) {
-          onClose();
-        } else {
-          Animated.spring(translateY, {
-            toValue: 0,
-            useNativeDriver: true,
-            tension: 65,
-            friction: 11,
-          }).start();
-        }
-      },
+  const panGesture = Gesture.Pan()
+    .onStart(() => {
+      context.value = translateY.value;
     })
-  ).current;
+    .onUpdate((e) => {
+      const newY = context.value + e.translationY;
+      translateY.value = Math.max(0, newY);
+    })
+    .onEnd((e) => {
+      if (e.translationY > DISMISS_THRESHOLD || e.velocityY > 500) {
+        translateY.value = withTiming(SHEET_HEIGHT, { duration: 200 });
+        runOnJS(onClose)();
+      } else {
+        translateY.value = withSpring(0, SPRING_CONFIG);
+      }
+    });
+
+  const sheetStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   function handleSubmit() {
     if (!selectedReason) return;
@@ -76,65 +81,64 @@ export default function ReportModal({
   if (!visible) return null;
 
   return (
-    <Animated.View
-      style={[styles.container, { transform: [{ translateY }] }]}
-      {...panResponder.panHandlers}
-    >
-      <BlurView tint="dark" intensity={90} style={styles.blur}>
-        <View style={styles.handle} />
+    <GestureDetector gesture={panGesture}>
+      <Animated.View style={[styles.container, sheetStyle]}>
+        <BlurView tint="dark" intensity={90} style={styles.blur}>
+          <View style={styles.handle} />
 
-        <View style={styles.header}>
-          <Text style={styles.title}>Report {targetType}</Text>
-          <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-            <Feather name="x" size={18} color={colors.dark.text2} />
-          </TouchableOpacity>
-        </View>
+          <View style={styles.header}>
+            <Text style={styles.title}>Report {targetType}</Text>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+              <Feather name="x" size={18} color={colors.dark.text2} />
+            </TouchableOpacity>
+          </View>
 
-        <Text style={styles.subtitle}>
-          Why are you reporting this {targetType}?
-        </Text>
+          <Text style={styles.subtitle}>
+            Why are you reporting this {targetType}?
+          </Text>
 
-        <View style={styles.reasonGrid}>
-          {REASONS.map((reason) => {
-            const active = selectedReason === reason;
-            return (
-              <TouchableOpacity
-                key={reason}
-                style={[styles.reasonPill, active && styles.reasonPillActive]}
-                onPress={() => setSelectedReason(reason)}
-                activeOpacity={0.7}
-              >
-                <Text
-                  style={[
-                    styles.reasonText,
-                    active && styles.reasonTextActive,
-                  ]}
+          <View style={styles.reasonGrid}>
+            {REASONS.map((reason) => {
+              const active = selectedReason === reason;
+              return (
+                <TouchableOpacity
+                  key={reason}
+                  style={[styles.reasonPill, active && styles.reasonPillActive]}
+                  onPress={() => setSelectedReason(reason)}
+                  activeOpacity={0.7}
                 >
-                  {reason}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                  <Text
+                    style={[
+                      styles.reasonText,
+                      active && styles.reasonTextActive,
+                    ]}
+                  >
+                    {reason}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
 
-        <View style={styles.actions}>
-          <TouchableOpacity
-            style={[
-              styles.submitBtn,
-              !selectedReason && styles.submitBtnDisabled,
-            ]}
-            onPress={handleSubmit}
-            disabled={!selectedReason}
-          >
-            <Text style={styles.submitText}>Submit Report</Text>
-          </TouchableOpacity>
+          <View style={styles.actions}>
+            <TouchableOpacity
+              style={[
+                styles.submitBtn,
+                !selectedReason && styles.submitBtnDisabled,
+              ]}
+              onPress={handleSubmit}
+              disabled={!selectedReason}
+            >
+              <Text style={styles.submitText}>Submit Report</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
-            <Text style={styles.cancelText}>Cancel</Text>
-          </TouchableOpacity>
-        </View>
-      </BlurView>
-    </Animated.View>
+            <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
+              <Text style={styles.cancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </BlurView>
+      </Animated.View>
+    </GestureDetector>
   );
 }
 

@@ -11,7 +11,14 @@
       "expo-location",
       "expo-image-picker",
       "expo-splash-screen",
-      "@sentry/react-native"
+      "@sentry/react-native",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#2EC4A0"
+        }
+      ]
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -21,6 +28,9 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.aychholdings.xpat",
+      "entitlements": {
+        "aps-environment": "production"
+      },
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "x/pat uses your location to show nearby spots, cafes, and coworking spaces shared by other nomads.",

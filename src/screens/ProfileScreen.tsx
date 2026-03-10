@@ -1,9 +1,14 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
   TextInput, Alert, ActivityIndicator, Linking, Share,
+  LayoutAnimation, UIManager, Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts, spacing, radius } from '../theme';
@@ -21,6 +26,8 @@ export default function ProfileScreen() {
   const [bio, setBio] = useState('');
   const [currentCity, setCurrentCity] = useState('');
   const [saving, setSaving] = useState(false);
+  const [spotsExpanded, setSpotsExpanded] = useState(false);
+  const SPOTS_PREVIEW_COUNT = 5;
 
   useEffect(() => {
     if (profile) {
@@ -174,6 +181,25 @@ export default function ProfileScreen() {
 
   const partners = Object.values(AFFILIATE_PARTNERS);
 
+  // Group spots by country for collapsible display
+  const spotsByCountry = useMemo(() => {
+    const groups: Record<string, Spot[]> = {};
+    mySpots.forEach(s => {
+      const key = s.country || 'Unknown';
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(s);
+    });
+    return Object.entries(groups).sort((a, b) => b[1].length - a[1].length);
+  }, [mySpots]);
+
+  const visibleSpots = spotsExpanded ? mySpots : mySpots.slice(0, SPOTS_PREVIEW_COUNT);
+  const hasMoreSpots = mySpots.length > SPOTS_PREVIEW_COUNT;
+
+  function toggleSpotsExpanded() {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSpotsExpanded(!spotsExpanded);
+  }
+
   return (
     <View style={styles.container}>
       <BrandHeader rightAction={
@@ -249,10 +275,40 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.sectionHeader}>
+        <TouchableOpacity
+          style={styles.sectionHeader}
+          onPress={hasMoreSpots ? toggleSpotsExpanded : undefined}
+          activeOpacity={hasMoreSpots ? 0.7 : 1}
+        >
           <Text style={styles.sectionTitle}>My Spots</Text>
-          <Text style={styles.sectionCount}>{mySpots.length}</Text>
-        </View>
+          <View style={styles.sectionRight}>
+            <Text style={styles.sectionCount}>{mySpots.length}</Text>
+            {hasMoreSpots && (
+              <Feather
+                name={spotsExpanded ? 'chevron-up' : 'chevron-down'}
+                size={16}
+                color={colors.dark.text2}
+              />
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Country summary pills */}
+        {mySpots.length > 0 && !spotsExpanded && (
+          <View style={styles.countryPills}>
+            {spotsByCountry.slice(0, 5).map(([country, spots]) => (
+              <View key={country} style={styles.countryPill}>
+                <Text style={styles.countryPillText}>{country}</Text>
+                <Text style={styles.countryPillCount}>{spots.length}</Text>
+              </View>
+            ))}
+            {spotsByCountry.length > 5 && (
+              <View style={styles.countryPill}>
+                <Text style={styles.countryPillText}>+{spotsByCountry.length - 5} more</Text>
+              </View>
+            )}
+          </View>
+        )}
 
         {mySpots.length === 0 ? (
           <View style={styles.emptyCard}>
@@ -260,19 +316,33 @@ export default function ProfileScreen() {
             <Text style={styles.emptyText}>Share your first spot!</Text>
           </View>
         ) : (
-          mySpots.map(spot => (
-            <View key={spot.id} style={styles.spotRow}>
-              <View style={[styles.spotDot, { backgroundColor: spot.category === 'cafe' || spot.category === 'experience' ? colors.amber : colors.teal }]} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.spotName}>{spot.name}</Text>
-                <Text style={styles.spotCity}>{spot.city}, {spot.country}</Text>
+          <>
+            {visibleSpots.map(spot => (
+              <View key={spot.id} style={styles.spotRow}>
+                <View style={[styles.spotDot, { backgroundColor: spot.category === 'cafe' || spot.category === 'experience' ? colors.amber : colors.teal }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.spotName}>{spot.name}</Text>
+                  <Text style={styles.spotCity}>{spot.city}, {spot.country}</Text>
+                </View>
+                <Text style={styles.spotCat}>{spot.category}</Text>
+                <TouchableOpacity onPress={() => handleDeleteSpot(spot)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                  <Feather name="trash-2" size={14} color={colors.red} />
+                </TouchableOpacity>
               </View>
-              <Text style={styles.spotCat}>{spot.category}</Text>
-              <TouchableOpacity onPress={() => handleDeleteSpot(spot)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Feather name="trash-2" size={14} color={colors.red} />
+            ))}
+            {hasMoreSpots && (
+              <TouchableOpacity style={styles.showMoreBtn} onPress={toggleSpotsExpanded} activeOpacity={0.7}>
+                <Text style={styles.showMoreText}>
+                  {spotsExpanded ? 'Show less' : `Show all ${mySpots.length} spots`}
+                </Text>
+                <Feather
+                  name={spotsExpanded ? 'chevron-up' : 'chevron-down'}
+                  size={14}
+                  color={colors.teal}
+                />
               </TouchableOpacity>
-            </View>
-          ))
+            )}
+          </>
         )}
 
         {/* Nomad Toolkit */}
@@ -387,7 +457,24 @@ const styles = StyleSheet.create({
   statLabel: { fontFamily: fonts.body, fontSize: 10, color: colors.dark.text2, marginTop: 2, textTransform: 'uppercase', letterSpacing: 1 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', width: '100%', marginBottom: spacing.sm },
   sectionTitle: { fontFamily: fonts.heading, fontSize: 18, color: colors.dark.text },
+  sectionRight: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   sectionCount: { fontFamily: fonts.body, fontSize: 12, color: colors.dark.text2 },
+  countryPills: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, width: '100%', marginBottom: spacing.sm },
+  countryPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.dark.bg2, borderRadius: 12,
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderWidth: 1, borderColor: colors.dark.border,
+  },
+  countryPillText: { fontFamily: fonts.body, fontSize: 11, color: colors.dark.text2 },
+  countryPillCount: { fontFamily: fonts.bodyBold, fontSize: 11, color: colors.teal },
+  showMoreBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    width: '100%', paddingVertical: spacing.sm,
+    borderWidth: 1, borderColor: 'rgba(46, 196, 160, 0.2)', borderRadius: radius.sm,
+    backgroundColor: 'rgba(46, 196, 160, 0.06)', marginBottom: spacing.sm,
+  },
+  showMoreText: { fontFamily: fonts.body, fontSize: 13, color: colors.teal },
   emptyCard: {
     backgroundColor: colors.dark.bg2, borderRadius: radius.md, padding: spacing.lg,
     width: '100%', alignItems: 'center', gap: spacing.sm,

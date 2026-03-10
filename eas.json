@@ -21,7 +21,7 @@
     "production": {
       "autoIncrement": true,
       "cache": {
-        "key": "v2-2026-03-09"
+        "key": "v3-push-2026-03-09"
       }
     }
   }
