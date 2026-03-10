@@ -16,7 +16,7 @@ import Skeleton from '../components/Skeleton';
 import { usePostHog } from '../lib/posthog';
 import { formatTimeAgo } from '../utils/formatTime';
 
-export default function FeedScreen() {
+export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}) {
   const { user, session } = useAuth();
   const navigation = useNavigation<any>();
   const posthog = usePostHog();
@@ -54,7 +54,7 @@ export default function FeedScreen() {
   if (!session) {
     return (
       <View style={styles.container}>
-        <BrandHeader />
+        {!hideHeader && <BrandHeader />}
         <View style={styles.authGate}>
           <View style={styles.authGateIconCircle}>
             <Feather name="message-circle" size={40} color={colors.teal} />
@@ -382,7 +382,7 @@ export default function FeedScreen() {
 
   return (
     <View style={styles.container}>
-      <BrandHeader />
+      {!hideHeader && <BrandHeader />}
 
       <View style={styles.composer}>
         <TextInput

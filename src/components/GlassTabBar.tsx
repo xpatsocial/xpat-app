@@ -13,6 +13,7 @@ import { colors, fonts } from '../theme';
 
 const TAB_ICONS: Record<string, string> = {
   Explore: 'compass',
+  Community: 'users',
   Feed: 'rss',
   Chat: 'message-circle',
   Profile: 'user',

@@ -6,9 +6,8 @@ import { colors } from '../theme';
 import GlassTabBar from '../components/GlassTabBar';
 
 import ExploreScreen from '../screens/ExploreScreen';
-import FeedScreen from '../screens/FeedScreen';
+import CommunityScreen from '../screens/CommunityScreen';
 import ProfileScreen from '../screens/ProfileScreen';
-import ChatScreen from '../screens/ChatScreen';
 import AddSpotScreen from '../screens/AddSpotScreen';
 import SpotDetailScreen from '../screens/SpotDetailScreen';
 import AuthScreen from '../screens/AuthScreen';
@@ -37,8 +36,7 @@ function MainTabs() {
       }}
     >
       <Tab.Screen name="Explore" component={ExploreScreen} />
-      <Tab.Screen name="Feed" component={FeedScreen} />
-      <Tab.Screen name="Chat" component={ChatScreen} />
+      <Tab.Screen name="Community" component={CommunityScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   );
