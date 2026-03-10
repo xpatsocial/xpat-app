@@ -21,7 +21,10 @@
     "production": {
       "autoIncrement": true,
       "cache": {
-        "key": "v4-capabilities-2026-03-09"
+        "key": "v5-all-capabilities-2026-03-10"
+      },
+      "env": {
+        "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }
   }
