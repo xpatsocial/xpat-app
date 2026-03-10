@@ -12,6 +12,7 @@ import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fonts, spacing, radius } from '../theme';
+import { usePostHog } from '../lib/posthog';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -36,6 +37,12 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [otherCity, setOtherCity] = useState('');
   const [showOtherInput, setShowOtherInput] = useState(false);
+  const posthog = usePostHog();
+
+  // Track onboarding_started on mount
+  useEffect(() => {
+    posthog.capture('onboarding_started');
+  }, []);
 
   // Animated gradient shift
   const gradientProgress = useSharedValue(0);
@@ -82,6 +89,8 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
   async function handleFinish() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const city = selectedCity || otherCity || 'Unknown';
+    posthog.capture('onboarding_city_selected', { city });
+    posthog.capture('onboarding_completed', { vibes: selectedVibes, city });
     await AsyncStorage.setItem('onboarding_complete', 'true');
     await AsyncStorage.setItem('onboarding_vibes', JSON.stringify(selectedVibes));
     await AsyncStorage.setItem('onboarding_city', city);
@@ -90,6 +99,10 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
 
   function handleNext() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    // Track vibes selection when advancing from step 1
+    if (step === 1) {
+      posthog.capture('onboarding_vibes_selected', { vibes: selectedVibes });
+    }
     setStep((s) => s + 1);
   }
 

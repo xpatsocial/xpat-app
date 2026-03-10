@@ -10,8 +10,10 @@ import * as Haptics from 'expo-haptics';
 import { colors, fonts, spacing, radius } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { Profile, Spot, Post, Connection, TravelOverlap } from '../types';
+import { Profile, Spot, Post, Connection, TravelOverlap, ReportCategory } from '../types';
 import { useTravelPlans } from '../hooks/useTravelPlans';
+import { useModeration } from '../hooks/useModeration';
+import ReportModal from '../components/ReportModal';
 
 type UserProfileParams = {
   UserProfile: { userId: string };
@@ -36,7 +38,9 @@ export default function UserProfileScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [connecting, setConnecting] = useState(false);
   const [travelOverlaps, setTravelOverlaps] = useState<TravelOverlap[]>([]);
+  const [reportVisible, setReportVisible] = useState(false);
   const { getOverlapsWithUser } = useTravelPlans();
+  const { blockUser, reportContent } = useModeration();
 
   const fetchAll = useCallback(async () => {
     if (!userId || !user) return;
@@ -295,7 +299,24 @@ export default function UserProfileScreen() {
           <Feather name="arrow-left" size={22} color={colors.dark.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
-        <View style={{ width: 22 }} />
+        {userId !== user?.id ? (
+          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+            <TouchableOpacity
+              onPress={() => setReportVisible(true)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Feather name="flag" size={18} color={colors.dark.text2} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => blockUser(userId, profile?.display_name ?? undefined)}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            >
+              <Feather name="slash" size={18} color={colors.dark.text2} />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={{ width: 22 }} />
+        )}
       </View>
 
       <ScrollView
@@ -421,9 +442,23 @@ export default function UserProfileScreen() {
           </View>
         ))}
 
-        {/* Connection button + mutual connections */}
+        {/* Connection button + message button + mutual connections */}
         <View style={styles.actionRow}>
           {renderConnectionButton()}
+          {connectionStatus === 'accepted' ? (
+            <TouchableOpacity
+              style={styles.messageBtn}
+              onPress={() => navigation.navigate('DirectMessage', { userId, displayName: profile.display_name })}
+            >
+              <Feather name="mail" size={14} color={colors.teal} />
+              <Text style={styles.messageBtnText}>Message</Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.messageBtnDisabled}>
+              <Feather name="mail" size={14} color={colors.dark.text3} />
+              <Text style={styles.messageBtnDisabledText}>Connect to Message</Text>
+            </View>
+          )}
         </View>
 
         {mutualCount > 0 && (
@@ -521,6 +556,21 @@ export default function UserProfileScreen() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
+
+      <ReportModal
+        visible={reportVisible}
+        targetType="user"
+        targetId={userId}
+        onClose={() => setReportVisible(false)}
+        onSubmit={(reason) => {
+          setReportVisible(false);
+          reportContent({
+            contentType: 'profile',
+            reportedUserId: userId,
+            category: reason.toLowerCase().replace(/ /g, '_') as ReportCategory,
+          });
+        }}
+      />
     </View>
   );
 }
@@ -693,6 +743,8 @@ const styles = StyleSheet.create({
   },
   // Action row
   actionRow: {
+    flexDirection: 'row',
+    gap: spacing.sm,
     marginBottom: spacing.sm,
     alignItems: 'center',
   },
@@ -739,6 +791,37 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 13,
     color: colors.teal,
+  },
+  messageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.teal,
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    paddingHorizontal: 28,
+  },
+  messageBtnText: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.teal,
+  },
+  messageBtnDisabled: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    borderRadius: radius.md,
+    paddingVertical: 10,
+    paddingHorizontal: 28,
+    opacity: 0.5,
+  },
+  messageBtnDisabledText: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.dark.text3,
   },
   mutualRow: {
     flexDirection: 'row',

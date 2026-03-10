@@ -1,10 +1,11 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { AuthProvider } from './src/hooks/useAuth';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -12,9 +13,6 @@ import { PostHogProvider } from './src/lib/posthog';
 import { initSentry, Sentry } from './src/lib/sentry';
 import { colors } from './src/theme';
 import ErrorBoundary from './src/components/ErrorBoundary';
-
-// Initialize Sentry as early as possible
-initSentry();
 
 const linking = {
   prefixes: ['xpat://', 'https://xpat.social'],
@@ -45,6 +43,15 @@ function App() {
     'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
     'SpaceMono-Bold': require('./assets/fonts/SpaceMono-Bold.ttf'),
   });
+
+  // Only initialize Sentry after GDPR consent is accepted
+  useEffect(() => {
+    AsyncStorage.getItem('gdpr_accepted').then((val) => {
+      if (val === 'true') {
+        initSentry();
+      }
+    });
+  }, []);
 
   const onLayoutRootView = useCallback(async () => {
     if (fontsLoaded) {

@@ -15,6 +15,7 @@ import ReportModal from '../components/ReportModal';
 import Skeleton from '../components/Skeleton';
 import { usePostHog } from '../lib/posthog';
 import { formatTimeAgo } from '../utils/formatTime';
+import { checkTextSafety } from '../lib/contentModeration';
 
 export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}) {
   const { user, session } = useAuth();
@@ -82,6 +83,13 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
 
   async function handlePost() {
     if (!newPost.trim() || !user) return;
+
+    const safety = await checkTextSafety(newPost.trim());
+    if (!safety.safe) {
+      Alert.alert('Post not shared', safety.reason ?? 'Content flagged by moderation.');
+      return;
+    }
+
     setPosting(true);
     const { error } = await supabase.from('posts').insert({
       user_id: user?.id,

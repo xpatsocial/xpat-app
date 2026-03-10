@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as Haptics from 'expo-haptics';
 import MapView, { Marker } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -14,6 +15,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../lib/posthog';
 import { SpotCategory } from '../types';
+import { checkTextSafety } from '../lib/contentModeration';
 
 const CATEGORIES: { key: SpotCategory; label: string; emoji: string }[] = [
   { key: 'cafe', label: 'Cafe', emoji: '☕' },
@@ -84,7 +86,13 @@ export default function AddSpotScreen({ navigation }: any) {
     });
 
     if (!result.canceled && result.assets.length > 0) {
-      setPhotoUri(result.assets[0].uri);
+      const pickedUri = result.assets[0].uri;
+      const manipulated = await ImageManipulator.manipulateAsync(
+        pickedUri,
+        [{ resize: { width: 1200 } }],
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG },
+      );
+      setPhotoUri(manipulated.uri);
     }
   }
 
@@ -106,18 +114,38 @@ export default function AddSpotScreen({ navigation }: any) {
       return;
     }
 
+    // Check name and note for content safety
+    const nameSafety = await checkTextSafety(name.trim());
+    if (!nameSafety.safe) {
+      Alert.alert('Spot not shared', nameSafety.reason ?? 'Name flagged by moderation.');
+      return;
+    }
+    if (note.trim()) {
+      const noteSafety = await checkTextSafety(note.trim());
+      if (!noteSafety.safe) {
+        Alert.alert('Spot not shared', noteSafety.reason ?? 'Note flagged by moderation.');
+        return;
+      }
+    }
+
     setLoading(true);
 
     let uploadedPhotoUrl: string | null = null;
     if (photoUri) {
       try {
-        const ext = photoUri.split('.').pop() || 'jpg';
-        const fileName = `${user.id}/${Date.now()}.${ext}`;
+        const fileName = `${user.id}/${Date.now()}.jpg`;
         const response = await fetch(photoUri);
         const blob = await response.blob();
+
+        if (blob.size > 5 * 1024 * 1024) {
+          Alert.alert('Photo too large', 'Image must be under 5 MB. Please choose a smaller photo.');
+          setLoading(false);
+          return;
+        }
+
         const { error: uploadError } = await supabase.storage
           .from('spot-photos')
-          .upload(fileName, blob, { contentType: `image/${ext}` });
+          .upload(fileName, blob, { contentType: 'image/jpeg' });
 
         if (!uploadError) {
           const { data: urlData } = supabase.storage

@@ -6,6 +6,7 @@ import * as Crypto from 'expo-crypto';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
 import { setUser as setSentryUser, clearUser as clearSentryUser } from '../lib/sentry';
+import { usePostHog } from '../lib/posthog';
 
 interface AuthContextType {
   user: User | null;
@@ -14,7 +15,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, name: string, birthdate?: string) => Promise<{ error: any }>;
-  signInWithApple: () => Promise<{ error: any }>;
+  signInWithApple: () => Promise<{ error: any; user?: User | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -26,12 +27,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const posthog = usePostHog();
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) {
+        fetchProfile(session.user.id);
+        posthog.identify(session.user.id, { email: session.user.email });
+      }
       setLoading(false);
     });
 
@@ -41,9 +46,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         fetchProfile(session.user.id);
         setSentryUser(session.user.id, session.user.email);
+        posthog.identify(session.user.id, { email: session.user.email });
       } else {
         setProfile(null);
         clearSentryUser();
+        posthog.reset();
       }
     });
 
@@ -101,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { error: { message: 'No identity token returned from Apple.' } };
       }
 
-      const { error } = await supabase.auth.signInWithIdToken({
+      const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: idToken,
         nonce: rawNonce,
@@ -116,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      return { error };
+      return { error, user: data?.user ?? null };
     } catch (e: any) {
       if (e.code === 'ERR_REQUEST_CANCELED') return { error: null };
       return { error: { message: e.message || 'Apple sign-in failed.' } };

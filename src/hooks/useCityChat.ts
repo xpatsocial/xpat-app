@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { ChatMessage, ChatChannel } from '../types';
 import { useAuth } from './useAuth';
 import { captureException } from '../lib/sentry';
+import { checkTextSafety } from '../lib/contentModeration';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface UseCityChatOptions {
@@ -110,6 +112,12 @@ export function useCityChat({ city, country }: UseCityChatOptions) {
   // Send a message
   const sendMessage = useCallback(async (content: string) => {
     if (!user || !channel || !content.trim()) return;
+
+    const safety = await checkTextSafety(content.trim());
+    if (!safety.safe) {
+      Alert.alert('Message not sent', safety.reason ?? 'Content flagged by moderation.');
+      return;
+    }
 
     setSending(true);
     const tempId = `temp-${Date.now()}`;

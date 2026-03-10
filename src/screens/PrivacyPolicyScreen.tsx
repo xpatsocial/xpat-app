@@ -45,6 +45,26 @@ export default function PrivacyPolicyScreen() {
             <Feather name="bar-chart-2" size={14} color={colors.amber} />
             <Text style={styles.bulletText}>Neighborhood pulse ratings you submit</Text>
           </View>
+          <View style={styles.bulletRow}>
+            <Feather name="message-circle" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>Chat messages in city channels and direct messages to other users</Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="calendar" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>Travel plans you add — destination and dates</Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="bell" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>Push notification tokens — device identifiers for delivering notifications</Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="camera" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>Photos you upload to spots and your profile</Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="smartphone" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>Device information — device type, OS, app version for error reporting</Text>
+          </View>
         </View>
 
         {/* How We Use It */}
@@ -61,6 +81,29 @@ export default function PrivacyPolicyScreen() {
           <View style={styles.bulletRow}>
             <Feather name="trending-up" size={14} color={colors.teal} />
             <Text style={styles.bulletText}>Improve recommendations over time</Text>
+          </View>
+        </View>
+
+        {/* Legal Basis for Processing */}
+        <Text style={styles.sectionTitle}>Legal Basis for Processing</Text>
+        <View style={styles.card}>
+          <View style={styles.bulletRow}>
+            <Feather name="file-text" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Contract performance</Text> — profile info, spots, posts, messages, travel plans, and connections are necessary to provide the service.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="shield" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Legitimate interest</Text> — analytics and error logs for app stability. Data is anonymized and does not override your rights.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="check-circle" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Consent</Text> — location data and push notifications are only collected with your explicit device permission consent.
+            </Text>
           </View>
         </View>
 
@@ -172,14 +215,53 @@ export default function PrivacyPolicyScreen() {
               <Text style={styles.providerName}>Right to Rectification</Text> — update or correct your personal information at any time from your profile.
             </Text>
           </View>
+          <View style={styles.bulletRow}>
+            <Feather name="shield" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Right to Restrict Processing</Text> — request that we limit how your data is processed under certain circumstances.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="alert-circle" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Right to Lodge a Complaint</Text> — you may file a complaint with your local data protection supervisory authority.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="cpu" size={14} color={colors.amber} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>No Automated Decision-Making</Text> — we do not use your personal data for automated decision-making or profiling that produces legal effects.
+            </Text>
+          </View>
         </View>
 
-        {/* Data Storage */}
-        <Text style={styles.sectionTitle}>Data Storage</Text>
+        {/* International Data Transfers */}
+        <Text style={styles.sectionTitle}>International Data Transfers</Text>
         <View style={styles.card}>
-          <Text style={styles.bodyText}>
-            Your data is stored securely on Supabase cloud infrastructure. All data is encrypted in transit using industry-standard TLS encryption.
-          </Text>
+          <View style={styles.bulletRow}>
+            <Feather name="database" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Supabase</Text> — database and authentication hosted on AWS US (us-east-1). Stores your profile, spots, posts, messages, and all user-generated content.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="alert-triangle" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>Sentry</Text> — error tracking in US. Receives your user ID, email, and device info when errors occur.
+            </Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="bar-chart" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              <Text style={styles.providerName}>PostHog</Text> — analytics in US. Receives anonymized usage events.
+            </Text>
+          </View>
+          <View style={[styles.bulletRow, { marginBottom: 0 }]}>
+            <Feather name="lock" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>
+              All transfers rely on provider DPAs and Standard Contractual Clauses (SCCs). Data is encrypted in transit via TLS.
+            </Text>
+          </View>
         </View>
 
         {/* Third Parties */}
@@ -187,6 +269,17 @@ export default function PrivacyPolicyScreen() {
         <View style={styles.card}>
           <Text style={styles.bodyText}>
             Affiliate partners may receive anonymized click data when you interact with affiliate links. No personally identifiable information is shared with third parties.
+          </Text>
+        </View>
+
+        {/* Data Controller */}
+        <Text style={styles.sectionTitle}>Data Controller</Text>
+        <View style={styles.card}>
+          <Text style={styles.bodyText}>
+            Aych Holdings LLC, a Delaware limited liability company.
+          </Text>
+          <Text style={[styles.bodyText, { marginTop: spacing.xs }]}>
+            Contact: alex@xpat.social
           </Text>
         </View>
 

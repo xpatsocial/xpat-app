@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { DirectMessage, DMConversation, Profile } from '../types';
 import { useAuth } from './useAuth';
+import { checkTextSafety } from '../lib/contentModeration';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export function useDirectMessages() {
@@ -230,6 +232,26 @@ export function useConversation(partnerId: string) {
   const sendMessage = useCallback(
     async (content: string) => {
       if (!user || !partnerId || !content.trim()) return;
+
+      // Check if users are connected before allowing message
+      const { data: connected, error: rpcError } = await supabase.rpc('are_connected', {
+        uid1: user.id,
+        uid2: partnerId,
+      });
+
+      if (rpcError || !connected) {
+        Alert.alert(
+          'Cannot send message',
+          'You need to connect with this person before sending a message.',
+        );
+        return;
+      }
+
+      const safety = await checkTextSafety(content.trim());
+      if (!safety.safe) {
+        Alert.alert('Message not sent', safety.reason ?? 'Content flagged by moderation.');
+        return;
+      }
 
       setSending(true);
       const tempId = `temp-${Date.now()}`;

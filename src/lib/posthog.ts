@@ -24,6 +24,7 @@ const noopClient: PostHogClient = {
 };
 
 let _client: PostHogClient = noopClient;
+let _rawClient: any = null;
 
 async function initPostHog(): Promise<PostHogClient> {
   if (!POSTHOG_API_KEY) return noopClient;
@@ -36,6 +37,7 @@ async function initPostHog(): Promise<PostHogClient> {
     const client = await PostHog.PostHog.initAsync(POSTHOG_API_KEY, {
       host: POSTHOG_HOST,
     });
+    _rawClient = client;
     return {
       capture: (event, props) => client.capture(event, props),
       identify: (id, props) => client.identify(id, props),
@@ -88,4 +90,23 @@ export function track(event: string, properties?: Record<string, unknown>): void
  */
 export function _setModuleClient(c: PostHogClient): void {
   _client = c;
+}
+
+/**
+ * Opt the user out of PostHog tracking (GDPR decline / settings toggle).
+ * All future capture calls become no-ops.
+ */
+export function optOutPostHog(): void {
+  if (_rawClient && typeof _rawClient.optOut === 'function') {
+    _rawClient.optOut();
+  }
+}
+
+/**
+ * Opt the user back into PostHog tracking (GDPR accept / settings toggle).
+ */
+export function optInPostHog(): void {
+  if (_rawClient && typeof _rawClient.optIn === 'function') {
+    _rawClient.optIn();
+  }
 }

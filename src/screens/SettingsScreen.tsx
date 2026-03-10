@@ -23,6 +23,8 @@ import {
   calculateProfileCompletion,
 } from '../lib/profilePrompts';
 import FeedbackSheet from '../components/FeedbackSheet';
+import { initSentry } from '../lib/sentry';
+import { optOutPostHog, optInPostHog } from '../lib/posthog';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -141,6 +143,14 @@ export default function SettingsScreen() {
   const [showArrivalPicker, setShowArrivalPicker] = useState(false);
   const [showDeparturePicker, setShowDeparturePicker] = useState(false);
   const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
+
+  // Load analytics consent state
+  useEffect(() => {
+    AsyncStorage.getItem('gdpr_accepted').then((val) => {
+      setAnalyticsEnabled(val === 'true');
+    });
+  }, []);
 
   useEffect(() => {
     if (profile) {
@@ -307,16 +317,64 @@ export default function SettingsScreen() {
     try {
       const exportData: Record<string, unknown> = { profile: profile || null };
       if (user) {
-        const { data: spots } = await supabase
-          .from('spots')
-          .select('*')
-          .eq('created_by', user.id);
-        const { data: posts } = await supabase
-          .from('posts')
-          .select('*')
-          .eq('user_id', user.id);
-        if (spots) exportData.spots = spots;
-        if (posts) exportData.posts = posts;
+        const safeQuery = async (
+          table: string,
+          filter: { column: string; value: string } | { or: string },
+        ) => {
+          try {
+            let query = supabase.from(table).select('*');
+            if ('or' in filter) {
+              query = query.or(filter.or);
+            } else {
+              query = query.eq(filter.column, filter.value);
+            }
+            const { data } = await query;
+            return data ?? [];
+          } catch {
+            return [];
+          }
+        };
+
+        const [
+          spots,
+          posts,
+          directMessages,
+          comments,
+          connections,
+          travelPlans,
+          savedSpots,
+          checkIns,
+          eventRsvps,
+          events,
+          betaFeedback,
+          userPreferences,
+        ] = await Promise.all([
+          safeQuery('spots', { column: 'created_by', value: user.id }),
+          safeQuery('posts', { column: 'user_id', value: user.id }),
+          safeQuery('direct_messages', { column: 'sender_id', value: user.id }),
+          safeQuery('comments', { column: 'user_id', value: user.id }),
+          safeQuery('connections', { or: `requester_id.eq.${user.id},addressee_id.eq.${user.id}` }),
+          safeQuery('travel_plans', { column: 'user_id', value: user.id }),
+          safeQuery('saved_spots', { column: 'user_id', value: user.id }),
+          safeQuery('check_ins', { column: 'user_id', value: user.id }),
+          safeQuery('event_rsvps', { column: 'user_id', value: user.id }),
+          safeQuery('events', { column: 'created_by', value: user.id }),
+          safeQuery('beta_feedback', { column: 'user_id', value: user.id }),
+          safeQuery('user_preferences', { column: 'user_id', value: user.id }),
+        ]);
+
+        exportData.spots = spots;
+        exportData.posts = posts;
+        exportData.direct_messages = directMessages;
+        exportData.comments = comments;
+        exportData.connections = connections;
+        exportData.travel_plans = travelPlans;
+        exportData.saved_spots = savedSpots;
+        exportData.check_ins = checkIns;
+        exportData.event_rsvps = eventRsvps;
+        exportData.events = events;
+        exportData.beta_feedback = betaFeedback;
+        exportData.user_preferences = userPreferences;
       }
       await Share.share({
         message: JSON.stringify(exportData, null, 2),
@@ -985,6 +1043,31 @@ export default function SettingsScreen() {
             label="Blocked Users"
             sublabel="Manage your block list"
             onPress={() => navigation.navigate('BlockedUsers' as never)}
+          />
+          <View style={styles.divider} />
+          <SettingRow
+            icon="bar-chart-2"
+            label="Analytics & Crash Reports"
+            sublabel="Help improve x/pat with anonymous data"
+            right={
+              <Switch
+                value={analyticsEnabled}
+                onValueChange={(val) => {
+                  setAnalyticsEnabled(val);
+                  AsyncStorage.setItem('gdpr_accepted', val ? 'true' : 'declined');
+                  if (val) {
+                    initSentry();
+                    optInPostHog();
+                  } else {
+                    optOutPostHog();
+                  }
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                trackColor={{ false: colors.dark.bg3, true: 'rgba(46,196,160,0.4)' }}
+                thumbColor={analyticsEnabled ? colors.teal : colors.dark.text2}
+                ios_backgroundColor={colors.dark.bg3}
+              />
+            }
           />
         </View>
 

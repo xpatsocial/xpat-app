@@ -26,6 +26,8 @@ import BlockedUsersScreen from '../screens/BlockedUsersScreen';
 import GDPRConsent from '../components/GDPRConsent';
 
 import { useAuth } from '../hooks/useAuth';
+import { initSentry } from '../lib/sentry';
+import { optOutPostHog, optInPostHog } from '../lib/posthog';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -59,12 +61,15 @@ export default function AppNavigator() {
 
   function handleGDPRAccept() {
     AsyncStorage.setItem('gdpr_accepted', 'true');
+    initSentry();
+    optInPostHog();
     setGdprAccepted(true);
   }
 
   function handleGDPRDecline() {
-    // Still allow usage but don't enable location features
+    // Still allow usage but disable all analytics
     AsyncStorage.setItem('gdpr_accepted', 'declined');
+    optOutPostHog();
     setGdprAccepted(true);
   }
 

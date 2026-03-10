@@ -84,15 +84,19 @@ export default function TermsOfServiceScreen() {
         <View style={styles.card}>
           <View style={styles.bulletRow}>
             <Feather name="check" size={14} color={colors.teal} />
-            <Text style={styles.bulletText}>You own the content you create on x/pat</Text>
+            <Text style={styles.bulletText}>You retain ownership of all content you create on x/pat, including spots, posts, photos, comments, and messages</Text>
           </View>
           <View style={styles.bulletRow}>
             <Feather name="check" size={14} color={colors.teal} />
-            <Text style={styles.bulletText}>You grant x/pat a license to display your content within the app</Text>
+            <Text style={styles.bulletText}>By posting content, you grant Aych Holdings LLC a worldwide, non-exclusive, royalty-free, sublicensable license to use, reproduce, modify, display, and distribute your content solely for the purpose of operating, promoting, and improving x/pat. This license continues until you delete the content or your account</Text>
           </View>
           <View style={styles.bulletRow}>
             <Feather name="check" size={14} color={colors.teal} />
-            <Text style={styles.bulletText}>We may remove content that violates our community guidelines</Text>
+            <Text style={styles.bulletText}>We may remove content that violates our community guidelines. You may delete your own content at any time</Text>
+          </View>
+          <View style={styles.bulletRow}>
+            <Feather name="check" size={14} color={colors.teal} />
+            <Text style={styles.bulletText}>You represent and warrant that you have the right to post all content you submit and that such content does not infringe any third-party rights</Text>
           </View>
         </View>
 
@@ -109,6 +113,12 @@ export default function TermsOfServiceScreen() {
         <View style={styles.card}>
           <Text style={styles.bodyText}>
             If you believe content on x/pat infringes your copyright or intellectual property rights, please submit a takedown request to alex@xpat.social with the following details: a description of the copyrighted work, the location of the infringing content within the app, your contact information, and a statement that you have a good-faith belief the use is unauthorized. We will review and respond to valid claims within 10 business days.
+          </Text>
+          <Text style={[styles.bodyText, { marginTop: spacing.sm, fontFamily: fonts.bodyBold }]}>
+            Counter-Notification
+          </Text>
+          <Text style={[styles.bodyText, { marginTop: spacing.xs }]}>
+            If you believe your content was removed by mistake or misidentification, you may submit a counter-notification to alex@xpat.social including: identification of the removed content and its former location, a statement under penalty of perjury that you believe the removal was the result of mistake or misidentification, your name, address, and phone number, and a statement consenting to the jurisdiction of the federal courts in the State of Delaware. Content will be restored within 10–14 business days unless the original complainant files a court action.
           </Text>
         </View>
 
@@ -133,7 +143,10 @@ export default function TermsOfServiceScreen() {
         <Text style={styles.sectionTitle}>Disclaimers</Text>
         <View style={styles.card}>
           <Text style={styles.bodyText}>
-            Neighborhood safety data and pulse ratings are community-sourced and are not independently verified by x/pat. Always use your own judgment when visiting new areas. x/pat does not guarantee the accuracy of user-submitted information.
+            THE SERVICE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTIES OF ANY KIND, WHETHER EXPRESS, IMPLIED, OR STATUTORY. AYCH HOLDINGS LLC EXPRESSLY DISCLAIMS ALL IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.
+          </Text>
+          <Text style={[styles.bodyText, { marginTop: spacing.sm }]}>
+            Neighborhood safety data and pulse ratings are community-sourced and are not independently verified by x/pat. Always use your own judgment when visiting new areas. x/pat does not guarantee the accuracy, completeness, or reliability of any user-submitted information.
           </Text>
         </View>
 
@@ -142,6 +155,47 @@ export default function TermsOfServiceScreen() {
         <View style={styles.card}>
           <Text style={styles.bodyText}>
             To the maximum extent permitted by law, x/pat and Aych Holdings LLC shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising from your use of the app. Our total liability shall not exceed the amount you paid to use the service, which is zero — x/pat is free for life.
+          </Text>
+        </View>
+
+        {/* Indemnification */}
+        <Text style={styles.sectionTitle}>Indemnification</Text>
+        <View style={styles.card}>
+          <Text style={styles.bodyText}>
+            You agree to defend, indemnify, and hold harmless Aych Holdings LLC, its officers, directors, employees, and agents from and against any claims, liabilities, damages, losses, and expenses (including reasonable attorneys' fees) arising out of or in any way connected with your use of the service, your violation of these Terms, your violation of any third-party rights, or any content you post on x/pat. This obligation survives termination of your account.
+          </Text>
+        </View>
+
+        {/* Governing Law */}
+        <Text style={styles.sectionTitle}>Governing Law</Text>
+        <View style={styles.card}>
+          <Text style={styles.bodyText}>
+            These Terms shall be governed by and construed in accordance with the laws of the State of Delaware, USA, without regard to conflict-of-law principles. You consent to the exclusive jurisdiction of the state and federal courts located in Delaware for any disputes arising under these Terms.
+          </Text>
+        </View>
+
+        {/* Dispute Resolution */}
+        <Text style={styles.sectionTitle}>Dispute Resolution</Text>
+        <View style={styles.card}>
+          <Text style={styles.bodyText}>
+            Any dispute arising from these Terms or your use of x/pat shall be resolved by binding arbitration administered by the American Arbitration Association (AAA) under its Consumer Arbitration Rules. Arbitration shall take place in Wilmington, Delaware, or remotely at your election.
+          </Text>
+          <Text style={[styles.bodyText, { marginTop: spacing.sm, fontFamily: fonts.bodyBold }]}>
+            CLASS ACTION WAIVER
+          </Text>
+          <Text style={[styles.bodyText, { marginTop: spacing.xs }]}>
+            You agree that all claims must be brought in your individual capacity and not as a plaintiff or class member in any purported class or representative proceeding.
+          </Text>
+          <Text style={[styles.bodyText, { marginTop: spacing.sm }]}>
+            You may opt out of this arbitration agreement by sending written notice to alex@xpat.social within 30 days of first accepting these Terms.
+          </Text>
+        </View>
+
+        {/* Severability */}
+        <Text style={styles.sectionTitle}>Severability</Text>
+        <View style={styles.card}>
+          <Text style={styles.bodyText}>
+            If any provision of these Terms is found to be unenforceable or invalid, that provision shall be limited or eliminated to the minimum extent necessary, and the remaining provisions shall continue in full force and effect.
           </Text>
         </View>
 

@@ -1,7 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useMemo } from 'react';
 import {
   View, Text, FlatList, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
+  StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -10,7 +10,8 @@ import { useAuth } from '../../hooks/useAuth';
 import { useCityChat } from '../../hooks/useCityChat';
 import { useTranslate } from '../../hooks/useTranslate';
 import { usePreferences } from '../../hooks/usePreferences';
-import { ChatMessage } from '../../types';
+import { useModeration, useBlockedUsers } from '../../hooks/useModeration';
+import { ChatMessage, ReportCategory } from '../../types';
 import Avatar from '../../components/Avatar';
 
 export default function ChatTab() {
@@ -68,9 +69,42 @@ function CityChat({ city, country, userId }: CityChatProps) {
   const { messages, loading, sending, sendMessage } = useCityChat({ city, country });
   const { translate, isTranslating } = useTranslate();
   const { preferences } = usePreferences();
+  const { blockUser, reportContent } = useModeration();
+  const blockedIds = useBlockedUsers();
   const [text, setText] = useState('');
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const flatListRef = useRef<FlatList>(null);
+
+  const filteredMessages = useMemo(
+    () => messages.filter((m) => !blockedIds.has(m.sender_id)),
+    [messages, blockedIds],
+  );
+
+  const handleLongPress = useCallback((msg: ChatMessage) => {
+    if (msg.sender_id === userId) return; // don't report yourself
+    Alert.alert(
+      'Message Options',
+      undefined,
+      [
+        {
+          text: 'Report Message',
+          onPress: () =>
+            reportContent({
+              contentType: 'message',
+              contentId: msg.id,
+              reportedUserId: msg.sender_id,
+              category: 'inappropriate',
+            }),
+        },
+        {
+          text: 'Block User',
+          style: 'destructive',
+          onPress: () => blockUser(msg.sender_id, msg.profiles?.display_name ?? undefined),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ],
+    );
+  }, [userId, reportContent, blockUser]);
 
   const targetLang = preferences.preferred_language || 'en';
 
@@ -109,7 +143,12 @@ function CityChat({ city, country, userId }: CityChatProps) {
     const translatingThis = isTranslating(item.id, targetLang);
 
     return (
-      <View style={[msgStyles.row, isMe && msgStyles.rowMe]}>
+      <TouchableOpacity
+        activeOpacity={0.8}
+        onLongPress={() => handleLongPress(item)}
+        delayLongPress={400}
+        style={[msgStyles.row, isMe && msgStyles.rowMe]}
+      >
         {!isMe && (
           <Avatar
             uri={item.profiles?.avatar_url}
@@ -149,7 +188,7 @@ function CityChat({ city, country, userId }: CityChatProps) {
             )}
           </View>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   }
 
@@ -179,7 +218,7 @@ function CityChat({ city, country, userId }: CityChatProps) {
 
       <FlatList
         ref={flatListRef}
-        data={messages}
+        data={filteredMessages}
         keyExtractor={(m) => m.id}
         renderItem={renderMessage}
         contentContainerStyle={styles.messageList}

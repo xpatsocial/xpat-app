@@ -10,6 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, spacing, radius } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../lib/posthog';
+import { supabase } from '../lib/supabase';
 
 // EU country codes for GDPR parental consent notice (13-16)
 const EU_TIMEZONES = [
@@ -52,7 +53,7 @@ function parseBirthdate(month: string, day: string, year: string): Date | null {
 }
 
 export default function AuthScreen() {
-  const { signIn, signUp, signInWithApple } = useAuth();
+  const { signIn, signUp, signInWithApple, signOut } = useAuth();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const posthog = usePostHog();
@@ -68,6 +69,9 @@ export default function AuthScreen() {
   const [birthYear, setBirthYear] = useState('');
   const [ageVerified, setAgeVerified] = useState(false);
   const [showParentalNotice, setShowParentalNotice] = useState(false);
+
+  // Apple Sign-In age gate — blocks access until DOB is verified
+  const [appleAgeGatePending, setAppleAgeGatePending] = useState(false);
 
   function handleVerifyAge() {
     const birthdate = parseBirthdate(birthMonth, birthDay, birthYear);
@@ -87,6 +91,37 @@ export default function AuthScreen() {
       setShowParentalNotice(true);
     }
     setAgeVerified(true);
+  }
+
+  async function handleAppleAgeVerify() {
+    const birthdate = parseBirthdate(birthMonth, birthDay, birthYear);
+    if (!birthdate) {
+      Alert.alert('Invalid Date', 'Please enter a valid date of birth (MM / DD / YYYY).');
+      return;
+    }
+    const age = calculateAge(birthdate);
+    if (age < 13) {
+      Alert.alert(
+        'Age Requirement',
+        'You must be at least 13 years old to use x/pat.',
+      );
+      await signOut();
+      setAppleAgeGatePending(false);
+      setBirthMonth('');
+      setBirthDay('');
+      setBirthYear('');
+      return;
+    }
+    if (age >= 13 && age < 16 && isLikelyEU()) {
+      setShowParentalNotice(true);
+    }
+    // Store birthdate in Supabase user metadata
+    const birthdateISO = birthdate.toISOString().split('T')[0];
+    setLoading(true);
+    await supabase.auth.updateUser({ data: { birthdate: birthdateISO } });
+    setLoading(false);
+    setAppleAgeGatePending(false);
+    posthog.capture('sign_in', { method: 'apple' });
   }
 
   function getBirthdateISO(): string | undefined {
@@ -148,7 +183,65 @@ export default function AuthScreen() {
         </Text>
         <Text style={styles.tagline}>your world, shared</Text>
 
-        {Platform.OS === 'ios' && (
+        {/* Apple Sign-In age verification gate */}
+        {appleAgeGatePending && (
+          <>
+            <Text style={styles.ageLabel}>Date of Birth</Text>
+            <Text style={styles.ageSublabel}>You must be 13 or older to use x/pat</Text>
+            {showParentalNotice && (
+              <View style={styles.parentalNotice}>
+                <Feather name="info" size={14} color={colors.amber} />
+                <Text style={styles.parentalNoticeText}>
+                  Under EU regulations, users aged 13-15 may need parental consent. By continuing, you confirm you have parental or guardian consent to use this service.
+                </Text>
+              </View>
+            )}
+            <View style={styles.dobRow}>
+              <TextInput
+                style={[styles.input, styles.dobInput]}
+                placeholder="MM"
+                placeholderTextColor={colors.dark.text2}
+                value={birthMonth}
+                onChangeText={(v) => setBirthMonth(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+              <Text style={styles.dobSeparator}>/</Text>
+              <TextInput
+                style={[styles.input, styles.dobInput]}
+                placeholder="DD"
+                placeholderTextColor={colors.dark.text2}
+                value={birthDay}
+                onChangeText={(v) => setBirthDay(v.replace(/[^0-9]/g, '').slice(0, 2))}
+                keyboardType="number-pad"
+                maxLength={2}
+              />
+              <Text style={styles.dobSeparator}>/</Text>
+              <TextInput
+                style={[styles.input, styles.dobInputYear]}
+                placeholder="YYYY"
+                placeholderTextColor={colors.dark.text2}
+                value={birthYear}
+                onChangeText={(v) => setBirthYear(v.replace(/[^0-9]/g, '').slice(0, 4))}
+                keyboardType="number-pad"
+                maxLength={4}
+              />
+            </View>
+            <TouchableOpacity
+              style={[styles.button, loading && styles.buttonDisabled]}
+              onPress={handleAppleAgeVerify}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color={colors.dark.bg} />
+              ) : (
+                <Text style={styles.buttonText}>Continue</Text>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
+
+        {!appleAgeGatePending && Platform.OS === 'ios' && (
           <>
             <AppleAuthentication.AppleAuthenticationButton
               buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
@@ -157,9 +250,21 @@ export default function AuthScreen() {
               style={styles.appleButton}
               onPress={async () => {
                 setLoading(true);
-                const { error } = await signInWithApple();
-                if (error) Alert.alert('Apple Sign In Error', error.message);
-                else posthog.capture('sign_in', { method: 'apple' });
+                const { error, user: appleUser } = await signInWithApple();
+                if (error) {
+                  Alert.alert('Apple Sign In Error', error.message);
+                  setLoading(false);
+                  return;
+                }
+                // Check if user already has a birthdate in metadata
+                const hasBirthdate = appleUser?.user_metadata?.birthdate;
+                if (!hasBirthdate) {
+                  // First-time Apple sign-in — require age verification
+                  setAppleAgeGatePending(true);
+                  setLoading(false);
+                  return;
+                }
+                posthog.capture('sign_in', { method: 'apple' });
                 setLoading(false);
               }}
             />
@@ -172,7 +277,7 @@ export default function AuthScreen() {
         )}
 
         {/* Age verification gate — shown before signup form */}
-        {isSignUp && !ageVerified && (
+        {!appleAgeGatePending && isSignUp && !ageVerified && (
           <>
             <Text style={styles.ageLabel}>Date of Birth</Text>
             <Text style={styles.ageSublabel}>You must be 13 or older to join x/pat</Text>
@@ -214,7 +319,7 @@ export default function AuthScreen() {
         )}
 
         {/* Signup form — shown after age is verified */}
-        {isSignUp && ageVerified && (
+        {!appleAgeGatePending && isSignUp && ageVerified && (
           <>
             {showParentalNotice && (
               <View style={styles.parentalNotice}>
@@ -264,7 +369,7 @@ export default function AuthScreen() {
         )}
 
         {/* Sign-in form — no age gate needed */}
-        {!isSignUp && (
+        {!appleAgeGatePending && !isSignUp && (
           <>
             <TextInput
               style={styles.input}
@@ -297,11 +402,13 @@ export default function AuthScreen() {
           </>
         )}
 
-        <TouchableOpacity onPress={handleToggleMode}>
-          <Text style={styles.switchText}>
-            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-          </Text>
-        </TouchableOpacity>
+        {!appleAgeGatePending && (
+          <TouchableOpacity onPress={handleToggleMode}>
+            <Text style={styles.switchText}>
+              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
     </KeyboardAvoidingView>
   );
