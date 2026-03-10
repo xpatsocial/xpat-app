@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, Alert, ActivityIndicator,
 } from 'react-native';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,7 +12,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../lib/posthog';
 
 export default function AuthScreen() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithApple } = useAuth();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const posthog = usePostHog();
@@ -64,6 +65,29 @@ export default function AuthScreen() {
           <Text style={styles.brandPat}>pat</Text>
         </Text>
         <Text style={styles.tagline}>your world, shared</Text>
+
+        {Platform.OS === 'ios' && (
+          <>
+            <AppleAuthentication.AppleAuthenticationButton
+              buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+              buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.WHITE}
+              cornerRadius={radius.md}
+              style={styles.appleButton}
+              onPress={async () => {
+                setLoading(true);
+                const { error } = await signInWithApple();
+                if (error) Alert.alert('Apple Sign In Error', error.message);
+                else posthog.capture('sign_in', { method: 'apple' });
+                setLoading(false);
+              }}
+            />
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+          </>
+        )}
 
         {isSignUp && (
           <TextInput
@@ -190,5 +214,28 @@ const styles = StyleSheet.create({
     color: colors.teal,
     textAlign: 'center',
     marginTop: spacing.lg,
+  },
+  appleButton: {
+    height: 50,
+    width: '100%',
+    marginBottom: spacing.md,
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.dark.border,
+  },
+  dividerText: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.dark.text2,
+    marginHorizontal: spacing.md,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
   },
 });

@@ -16,6 +16,9 @@ import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { Spot, AFFILIATE_PARTNERS } from '../types';
 import BrandHeader from '../components/BrandHeader';
+import SwipeableRow from '../components/SwipeableRow';
+import AnimatedPressable from '../components/AnimatedPressable';
+import AvailabilityToggle from '../components/AvailabilityToggle';
 
 export default function ProfileScreen() {
   const { user, session, profile, signOut } = useAuth();
@@ -203,9 +206,14 @@ export default function ProfileScreen() {
   return (
     <View style={styles.container}>
       <BrandHeader rightAction={
-        <TouchableOpacity onPress={() => setEditing(!editing)}>
-          <Feather name={editing ? 'x' : 'edit-2'} size={18} color={colors.teal} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <TouchableOpacity onPress={() => setEditing(!editing)}>
+            <Feather name={editing ? 'x' : 'edit-2'} size={18} color={colors.teal} />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => navigation.navigate('Settings' as never)}>
+            <Feather name="settings" size={18} color={colors.dark.text2} />
+          </TouchableOpacity>
+        </View>
       } />
 
       <ScrollView contentContainerStyle={styles.content}>
@@ -255,6 +263,13 @@ export default function ProfileScreen() {
             </>
           )}
         </View>
+
+        {/* Activity Status */}
+        <AvailabilityToggle
+          userId={user!.id}
+          city={profile?.current_city}
+          country={profile?.current_country}
+        />
 
         <View style={styles.statsRow}>
           <View style={styles.stat}>
@@ -318,17 +333,35 @@ export default function ProfileScreen() {
         ) : (
           <>
             {visibleSpots.map(spot => (
-              <View key={spot.id} style={styles.spotRow}>
-                <View style={[styles.spotDot, { backgroundColor: spot.category === 'cafe' || spot.category === 'experience' ? colors.amber : colors.teal }]} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.spotName}>{spot.name}</Text>
-                  <Text style={styles.spotCity}>{spot.city}, {spot.country}</Text>
+              <SwipeableRow
+                key={spot.id}
+                style={styles.spotRowWrapper}
+                rightActions={[
+                  {
+                    icon: 'share',
+                    color: colors.teal,
+                    bgColor: 'rgba(46, 196, 160, 0.15)',
+                    onPress: () => Share.share({
+                      message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!`,
+                    }),
+                  },
+                  {
+                    icon: 'trash-2',
+                    color: colors.red,
+                    bgColor: 'rgba(239, 68, 68, 0.15)',
+                    onPress: () => handleDeleteSpot(spot),
+                  },
+                ]}
+              >
+                <View style={styles.spotRow}>
+                  <View style={[styles.spotDot, { backgroundColor: spot.category === 'cafe' || spot.category === 'experience' ? colors.amber : colors.teal }]} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.spotName}>{spot.name}</Text>
+                    <Text style={styles.spotCity}>{spot.city}, {spot.country}</Text>
+                  </View>
+                  <Text style={styles.spotCat}>{spot.category}</Text>
                 </View>
-                <Text style={styles.spotCat}>{spot.category}</Text>
-                <TouchableOpacity onPress={() => handleDeleteSpot(spot)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                  <Feather name="trash-2" size={14} color={colors.red} />
-                </TouchableOpacity>
-              </View>
+              </SwipeableRow>
             ))}
             {hasMoreSpots && (
               <TouchableOpacity style={styles.showMoreBtn} onPress={toggleSpotsExpanded} activeOpacity={0.7}>
@@ -350,10 +383,9 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>Nomad Toolkit</Text>
         </View>
 
-        <TouchableOpacity
+        <AnimatedPressable
           style={styles.toolkitLink}
           onPress={() => navigation.navigate('NomadToolkit')}
-          activeOpacity={0.7}
         >
           <View style={styles.partnerIcon}>
             <Feather name="globe" size={18} color={colors.teal} />
@@ -363,7 +395,21 @@ export default function ProfileScreen() {
             <Text style={styles.partnerSubtitle}>60 countries with nomad visas</Text>
           </View>
           <Feather name="chevron-right" size={18} color={colors.dark.text2} />
-        </TouchableOpacity>
+        </AnimatedPressable>
+
+        <AnimatedPressable
+          style={styles.toolkitLink}
+          onPress={() => navigation.navigate('NomadDiscovery')}
+        >
+          <View style={styles.partnerIcon}>
+            <Feather name="users" size={18} color={colors.amber} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.partnerLabel}>Discover Nomads</Text>
+            <Text style={styles.partnerSubtitle}>Swipe to connect with travelers</Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.dark.text2} />
+        </AnimatedPressable>
 
         {partners.map((partner) => (
           <View
@@ -481,10 +527,13 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: colors.dark.border, borderStyle: 'dashed',
   },
   emptyText: { fontFamily: fonts.body, fontSize: 13, color: colors.dark.text2 },
+  spotRowWrapper: {
+    width: '100%', marginBottom: spacing.sm, borderRadius: radius.sm, overflow: 'hidden',
+  },
   spotRow: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
     backgroundColor: colors.dark.bg2, borderRadius: radius.sm, padding: spacing.sm + spacing.xs,
-    width: '100%', marginBottom: spacing.sm, borderWidth: 1, borderColor: colors.dark.border,
+    borderWidth: 1, borderColor: colors.dark.border,
   },
   spotDot: { width: 8, height: 8, borderRadius: 4 },
   spotName: { fontFamily: fonts.bodyBold, fontSize: 13, color: colors.dark.text },

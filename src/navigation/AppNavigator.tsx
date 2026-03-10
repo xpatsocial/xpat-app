@@ -17,6 +17,10 @@ import UserProfileScreen from '../screens/UserProfileScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import TermsOfServiceScreen from '../screens/TermsOfServiceScreen';
 import NomadToolkitScreen from '../screens/NomadToolkitScreen';
+import NomadDiscoveryScreen from '../screens/NomadDiscoveryScreen';
+import SpotDiscoveryScreen from '../screens/SpotDiscoveryScreen';
+import EventSwipeScreen from '../screens/EventSwipeScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 import GDPRConsent from '../components/GDPRConsent';
 
 import { useAuth } from '../hooks/useAuth';
@@ -65,7 +69,14 @@ export default function AppNavigator() {
 
   return (
     <>
-      <Stack.Navigator screenOptions={{ headerShown: false }}>
+      <Stack.Navigator
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { backgroundColor: colors.dark.bg },
+          animation: 'slide_from_right',
+          gestureEnabled: true,
+        }}
+      >
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen
           name="Auth"
@@ -85,7 +96,13 @@ export default function AppNavigator() {
         <Stack.Screen
           name="SpotDetail"
           component={SpotDetailScreen}
-          options={{ presentation: 'modal', gestureEnabled: true }}
+          options={{
+            presentation: 'formSheet',
+            gestureEnabled: true,
+            sheetAllowedDetents: [0.75, 1.0],
+            sheetGrabberVisible: true,
+            sheetCornerRadius: 20,
+          }}
         />
         <Stack.Screen
           name="UserProfile"
@@ -105,6 +122,26 @@ export default function AppNavigator() {
         <Stack.Screen
           name="NomadToolkit"
           component={NomadToolkitScreen}
+          options={{ presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="NomadDiscovery"
+          component={NomadDiscoveryScreen}
+          options={{ presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="SpotDiscovery"
+          component={SpotDiscoveryScreen}
+          options={{ presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="EventSwipe"
+          component={EventSwipeScreen}
+          options={{ presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="Settings"
+          component={SettingsScreen}
           options={{ presentation: 'card' }}
         />
       </Stack.Navigator>

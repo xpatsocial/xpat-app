@@ -122,6 +122,41 @@ export interface Connection {
   created_at: string;
 }
 
+export type ActivityStatus = 'exploring' | 'working' | 'available' | 'offline';
+
+export interface EventRsvp {
+  id: string;
+  event_id: number;
+  user_id: string;
+  status: 'going' | 'interested' | 'not_going';
+  created_at: string;
+  profiles?: Profile;
+}
+
+export interface TravelPlan {
+  id: string;
+  user_id: string;
+  city: string;
+  country: string;
+  start_date: string;
+  end_date: string;
+  is_public: boolean;
+  created_at: string;
+  profiles?: Profile;
+}
+
+export interface UserAvailability {
+  user_id: string;
+  status: ActivityStatus;
+  message: string | null;
+  lat: number | null;
+  lng: number | null;
+  city: string | null;
+  expires_at: string;
+  updated_at: string;
+  profiles?: Profile;
+}
+
 export interface AffiliatePartner {
   name: string;
   icon: string;

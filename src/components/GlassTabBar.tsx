@@ -20,8 +20,8 @@ const TAB_ICONS: Record<string, string> = {
 
 const SPRING_CONFIG = {
   damping: 18,
-  stiffness: 180,
-  mass: 0.8,
+  stiffness: 220,
+  mass: 0.4,
 };
 
 interface GlassTabBarProps {

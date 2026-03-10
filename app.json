@@ -2,7 +2,7 @@
   "expo": {
     "name": "x/pat",
     "slug": "xpat-app",
-    "version": "1.0.3",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -12,6 +12,7 @@
       "expo-image-picker",
       "expo-splash-screen",
       "@sentry/react-native",
+      "expo-apple-authentication",
       [
         "expo-notifications",
         {
@@ -29,8 +30,16 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.aychholdings.xpat",
       "entitlements": {
-        "aps-environment": "production"
+        "aps-environment": "production",
+        "com.apple.developer.associated-domains": [
+          "applinks:xpat.social",
+          "webcredentials:xpat.social"
+        ],
+        "com.apple.security.application-groups": [
+          "group.com.aychholdings.xpat"
+        ]
       },
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false,
         "NSLocationWhenInUseUsageDescription": "x/pat uses your location to show nearby spots, cafes, and coworking spaces shared by other nomads.",
