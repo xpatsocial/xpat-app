@@ -6,12 +6,14 @@ import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, spacing, radius } from '../theme';
 
+import FeedScreen from './FeedScreen';
 import ChatTab from './community/ChatTab';
 import MessagesTab from './community/MessagesTab';
 
 const TopTab = createMaterialTopTabNavigator();
 
 const TAB_CONFIG = [
+  { name: 'Feed', icon: 'grid' },
   { name: 'Chat', icon: 'message-circle' },
   { name: 'Messages', icon: 'mail' },
 ];
@@ -80,6 +82,9 @@ export default function PeopleScreen({ navigation }: any) {
           animationEnabled: true,
         }}
       >
+        <TopTab.Screen name="Feed">
+          {() => <FeedScreen navigation={navigation} hideHeader />}
+        </TopTab.Screen>
         <TopTab.Screen name="Chat" component={ChatTab} />
         <TopTab.Screen name="Messages" component={MessagesTab} />
       </TopTab.Navigator>

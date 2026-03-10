@@ -44,7 +44,7 @@ function formatTime(dateString: string): string {
   });
 }
 
-export default function CalendarTab() {
+export default function CalendarTab({ searchQuery = '' }: { searchQuery?: string }) {
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
@@ -62,16 +62,27 @@ export default function CalendarTab() {
     }).catch(() => setLoading(false));
   }, []);
 
+  const searchFilteredEvents = useMemo(() => {
+    if (!searchQuery.trim()) return events;
+    const q = searchQuery.toLowerCase();
+    return events.filter(
+      (e) =>
+        e.title?.toLowerCase().includes(q) ||
+        e.venue_name?.toLowerCase().includes(q) ||
+        e.description?.toLowerCase().includes(q)
+    );
+  }, [events, searchQuery]);
+
   const eventsByDate = useMemo(() => {
     const map: Record<string, AppEvent[]> = {};
-    events.forEach((event) => {
+    searchFilteredEvents.forEach((event) => {
       const d = new Date(event.starts_at);
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       if (!map[key]) map[key] = [];
       map[key].push(event);
     });
     return map;
-  }, [events]);
+  }, [searchFilteredEvents]);
 
   const dateKey = useCallback(
     (year: number, month: number, day: number) => `${year}-${month}-${day}`,

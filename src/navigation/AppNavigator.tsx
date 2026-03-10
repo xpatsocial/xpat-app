@@ -8,7 +8,6 @@ import ErrorBoundary from '../components/ErrorBoundary';
 
 import PlacesScreen from '../screens/PlacesScreen';
 import PeopleScreen from '../screens/PeopleScreen';
-import FeedScreen from '../screens/FeedScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CreateEventScreen from '../screens/CreateEventScreen';
 import AddSpotScreen from '../screens/AddSpotScreen';
@@ -43,7 +42,6 @@ function MainTabs() {
       }}
     >
       <Tab.Screen name="Home">{(props: any) => <ErrorBoundary><PeopleScreen {...props} /></ErrorBoundary>}</Tab.Screen>
-      <Tab.Screen name="Feed">{(props: any) => <ErrorBoundary><FeedScreen {...props} /></ErrorBoundary>}</Tab.Screen>
       <Tab.Screen name="Explore">{(props: any) => <ErrorBoundary><PlacesScreen {...props} /></ErrorBoundary>}</Tab.Screen>
       <Tab.Screen name="Profile">{(props: any) => <ErrorBoundary><ProfileScreen {...props} /></ErrorBoundary>}</Tab.Screen>
     </Tab.Navigator>

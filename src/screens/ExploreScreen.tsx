@@ -109,9 +109,12 @@ interface ExploreScreenProps {
   onTabChange?: (tab: PlacesTab) => void;
   /** When true, render only the header (tab toggle + search) — no map */
   headerOnly?: boolean;
+  /** Persistent search query lifted from PlacesScreen */
+  searchQuery?: string;
+  onSearchChange?: (query: string) => void;
 }
 
-export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChange, headerOnly }: ExploreScreenProps) {
+export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChange, headerOnly, searchQuery: parentSearchQuery, onSearchChange }: ExploreScreenProps) {
   const { user, profile } = useAuth();
   const posthog = usePostHog();
   const insets = useSafeAreaInsets();
@@ -124,9 +127,10 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
   // GPS location state
   const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Search state
-  const [searchVisible, setSearchVisible] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
+  // Search state — driven by parent for persistence across tabs
+  const [searchVisible, setSearchVisible] = useState(!!(parentSearchQuery && parentSearchQuery.trim()));
+  const searchQuery = parentSearchQuery ?? '';
+  const setSearchQuery = onSearchChange ?? (() => {});
 
   // Neighborhood Pulse state
   const [currentRegion, setCurrentRegion] = useState<Region | null>(null);
@@ -496,32 +500,71 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
   const showPulseCard = isNeighborhoodZoom && pulseData.tagCounts.length > 0
     && !selectedSpot && !pulseSheetVisible;
 
-  // headerOnly mode: render just the tab toggle (for Events/Calendar tabs in PlacesScreen)
+  // headerOnly mode: render tab toggle + search for Events/Calendar tabs
   if (headerOnly) {
     return (
       <View style={styles.headerOnlyContainer}>
-        {onTabChange && (
-          <View style={styles.tabToggleRow}>
-            {TABS.map((tab) => {
-              const isActive = activeTab === tab.name;
-              return (
-                <TouchableOpacity
-                  key={tab.name}
-                  style={[styles.tabToggle, isActive && styles.tabToggleActive]}
-                  onPress={() => { Haptics.selectionAsync(); onTabChange(tab.name); }}
-                  activeOpacity={0.7}
-                >
-                  <Feather
-                    name={tab.icon as any}
-                    size={13}
-                    color={isActive ? colors.dark.bg : colors.dark.text2}
-                  />
-                  <Text style={[styles.tabToggleText, isActive && styles.tabToggleTextActive]}>
-                    {tab.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+        <View style={styles.headerRow1}>
+          {onTabChange && (
+            <View style={[styles.tabToggleRow, { flex: 1 }]}>
+              {TABS.map((tab) => {
+                const isActive = activeTab === tab.name;
+                return (
+                  <TouchableOpacity
+                    key={tab.name}
+                    style={[styles.tabToggle, isActive && styles.tabToggleActive]}
+                    onPress={() => { Haptics.selectionAsync(); onTabChange(tab.name); }}
+                    activeOpacity={0.7}
+                  >
+                    <Feather
+                      name={tab.icon as any}
+                      size={13}
+                      color={isActive ? colors.dark.bg : colors.dark.text2}
+                    />
+                    <Text style={[styles.tabToggleText, isActive && styles.tabToggleTextActive]}>
+                      {tab.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
+          <TouchableOpacity
+            style={styles.searchBtn}
+            onPress={() => {
+              Haptics.selectionAsync();
+              setSearchVisible(!searchVisible);
+              if (searchVisible) {
+                setSearchQuery('');
+                Keyboard.dismiss();
+              }
+            }}
+          >
+            <Feather name={searchVisible ? 'x' : 'search'} size={18} color={colors.dark.text} />
+          </TouchableOpacity>
+        </View>
+        {searchVisible && (
+          <View style={styles.headerOnlySearch}>
+            <Feather name="search" size={15} color={colors.dark.text2} />
+            <TextInput
+              style={styles.searchPillInput}
+              placeholder="Search events, venues..."
+              placeholderTextColor={colors.dark.text3}
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              autoFocus
+              returnKeyType="search"
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity
+                onPress={() => setSearchQuery('')}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Feather name="x-circle" size={14} color={colors.dark.text3} />
+              </TouchableOpacity>
+            )}
           </View>
         )}
       </View>
@@ -909,6 +952,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     backgroundColor: colors.dark.bg,
+    gap: spacing.sm,
+  },
+  headerOnlySearch: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 42,
+    backgroundColor: colors.dark.bg2,
+    borderRadius: 21,
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+    borderWidth: 0.5,
+    borderColor: colors.dark.border,
   },
   tabToggleRow: {
     flexDirection: 'row',

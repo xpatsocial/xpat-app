@@ -13,7 +13,6 @@ import { colors, fonts } from '../theme';
 
 const TAB_ICONS: Record<string, string> = {
   Home: 'home',
-  Feed: 'grid',
   Explore: 'map-pin',
   Profile: 'user',
 };

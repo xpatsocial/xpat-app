@@ -55,7 +55,7 @@ function isSameDay(a: Date, b: Date): boolean {
 // Component
 // ---------------------------------------------------------------------------
 
-export default function EventsTab() {
+export default function EventsTab({ searchQuery = '' }: { searchQuery?: string }) {
   const navigation = useNavigation<any>();
   const { user, profile } = useAuth();
   const { upcomingEvents, cityEvents, rsvp } = useEvents();
@@ -106,7 +106,16 @@ export default function EventsTab() {
   // -----------------------------------------------------------------------
   const filteredEvents = events.filter((e) => {
     const eventDate = new Date(e.starts_at);
-    return isSameDay(eventDate, selectedDate);
+    if (!isSameDay(eventDate, selectedDate)) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return (
+        e.title?.toLowerCase().includes(q) ||
+        e.venue_name?.toLowerCase().includes(q) ||
+        e.description?.toLowerCase().includes(q)
+      );
+    }
+    return true;
   });
 
   // Count events per date for dot indicators

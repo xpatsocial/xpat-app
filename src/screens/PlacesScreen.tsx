@@ -11,6 +11,8 @@ export type PlacesTab = 'Map' | 'Events' | 'Calendar';
 
 export default function PlacesScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<PlacesTab>('Map');
+  // Persistent search state shared across all sub-tabs
+  const [searchQuery, setSearchQuery] = useState('');
 
   const handleTabChange = useCallback((tab: PlacesTab) => setActiveTab(tab), []);
 
@@ -21,6 +23,8 @@ export default function PlacesScreen({ navigation }: any) {
           navigation={navigation}
           activeTab={activeTab}
           onTabChange={handleTabChange}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
         />
       </View>
     );
@@ -35,9 +39,15 @@ export default function PlacesScreen({ navigation }: any) {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         headerOnly
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
       />
       <View style={styles.tabContent}>
-        {activeTab === 'Events' ? <EventsTab /> : <CalendarTab />}
+        {activeTab === 'Events' ? (
+          <EventsTab searchQuery={searchQuery} />
+        ) : (
+          <CalendarTab searchQuery={searchQuery} />
+        )}
       </View>
     </View>
   );
