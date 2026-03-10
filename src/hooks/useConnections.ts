@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Alert } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { Connection, ConnectionStatus, Profile } from '../types';
 import { useAuth } from './useAuth';
+import { getRateLimitError } from '../lib/rateLimiter';
 
 export function useConnections() {
   const { user } = useAuth();
@@ -66,6 +68,12 @@ export function useConnections() {
   const sendRequest = useCallback(
     async (targetId: string, message?: string) => {
       if (!user) return { error: { message: 'Not authenticated' } };
+
+      const rateLimitMsg = getRateLimitError('connection_request');
+      if (rateLimitMsg) {
+        Alert.alert('Slow down', rateLimitMsg);
+        return { error: { message: rateLimitMsg } };
+      }
 
       const { data, error } = await supabase
         .from('connections')

@@ -5,11 +5,11 @@ import {
   LayoutAnimation, UIManager, Platform,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import Constants from 'expo-constants';
 import { colors, fonts, spacing, radius } from '../theme';

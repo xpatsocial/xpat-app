@@ -4,6 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { ReportCategory } from '../types';
+import { getRateLimitError } from '../lib/rateLimiter';
 
 export function useModeration() {
   const { user } = useAuth();
@@ -95,6 +96,12 @@ export function useModeration() {
       description?: string;
     }) => {
       if (!user) return false;
+
+      const rateLimitMsg = getRateLimitError('report');
+      if (rateLimitMsg) {
+        Alert.alert('Slow down', rateLimitMsg);
+        return false;
+      }
 
       const { error } = await supabase.from('reports').insert({
         reporter_id: user.id,

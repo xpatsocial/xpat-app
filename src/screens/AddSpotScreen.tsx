@@ -16,6 +16,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../lib/posthog';
 import { SpotCategory } from '../types';
 import { checkTextSafety } from '../lib/contentModeration';
+import { getRateLimitError } from '../lib/rateLimiter';
 
 const CATEGORIES: { key: SpotCategory; label: string; emoji: string }[] = [
   { key: 'cafe', label: 'Cafe', emoji: '☕' },
@@ -111,6 +112,12 @@ export default function AddSpotScreen({ navigation }: any) {
     if (!user) return;
     if (!name.trim() || !city.trim() || !country.trim()) {
       Alert.alert('Missing fields', 'Name, city, and country are required.');
+      return;
+    }
+
+    const rateLimitMsg = getRateLimitError('spot');
+    if (rateLimitMsg) {
+      Alert.alert('Slow down', rateLimitMsg);
       return;
     }
 

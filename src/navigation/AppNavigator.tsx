@@ -40,9 +40,9 @@ function MainTabs() {
         headerShown: false,
       }}
     >
-      <Tab.Screen name="Places">{() => <ErrorBoundary><PlacesScreen /></ErrorBoundary>}</Tab.Screen>
-      <Tab.Screen name="People">{() => <ErrorBoundary><PeopleScreen /></ErrorBoundary>}</Tab.Screen>
-      <Tab.Screen name="Profile">{() => <ErrorBoundary><ProfileScreen /></ErrorBoundary>}</Tab.Screen>
+      <Tab.Screen name="Places">{(props: any) => <ErrorBoundary><PlacesScreen {...props} /></ErrorBoundary>}</Tab.Screen>
+      <Tab.Screen name="People">{(props: any) => <ErrorBoundary><PeopleScreen {...props} /></ErrorBoundary>}</Tab.Screen>
+      <Tab.Screen name="Profile">{(props: any) => <ErrorBoundary><ProfileScreen {...props} /></ErrorBoundary>}</Tab.Screen>
     </Tab.Navigator>
   );
 }
@@ -54,6 +54,8 @@ export default function AppNavigator() {
   useEffect(() => {
     AsyncStorage.getItem('gdpr_accepted').then((val) => {
       setGdprAccepted(val === 'true' || val === 'declined');
+    }).catch(() => {
+      setGdprAccepted(false); // Show GDPR consent if storage fails
     });
   }, []);
 

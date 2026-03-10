@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { DirectMessage, DMConversation, Profile } from '../types';
 import { useAuth } from './useAuth';
 import { checkTextSafety } from '../lib/contentModeration';
+import { getRateLimitError } from '../lib/rateLimiter';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 export function useDirectMessages() {
@@ -232,6 +233,12 @@ export function useConversation(partnerId: string) {
   const sendMessage = useCallback(
     async (content: string) => {
       if (!user || !partnerId || !content.trim()) return;
+
+      const rateLimitMsg = getRateLimitError('direct_message');
+      if (rateLimitMsg) {
+        Alert.alert('Slow down', rateLimitMsg);
+        return;
+      }
 
       // Check if users are connected before allowing message
       const { data: connected, error: rpcError } = await supabase.rpc('are_connected', {

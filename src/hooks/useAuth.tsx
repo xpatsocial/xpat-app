@@ -38,6 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         posthog.identify(session.user.id, { email: session.user.email });
       }
       setLoading(false);
+    }).catch(() => {
+      setLoading(false);
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -55,7 +57,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [posthog]);
 
   async function fetchProfile(userId: string) {
     const { data } = await supabase

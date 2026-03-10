@@ -5,6 +5,7 @@ import { ChatMessage, ChatChannel } from '../types';
 import { useAuth } from './useAuth';
 import { captureException } from '../lib/sentry';
 import { checkTextSafety } from '../lib/contentModeration';
+import { getRateLimitError } from '../lib/rateLimiter';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 
 interface UseCityChatOptions {
@@ -112,6 +113,12 @@ export function useCityChat({ city, country }: UseCityChatOptions) {
   // Send a message
   const sendMessage = useCallback(async (content: string) => {
     if (!user || !channel || !content.trim()) return;
+
+    const rateLimitMsg = getRateLimitError('chat_message');
+    if (rateLimitMsg) {
+      Alert.alert('Slow down', rateLimitMsg);
+      return;
+    }
 
     const safety = await checkTextSafety(content.trim());
     if (!safety.safe) {

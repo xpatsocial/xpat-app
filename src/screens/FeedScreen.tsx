@@ -16,6 +16,7 @@ import Skeleton from '../components/Skeleton';
 import { usePostHog } from '../lib/posthog';
 import { formatTimeAgo } from '../utils/formatTime';
 import { checkTextSafety } from '../lib/contentModeration';
+import { getRateLimitError } from '../lib/rateLimiter';
 
 export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}) {
   const { user, session } = useAuth();
@@ -84,6 +85,12 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
   async function handlePost() {
     if (!newPost.trim() || !user) return;
 
+    const rateLimitMsg = getRateLimitError('post');
+    if (rateLimitMsg) {
+      Alert.alert('Slow down', rateLimitMsg);
+      return;
+    }
+
     const safety = await checkTextSafety(newPost.trim());
     if (!safety.safe) {
       Alert.alert('Post not shared', safety.reason ?? 'Content flagged by moderation.');
@@ -123,6 +130,11 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
   async function handleLike(item: Post) {
     if (!user) return;
     const liked = isLikedByUser(item);
+
+    if (!liked) {
+      const rateLimitMsg = getRateLimitError('like');
+      if (rateLimitMsg) return; // Silent — don't alert for likes
+    }
 
     // Optimistic update
     setPosts((prev) =>
@@ -185,6 +197,18 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
     const text = commentTexts[postId]?.trim();
     if (!text || !user) return;
 
+    const rateLimitMsg = getRateLimitError('comment');
+    if (rateLimitMsg) {
+      Alert.alert('Slow down', rateLimitMsg);
+      return;
+    }
+
+    const safety = await checkTextSafety(text);
+    if (!safety.safe) {
+      Alert.alert('Comment not posted', safety.reason ?? 'Content flagged by moderation.');
+      return;
+    }
+
     setPostingComment((prev) => new Set(prev).add(postId));
 
     const { error } = await supabase
@@ -239,6 +263,11 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
 
   async function submitReport(reason: string) {
     if (!user) return;
+    const rateLimitMsg = getRateLimitError('report');
+    if (rateLimitMsg) {
+      Alert.alert('Slow down', rateLimitMsg);
+      return;
+    }
     await supabase.from('reports').insert({
       reporter_id: user.id,
       target_type: 'post',

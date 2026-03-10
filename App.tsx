@@ -50,6 +50,8 @@ function App() {
       if (val === 'true') {
         initSentry();
       }
+    }).catch(() => {
+      // Storage unavailable — skip Sentry init
     });
   }, []);
 
