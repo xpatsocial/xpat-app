@@ -20,6 +20,7 @@ import NomadDiscoveryScreen from '../screens/NomadDiscoveryScreen';
 import SpotDiscoveryScreen from '../screens/SpotDiscoveryScreen';
 import EventSwipeScreen from '../screens/EventSwipeScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import BlockedUsersScreen from '../screens/BlockedUsersScreen';
 import GDPRConsent from '../components/GDPRConsent';
 
 import { useAuth } from '../hooks/useAuth';
@@ -140,6 +141,11 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Settings"
           component={SettingsScreen}
+          options={{ presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="BlockedUsers"
+          component={BlockedUsersScreen}
           options={{ presentation: 'card' }}
         />
       </Stack.Navigator>

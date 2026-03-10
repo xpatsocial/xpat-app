@@ -22,7 +22,7 @@ interface ReportModalProps {
   onSubmit: (reason: string) => void;
 }
 
-const REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Misinformation'];
+const REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Fake Profile', 'Scam', 'Other'];
 const SHEET_HEIGHT = 340;
 const DISMISS_THRESHOLD = 80;
 

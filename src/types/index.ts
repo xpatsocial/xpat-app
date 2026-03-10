@@ -11,6 +11,11 @@ export interface Profile {
   home_city: string | null;
   role: string;
   created_at: string;
+  languages?: string[];
+  skills?: string[];
+  open_to?: string[];
+  timezone?: string | null;
+  nationality?: string | null;
 }
 
 export interface Spot {
@@ -163,6 +168,81 @@ export interface AffiliatePartner {
   label: string;
   subtitle: string;
   url: string;
+}
+
+// Chat types
+export interface ChatChannel {
+  id: string;
+  type: 'city' | 'dm' | 'group';
+  name: string | null;
+  city: string | null;
+  country: string | null;
+  description: string | null;
+  avatar_url: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatMember {
+  id: string;
+  channel_id: string;
+  user_id: string;
+  role: 'admin' | 'moderator' | 'member';
+  muted: boolean;
+  joined_at: string;
+  last_read_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  channel_id: string;
+  sender_id: string;
+  content: string;
+  reply_to: string | null;
+  edited: boolean;
+  deleted: boolean;
+  created_at: string;
+  updated_at: string;
+  profiles?: Profile;
+}
+
+export interface Block {
+  id: string;
+  blocker_id: string;
+  blocked_id: string;
+  created_at: string;
+}
+
+export type ReportCategory = 'spam' | 'harassment' | 'inappropriate' | 'fake_profile' | 'scam' | 'other';
+
+export interface Report {
+  id: string;
+  reporter_id: string;
+  reported_user_id: string | null;
+  content_type: 'profile' | 'message' | 'post' | 'spot' | 'event';
+  content_id: string | null;
+  category: ReportCategory;
+  description: string | null;
+  status: 'pending' | 'reviewed' | 'actioned' | 'dismissed';
+  created_at: string;
+}
+
+export interface UserPreferences {
+  user_id: string;
+  show_on_map: boolean;
+  profile_visibility: 'public' | 'connections' | 'private';
+  notify_connections: boolean;
+  notify_messages: boolean;
+  notify_nearby: boolean;
+  notify_events: boolean;
+  notify_email: boolean;
+  quiet_hours_start: string | null;
+  quiet_hours_end: string | null;
+  distance_unit: 'km' | 'mi';
+  auto_join_city_chat: boolean;
+  auto_load_images: boolean;
+  preferred_language: string;
 }
 
 export const AFFILIATE_PARTNERS: Record<string, AffiliatePartner> = {

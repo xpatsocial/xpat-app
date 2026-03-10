@@ -1,12 +1,12 @@
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
+import Animated from 'react-native-reanimated';
 import { colors, fonts, spacing, radius } from '../theme';
 import BrandHeader from '../components/BrandHeader';
 
+import ChatTab from './community/ChatTab';
 import NearbyTab from './community/NearbyTab';
 import FeedTab from './community/FeedTab';
 import EventsTab from './community/EventsTab';
@@ -15,6 +15,7 @@ import DiscoverTab from './community/DiscoverTab';
 const TopTab = createMaterialTopTabNavigator();
 
 const TAB_CONFIG = [
+  { name: 'Chat', icon: 'message-circle' },
   { name: 'Nearby', icon: 'map-pin' },
   { name: 'Feed', icon: 'rss' },
   { name: 'Events', icon: 'calendar' },
@@ -71,6 +72,7 @@ export default function CommunityScreen() {
           animationEnabled: true,
         }}
       >
+        <TopTab.Screen name="Chat" component={ChatTab} />
         <TopTab.Screen name="Nearby" component={NearbyTab} />
         <TopTab.Screen name="Feed" component={FeedTab} />
         <TopTab.Screen name="Events" component={EventsTab} />
@@ -116,9 +118,9 @@ const tabStyles = StyleSheet.create({
   },
   pillText: {
     fontFamily: fonts.body,
-    fontSize: 11,
+    fontSize: 10,
     color: colors.dark.text2,
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   pillTextActive: {
     color: colors.dark.bg,

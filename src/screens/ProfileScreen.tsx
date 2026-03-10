@@ -11,6 +11,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 }
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import Constants from 'expo-constants';
 import { colors, fonts, spacing, radius } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -463,7 +464,7 @@ export default function ProfileScreen() {
           <Text style={styles.deleteBtnText}>Delete Account</Text>
         </TouchableOpacity>
 
-        <Text style={styles.version}>x/pat v1.0.3 beta</Text>
+        <Text style={styles.version}>x/pat v{Constants.expoConfig?.version || '1.1.0'} beta</Text>
       </ScrollView>
     </View>
   );

@@ -12,6 +12,8 @@ import Constants from 'expo-constants';
 import { colors, fonts, spacing, radius } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { usePreferences } from '../hooks/usePreferences';
+import { LANGUAGES } from '../hooks/useTranslate';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -26,6 +28,10 @@ interface SettingsState {
   bio: string;
   currentCity: string;
   homeCity: string;
+  nationality: string;
+  languages: string[];
+  skills: string[];
+  openTo: string[];
   profileVisibility: ProfileVisibility;
   showLocationOnMap: boolean;
   notifyConnections: boolean;
@@ -44,6 +50,10 @@ const DEFAULT_SETTINGS: SettingsState = {
   bio: '',
   currentCity: '',
   homeCity: '',
+  nationality: '',
+  languages: [],
+  skills: [],
+  openTo: [],
   profileVisibility: 'public',
   showLocationOnMap: true,
   notifyConnections: true,
@@ -56,6 +66,17 @@ const DEFAULT_SETTINGS: SettingsState = {
   autoLoadImages: true,
 };
 
+const SKILL_OPTIONS = [
+  'Developer', 'Designer', 'Writer', 'Marketer', 'Product',
+  'Photographer', 'Video', 'Music', 'Teaching', 'Consulting',
+  'Founder', 'Freelancer', 'Artist', 'Data', 'Finance',
+];
+
+const OPEN_TO_OPTIONS = [
+  'Coffee chats', 'Coworking', 'Travel buddy', 'Collaboration',
+  'Language exchange', 'Mentoring', 'Networking', 'Sports/fitness',
+];
+
 // ---------------------------------------------------------------------------
 // Screen
 // ---------------------------------------------------------------------------
@@ -64,6 +85,7 @@ export default function SettingsScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { user, profile, signOut } = useAuth();
+  const { preferences, updatePreference, updatePreferences } = usePreferences();
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
   const [saving, setSaving] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -77,37 +99,30 @@ export default function SettingsScreen() {
         bio: profile.bio || '',
         currentCity: profile.current_city || '',
         homeCity: profile.home_city || '',
+        nationality: profile.nationality || '',
+        languages: profile.languages || [],
+        skills: profile.skills || [],
+        openTo: profile.open_to || [],
       }));
     }
-    AsyncStorage.multiGet([
-      'pref_distance_unit',
-      'pref_auto_load_images',
-      'pref_profile_visibility',
-      'pref_show_location',
-      'pref_notify_connections',
-      'pref_notify_messages',
-      'pref_notify_nearby',
-      'pref_notify_events',
-      'pref_quiet_hours',
-      'pref_email_notifications',
-    ]).then((entries) => {
-      const map = Object.fromEntries(entries.filter(([, v]) => v !== null));
-      setSettings((prev) => ({
-        ...prev,
-        distanceUnit: (map['pref_distance_unit'] as DistanceUnit) || prev.distanceUnit,
-        autoLoadImages: map['pref_auto_load_images'] !== 'false',
-        profileVisibility:
-          (map['pref_profile_visibility'] as ProfileVisibility) || prev.profileVisibility,
-        showLocationOnMap: map['pref_show_location'] !== 'false',
-        notifyConnections: map['pref_notify_connections'] !== 'false',
-        notifyMessages: map['pref_notify_messages'] !== 'false',
-        notifyNearbyNomads: map['pref_notify_nearby'] !== 'false',
-        notifyEvents: map['pref_notify_events'] !== 'false',
-        quietHoursEnabled: map['pref_quiet_hours'] === 'true',
-        emailNotifications: map['pref_email_notifications'] !== 'false',
-      }));
-    });
   }, [profile]);
+
+  // Sync preferences from Supabase hook into local settings state
+  useEffect(() => {
+    setSettings((prev) => ({
+      ...prev,
+      distanceUnit: preferences.distance_unit,
+      autoLoadImages: preferences.auto_load_images,
+      profileVisibility: preferences.profile_visibility === 'private' ? 'hidden' as ProfileVisibility : preferences.profile_visibility as ProfileVisibility,
+      showLocationOnMap: preferences.show_on_map,
+      notifyConnections: preferences.notify_connections,
+      notifyMessages: preferences.notify_messages,
+      notifyNearbyNomads: preferences.notify_nearby,
+      notifyEvents: preferences.notify_events,
+      quietHoursEnabled: !!preferences.quiet_hours_start,
+      emailNotifications: preferences.notify_email,
+    }));
+  }, [preferences]);
 
   const updateField = useCallback(
     <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => {
@@ -117,14 +132,35 @@ export default function SettingsScreen() {
     [],
   );
 
-  const toggleSwitch = useCallback((key: keyof SettingsState, storageKey: string) => {
+  // Map from local setting key to Supabase preference key
+  const PREF_KEY_MAP: Record<string, string> = {
+    showLocationOnMap: 'show_on_map',
+    notifyConnections: 'notify_connections',
+    notifyMessages: 'notify_messages',
+    notifyNearbyNomads: 'notify_nearby',
+    notifyEvents: 'notify_events',
+    quietHoursEnabled: 'quiet_hours_start',
+    emailNotifications: 'notify_email',
+    autoLoadImages: 'auto_load_images',
+  };
+
+  const toggleSwitch = useCallback((key: keyof SettingsState, _storageKey: string) => {
     setSettings((prev) => {
       const newVal = !prev[key];
-      AsyncStorage.setItem(storageKey, String(newVal));
+      // Sync to Supabase via preferences hook
+      const prefKey = PREF_KEY_MAP[key];
+      if (prefKey) {
+        if (key === 'quietHoursEnabled') {
+          updatePreference('quiet_hours_start', newVal ? '22:00' : null);
+          updatePreference('quiet_hours_end', newVal ? '08:00' : null);
+        } else {
+          updatePreference(prefKey as any, newVal);
+        }
+      }
       return { ...prev, [key]: newVal };
     });
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-  }, []);
+  }, [updatePreference]);
 
   async function handleSave() {
     if (!user) return;
@@ -137,21 +173,25 @@ export default function SettingsScreen() {
         bio: settings.bio.trim() || null,
         current_city: settings.currentCity.trim() || null,
         home_city: settings.homeCity.trim() || null,
+        nationality: settings.nationality.trim() || null,
+        languages: settings.languages,
+        skills: settings.skills,
+        open_to: settings.openTo,
       })
       .eq('id', user.id);
 
-    await AsyncStorage.multiSet([
-      ['pref_distance_unit', settings.distanceUnit],
-      ['pref_auto_load_images', String(settings.autoLoadImages)],
-      ['pref_profile_visibility', settings.profileVisibility],
-      ['pref_show_location', String(settings.showLocationOnMap)],
-      ['pref_notify_connections', String(settings.notifyConnections)],
-      ['pref_notify_messages', String(settings.notifyMessages)],
-      ['pref_notify_nearby', String(settings.notifyNearbyNomads)],
-      ['pref_notify_events', String(settings.notifyEvents)],
-      ['pref_quiet_hours', String(settings.quietHoursEnabled)],
-      ['pref_email_notifications', String(settings.emailNotifications)],
-    ]);
+    // Batch sync all preferences to Supabase in single call
+    await updatePreferences({
+      distance_unit: settings.distanceUnit,
+      profile_visibility: settings.profileVisibility === 'hidden' ? 'private' : settings.profileVisibility,
+      show_on_map: settings.showLocationOnMap,
+      notify_connections: settings.notifyConnections,
+      notify_messages: settings.notifyMessages,
+      notify_nearby: settings.notifyNearbyNomads,
+      notify_events: settings.notifyEvents,
+      notify_email: settings.emailNotifications,
+      auto_load_images: settings.autoLoadImages,
+    });
 
     setSaving(false);
     if (error) {
@@ -398,6 +438,93 @@ export default function SettingsScreen() {
               placeholderTextColor={colors.dark.text3}
             />
           </View>
+          <View style={styles.divider} />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Nationality</Text>
+            <TextInput
+              style={styles.fieldInput}
+              value={settings.nationality}
+              onChangeText={(v) => updateField('nationality', v)}
+              placeholder="e.g. American, Brazilian, German"
+              placeholderTextColor={colors.dark.text3}
+            />
+          </View>
+        </View>
+
+        {/* SKILLS & INTERESTS */}
+        <SectionHeader icon="briefcase" title="Skills & Interests" />
+        <View style={styles.card}>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>What I Do</Text>
+            <View style={styles.chipGrid}>
+              {SKILL_OPTIONS.map((skill) => {
+                const active = settings.skills.includes(skill);
+                return (
+                  <TouchableOpacity
+                    key={skill}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => {
+                      const next = active
+                        ? settings.skills.filter((s) => s !== skill)
+                        : [...settings.skills, skill];
+                      updateField('skills', next);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{skill}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Open To</Text>
+            <View style={styles.chipGrid}>
+              {OPEN_TO_OPTIONS.map((item) => {
+                const active = settings.openTo.includes(item);
+                return (
+                  <TouchableOpacity
+                    key={item}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => {
+                      const next = active
+                        ? settings.openTo.filter((o) => o !== item)
+                        : [...settings.openTo, item];
+                      updateField('openTo', next);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{item}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>Languages I Speak</Text>
+            <View style={styles.chipGrid}>
+              {LANGUAGES.map((lang) => {
+                const active = settings.languages.includes(lang.code);
+                return (
+                  <TouchableOpacity
+                    key={lang.code}
+                    style={[styles.chip, active && styles.chipActive]}
+                    onPress={() => {
+                      const next = active
+                        ? settings.languages.filter((l) => l !== lang.code)
+                        : [...settings.languages, lang.code];
+                      updateField('languages', next);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={[styles.chipText, active && styles.chipTextActive]}>{lang.flag} {lang.name}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
         </View>
 
         {/* PRIVACY & SAFETY */}
@@ -416,7 +543,7 @@ export default function SettingsScreen() {
                 value={settings.profileVisibility}
                 onSelect={(v) => {
                   updateField('profileVisibility', v as ProfileVisibility);
-                  AsyncStorage.setItem('pref_profile_visibility', v);
+                  updatePreference('profile_visibility', v === 'hidden' ? 'private' : v as any);
                 }}
               />
             }
@@ -435,7 +562,7 @@ export default function SettingsScreen() {
             icon="slash"
             label="Blocked Users"
             sublabel="Manage your block list"
-            onPress={() => Alert.alert('Blocked Users', 'No blocked users yet.')}
+            onPress={() => navigation.navigate('BlockedUsers' as never)}
           />
         </View>
 
@@ -470,13 +597,38 @@ export default function SettingsScreen() {
                 value={settings.distanceUnit}
                 onSelect={(v) => {
                   updateField('distanceUnit', v as DistanceUnit);
-                  AsyncStorage.setItem('pref_distance_unit', v);
+                  updatePreference('distance_unit', v as any);
                 }}
               />
             }
           />
           <View style={styles.divider} />
           <ToggleRow icon="image" label="Auto-Load Images" sublabel="Save data on slow connections" value={settings.autoLoadImages} storageKey="pref_auto_load_images" settingKey="autoLoadImages" />
+          <View style={styles.divider} />
+          <SettingRow
+            icon="globe"
+            label="Translate Language"
+            sublabel="Tap-to-translate target language"
+            right={
+              <TouchableOpacity
+                style={styles.langPicker}
+                onPress={() => {
+                  const currentIdx = LANGUAGES.findIndex((l) => l.code === preferences.preferred_language);
+                  const nextIdx = (currentIdx + 1) % LANGUAGES.length;
+                  const next = LANGUAGES[nextIdx];
+                  updatePreference('preferred_language', next.code);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.langPickerText}>
+                  {LANGUAGES.find((l) => l.code === preferences.preferred_language)?.flag || ''}{' '}
+                  {LANGUAGES.find((l) => l.code === preferences.preferred_language)?.name || preferences.preferred_language}
+                </Text>
+                <Feather name="chevron-right" size={12} color={colors.dark.text3} />
+              </TouchableOpacity>
+            }
+          />
         </View>
 
         {/* ACCOUNT */}
@@ -626,6 +778,49 @@ const styles = StyleSheet.create({
   segmentActive: { backgroundColor: colors.teal },
   segmentText: { fontFamily: fonts.body, fontSize: 10, color: colors.dark.text2 },
   segmentTextActive: { color: colors.dark.bg, fontFamily: fonts.bodyBold },
+
+  chipGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  chip: {
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: radius.full,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    backgroundColor: colors.dark.bg,
+  },
+  chipActive: {
+    backgroundColor: 'rgba(46,196,160,0.15)',
+    borderColor: colors.teal,
+  },
+  chipText: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.dark.text2,
+  },
+  chipTextActive: {
+    color: colors.teal,
+    fontFamily: fonts.bodyBold,
+  },
+  langPicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.dark.bg,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
+  langPickerText: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.dark.text,
+  },
 
   version: {
     fontFamily: fonts.body,
