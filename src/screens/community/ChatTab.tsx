@@ -14,9 +14,45 @@ import { useModeration, useBlockedUsers } from '../../hooks/useModeration';
 import { ChatMessage, ReportCategory } from '../../types';
 import Avatar from '../../components/Avatar';
 
+type ChatScope = 'nearby' | 'global' | 'friends';
+
+const SCOPE_OPTIONS: { key: ChatScope; label: string; icon: string }[] = [
+  { key: 'nearby', label: 'Nearby', icon: 'map-pin' },
+  { key: 'global', label: 'Global', icon: 'globe' },
+  { key: 'friends', label: 'Friends', icon: 'users' },
+];
+
+function ScopeToggle({ scope, setScope }: { scope: ChatScope; setScope: (s: ChatScope) => void }) {
+  return (
+    <View style={styles.scopeContainer}>
+      {SCOPE_OPTIONS.map((opt) => {
+        const active = scope === opt.key;
+        return (
+          <TouchableOpacity
+            key={opt.key}
+            style={[styles.scopePill, active && styles.scopePillActive]}
+            onPress={() => setScope(opt.key)}
+            activeOpacity={0.7}
+          >
+            <Feather
+              name={opt.icon as any}
+              size={11}
+              color={active ? colors.dark.bg : colors.dark.text2}
+            />
+            <Text style={[styles.scopePillText, active && styles.scopePillTextActive]}>
+              {opt.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
 export default function ChatTab() {
   const { user, session, profile } = useAuth();
   const navigation = useNavigation<any>();
+  const [scope, setScope] = useState<ChatScope>('nearby');
 
   if (!session) {
     return (
@@ -48,12 +84,29 @@ export default function ChatTab() {
     );
   }
 
+  if (scope === 'friends') {
+    return (
+      <View style={styles.chatRoot}>
+        <ScopeToggle scope={scope} setScope={setScope} />
+        <View style={styles.friendsPlaceholder}>
+          <Feather name="message-circle" size={40} color={colors.dark.text3} />
+          <Text style={styles.friendsPlaceholderText}>Direct messages coming soon</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const chatCity = scope === 'global' ? 'global' : profile.current_city;
+  const chatCountry = scope === 'global' ? 'global' : profile.current_country;
+
   return (
     <CityChat
-      city={profile.current_city}
-      country={profile.current_country}
+      city={chatCity}
+      country={chatCountry}
       userId={user!.id}
       displayName={profile.display_name}
+      scope={scope}
+      setScope={setScope}
     />
   );
 }
@@ -63,9 +116,11 @@ interface CityChatProps {
   country: string;
   userId: string;
   displayName: string | null;
+  scope: ChatScope;
+  setScope: (s: ChatScope) => void;
 }
 
-function CityChat({ city, country, userId }: CityChatProps) {
+function CityChat({ city, country, userId, scope, setScope }: CityChatProps) {
   const { messages, loading, sending, sendMessage } = useCityChat({ city, country });
   const { translate, isTranslating } = useTranslate();
   const { preferences } = usePreferences();
@@ -126,9 +181,13 @@ function CityChat({ city, country, userId }: CityChatProps) {
       return;
     }
 
-    const result = await translate(msg.content, targetLang, msg.id);
-    if (result) {
-      setTranslations((prev) => ({ ...prev, [msg.id]: result.translatedText }));
+    try {
+      const result = await translate(msg.content, targetLang, msg.id);
+      if (result) {
+        setTranslations((prev) => ({ ...prev, [msg.id]: result.translatedText }));
+      }
+    } catch {
+      // silently fail - translation is non-critical
     }
   }, [translations, translate, targetLang]);
 
@@ -196,7 +255,9 @@ function CityChat({ city, country, userId }: CityChatProps) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator color={colors.teal} size="large" />
-        <Text style={styles.loadingText}>Joining {city} chat...</Text>
+        <Text style={styles.loadingText}>
+          {scope === 'global' ? 'Joining global chat...' : `Joining ${city} chat...`}
+        </Text>
       </View>
     );
   }
@@ -207,9 +268,13 @@ function CityChat({ city, country, userId }: CityChatProps) {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={180}
     >
+      <ScopeToggle scope={scope} setScope={setScope} />
+
       <View style={styles.channelHeader}>
-        <Feather name="map-pin" size={14} color={colors.teal} />
-        <Text style={styles.channelName}>{city}, {country}</Text>
+        <Feather name={scope === 'global' ? 'globe' : 'map-pin'} size={14} color={colors.teal} />
+        <Text style={styles.channelName}>
+          {scope === 'global' ? 'Global Chat' : `${city}, ${country}`}
+        </Text>
         <View style={styles.channelRight}>
           <Feather name="globe" size={12} color={colors.dark.text3} />
           <Text style={styles.channelLang}>{targetLang.toUpperCase()}</Text>
@@ -320,6 +385,44 @@ const styles = StyleSheet.create({
   authSubtitle: { fontFamily: fonts.body, fontSize: 13, color: colors.dark.text2, textAlign: 'center', lineHeight: 20, marginBottom: spacing.lg },
   authBtn: { backgroundColor: colors.teal, borderRadius: radius.md, paddingVertical: spacing.sm + spacing.xs, paddingHorizontal: spacing.xl + spacing.lg },
   authBtnText: { fontFamily: fonts.bodyBold, fontSize: 16, color: colors.dark.bg },
+  scopeContainer: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.dark.bg,
+  },
+  scopePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: spacing.sm + 2,
+    paddingVertical: 5,
+    borderRadius: radius.lg,
+    backgroundColor: colors.dark.bg3,
+  },
+  scopePillActive: {
+    backgroundColor: colors.teal,
+  },
+  scopePillText: {
+    fontFamily: fonts.body,
+    fontSize: 11,
+    color: colors.dark.text2,
+  },
+  scopePillTextActive: {
+    color: colors.dark.bg,
+  },
+  friendsPlaceholder: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  friendsPlaceholderText: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.dark.text2,
+  },
 });
 
 const msgStyles = StyleSheet.create({

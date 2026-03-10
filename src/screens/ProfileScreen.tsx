@@ -526,6 +526,20 @@ export default function ProfileScreen() {
           <Feather name="chevron-right" size={18} color={colors.dark.text2} />
         </AnimatedPressable>
 
+        <AnimatedPressable
+          style={styles.toolkitLink}
+          onPress={() => navigation.navigate('AskAI')}
+        >
+          <View style={[styles.partnerIcon, { backgroundColor: 'rgba(232,128,58,0.15)' }]}>
+            <Feather name="zap" size={18} color={colors.amber} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.partnerLabel}>x/pat AI</Text>
+            <Text style={styles.partnerSubtitle}>Ask about visas, cities, safety & more</Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.dark.text2} />
+        </AnimatedPressable>
+
         {partners.map((partner) => (
           <View
             key={partner.name}

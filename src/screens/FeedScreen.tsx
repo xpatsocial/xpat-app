@@ -1,11 +1,14 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View, Text, FlatList, StyleSheet, TouchableOpacity,
-  RefreshControl, ActivityIndicator, TextInput, Alert, Share,
+  RefreshControl, ActivityIndicator, TextInput, Alert, Share, Image,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { decode } from 'base64-arraybuffer';
 import { colors, fonts, spacing, radius } from '../theme';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -34,6 +37,8 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
   const [loadingComments, setLoadingComments] = useState<Set<number>>(new Set());
   const [postingComment, setPostingComment] = useState<Set<number>>(new Set());
   const [reportTarget, setReportTarget] = useState<{ id: number; visible: boolean }>({ id: 0, visible: false });
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const fetchPosts = useCallback(async () => {
     if (!session) return;
@@ -82,6 +87,28 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
     );
   }
 
+  async function pickImage() {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Allow photo access to add images to posts.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setSelectedImage(result.assets[0].uri);
+      }
+    } catch (err: any) {
+      Alert.alert('Image picker error', err.message || 'Failed to open photo library.');
+    }
+  }
+
   async function handlePost() {
     if (!newPost.trim() || !user) return;
 
@@ -98,16 +125,56 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
     }
 
     setPosting(true);
-    const { error } = await supabase.from('posts').insert({
+
+    let photo_url: string | null = null;
+    if (selectedImage) {
+      try {
+        setUploading(true);
+        const manipulated = await ImageManipulator.manipulateAsync(
+          selectedImage,
+          [{ resize: { width: 1200 } }],
+          { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true },
+        );
+
+        const filePath = `${user.id}/${Date.now()}.jpg`;
+        const { error: uploadError } = await supabase.storage
+          .from('post-photos')
+          .upload(filePath, decode(manipulated.base64!), { contentType: 'image/jpeg', upsert: false });
+
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage
+            .from('post-photos')
+            .getPublicUrl(filePath);
+          photo_url = urlData.publicUrl;
+        } else {
+          Alert.alert('Upload failed', uploadError.message);
+          setPosting(false);
+          setUploading(false);
+          return;
+        }
+      } catch (err: any) {
+        Alert.alert('Upload error', err.message || 'Failed to upload photo.');
+        setPosting(false);
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+    }
+
+    const insertData: any = {
       user_id: user?.id,
       content: newPost.trim(),
-    });
+    };
+    if (photo_url) insertData.photo_url = photo_url;
+
+    const { error } = await supabase.from('posts').insert(insertData);
     if (error) {
       Alert.alert('Error', error.message);
     } else {
-      posthog.capture('post_created', { has_spot: false });
+      posthog.capture('post_created', { has_spot: false, has_photo: !!photo_url });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setNewPost('');
+      setSelectedImage(null);
       fetchPosts();
     }
     setPosting(false);
@@ -345,6 +412,13 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
           </View>
         </View>
         <Text style={styles.postContent}>{item.content}</Text>
+        {item.photo_url && (
+          <Image
+            source={{ uri: item.photo_url }}
+            style={styles.postImage}
+            resizeMode="cover"
+          />
+        )}
         {item.spots && (
           <View style={styles.spotTag}>
             <Feather name="map-pin" size={10} color={colors.amber} />
@@ -433,18 +507,34 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
           onChangeText={setNewPost}
           multiline
         />
+        <TouchableOpacity onPress={pickImage} style={{ justifyContent: 'center', paddingHorizontal: 4 }}>
+          <Feather name="image" size={20} color={colors.dark.text2} />
+        </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.postBtn, (!newPost.trim() || posting) && styles.postBtnDisabled]}
+          style={[styles.postBtn, (!newPost.trim() || posting || uploading) && styles.postBtnDisabled]}
           onPress={handlePost}
-          disabled={!newPost.trim() || posting}
+          disabled={!newPost.trim() || posting || uploading}
         >
-          {posting ? (
+          {posting || uploading ? (
             <ActivityIndicator color={colors.dark.bg} size="small" />
           ) : (
             <Feather name="send" size={16} color={colors.dark.bg} />
           )}
         </TouchableOpacity>
       </View>
+      {selectedImage && (
+        <View style={styles.imagePreviewContainer}>
+          <View>
+            <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+            <TouchableOpacity
+              style={styles.removeImageBtn}
+              onPress={() => setSelectedImage(null)}
+            >
+              <Feather name="x" size={12} color={colors.dark.text} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {loading ? (
         <View style={{ padding: spacing.lg }}>
@@ -603,6 +693,17 @@ const styles = StyleSheet.create({
     marginTop: spacing.md,
   },
   emptyPostBtnText: { fontFamily: fonts.bodyBold, fontSize: 14, color: colors.dark.bg },
+
+  // Image styles
+  imagePreview: { width: 60, height: 60, borderRadius: 8, marginRight: 8 },
+  imagePreviewContainer: { flexDirection: 'row' as const, alignItems: 'center' as const, paddingHorizontal: spacing.lg, paddingBottom: 8 },
+  removeImageBtn: {
+    position: 'absolute' as const, top: -6, right: 2,
+    backgroundColor: colors.dark.bg, borderRadius: 10,
+    width: 20, height: 20,
+    alignItems: 'center' as const, justifyContent: 'center' as const,
+  },
+  postImage: { width: '100%' as const, height: 200, borderRadius: 12, marginTop: 8 },
 
   // Comment section styles
   commentsSection: {

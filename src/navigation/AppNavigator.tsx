@@ -23,6 +23,7 @@ import SpotDiscoveryScreen from '../screens/SpotDiscoveryScreen';
 import EventSwipeScreen from '../screens/EventSwipeScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import BlockedUsersScreen from '../screens/BlockedUsersScreen';
+import AskAIScreen from '../screens/AskAIScreen';
 import GDPRConsent from '../components/GDPRConsent';
 
 import { useAuth } from '../hooks/useAuth';
@@ -161,6 +162,11 @@ export default function AppNavigator() {
           name="CreateEvent"
           component={CreateEventScreen}
           options={{ presentation: 'modal' }}
+        />
+        <Stack.Screen
+          name="AskAI"
+          component={AskAIScreen}
+          options={{ presentation: 'card' }}
         />
       </Stack.Navigator>
 

@@ -1,8 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
-import { Alert } from 'react-native';
-import { getRateLimitError } from '../lib/rateLimiter';
 import { AppEvent, EventRsvp, Profile, EventCategory } from '../types';
 
 export interface CreateEventInput {
@@ -128,9 +126,6 @@ export function useEvents() {
     async (input: CreateEventInput): Promise<{ data: AppEvent | null; error: string | null }> => {
       if (!user) return { data: null, error: 'Not authenticated' };
 
-      const rateLimitMsg = getRateLimitError('event');
-      if (rateLimitMsg) return { data: null, error: rateLimitMsg };
-
       const { data, error } = await supabase
         .from('events')
         .insert({
@@ -167,9 +162,6 @@ export function useEvents() {
       status: 'going' | 'interested' | 'cancelled',
     ): Promise<{ error: string | null }> => {
       if (!user) return { error: 'Not authenticated' };
-
-      const rateLimitMsg = getRateLimitError('rsvp');
-      if (rateLimitMsg) return { error: rateLimitMsg };
 
       const { error } = await supabase
         .from('event_rsvps')

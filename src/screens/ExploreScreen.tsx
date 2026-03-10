@@ -95,7 +95,23 @@ const ZONE_COLORS: Record<string, { fill: string; stroke: string }> = {
   mixed: { fill: 'rgba(46,196,160,0.15)', stroke: 'rgba(46,196,160,0.4)' },
 };
 
-export default function ExploreScreen({ navigation, onSwitchToEvents }: { navigation: any; onSwitchToEvents?: () => void }) {
+import type { PlacesTab } from './PlacesScreen';
+
+const TABS: Array<{ name: PlacesTab; icon: string }> = [
+  { name: 'Map', icon: 'map' },
+  { name: 'Events', icon: 'calendar' },
+  { name: 'Calendar', icon: 'grid' },
+];
+
+interface ExploreScreenProps {
+  navigation: any;
+  activeTab?: PlacesTab;
+  onTabChange?: (tab: PlacesTab) => void;
+  /** When true, render only the header (tab toggle + search) — no map */
+  headerOnly?: boolean;
+}
+
+export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChange, headerOnly }: ExploreScreenProps) {
   const { user, profile } = useAuth();
   const posthog = usePostHog();
   const insets = useSafeAreaInsets();
@@ -366,6 +382,14 @@ export default function ExploreScreen({ navigation, onSwitchToEvents }: { naviga
   const pulseDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const spotsDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Clean up debounce timers on unmount
+  useEffect(() => {
+    return () => {
+      if (pulseDebounceRef.current) clearTimeout(pulseDebounceRef.current);
+      if (spotsDebounceRef.current) clearTimeout(spotsDebounceRef.current);
+    };
+  }, []);
+
   function handleRegionChange(region: Region) {
     setCurrentRegion(region);
     const zoomed = region.latitudeDelta < NEIGHBORHOOD_ZOOM_THRESHOLD;
@@ -472,6 +496,38 @@ export default function ExploreScreen({ navigation, onSwitchToEvents }: { naviga
   const showPulseCard = isNeighborhoodZoom && pulseData.tagCounts.length > 0
     && !selectedSpot && !pulseSheetVisible;
 
+  // headerOnly mode: render just the tab toggle (for Events/Calendar tabs in PlacesScreen)
+  if (headerOnly) {
+    return (
+      <View style={styles.headerOnlyContainer}>
+        {onTabChange && (
+          <View style={styles.tabToggleRow}>
+            {TABS.map((tab) => {
+              const isActive = activeTab === tab.name;
+              return (
+                <TouchableOpacity
+                  key={tab.name}
+                  style={[styles.tabToggle, isActive && styles.tabToggleActive]}
+                  onPress={() => { Haptics.selectionAsync(); onTabChange(tab.name); }}
+                  activeOpacity={0.7}
+                >
+                  <Feather
+                    name={tab.icon as any}
+                    size={13}
+                    color={isActive ? colors.dark.bg : colors.dark.text2}
+                  />
+                  <Text style={[styles.tabToggleText, isActive && styles.tabToggleTextActive]}>
+                    {tab.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       {/* Full-screen map */}
@@ -545,44 +601,50 @@ export default function ExploreScreen({ navigation, onSwitchToEvents }: { naviga
           ))}
       </MapView>
 
-      {/* Floating header */}
+      {/* Floating header — tab toggle + search + categories */}
       <View style={styles.floatingHeader}>
         <BlurView tint="dark" intensity={70} style={[styles.headerBlur, { paddingTop: insets.top + 8 }]}>
-          {/* Row 1: Map / Events toggle + Search button */}
-          <View style={styles.headerRow1}>
-            {onSwitchToEvents && (
-              <View style={styles.segmentedToggle}>
-                <View style={styles.segmentActive}>
-                  <Feather name="map" size={13} color={colors.dark.bg} />
-                  <Text style={styles.segmentTextActive}>Map</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.segment}
-                  onPress={() => { Haptics.selectionAsync(); onSwitchToEvents(); }}
-                  activeOpacity={0.7}
-                >
-                  <Feather name="calendar" size={13} color={colors.dark.text2} />
-                  <Text style={styles.segmentText}>Events</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            <TouchableOpacity
-              style={styles.searchBtn}
-              onPress={() => { Haptics.selectionAsync(); setSearchVisible(!searchVisible); }}
-              activeOpacity={0.7}
-            >
-              <Feather name={searchVisible ? 'x' : 'search'} size={18} color={colors.dark.text} />
-            </TouchableOpacity>
-          </View>
+          {/* Row 1: Map / Events / Calendar toggle */}
+          {onTabChange && (
+            <View style={styles.tabToggleRow}>
+              {TABS.map((tab) => {
+                const isActive = activeTab === tab.name;
+                return (
+                  <TouchableOpacity
+                    key={tab.name}
+                    style={[styles.tabToggle, isActive && styles.tabToggleActive]}
+                    onPress={() => { Haptics.selectionAsync(); onTabChange(tab.name); }}
+                    activeOpacity={0.7}
+                  >
+                    <Feather
+                      name={tab.icon as any}
+                      size={13}
+                      color={isActive ? colors.dark.bg : colors.dark.text2}
+                    />
+                    <Text style={[styles.tabToggleText, isActive && styles.tabToggleTextActive]}>
+                      {tab.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
-          {/* Expandable search bar + category chips */}
-          {searchVisible && (
-            <>
-              <View style={styles.searchPill}>
-                <Feather name="search" size={15} color={colors.dark.text2} />
+          {/* Row 2: Search bar + Add button */}
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              style={styles.searchPill}
+              onPress={() => {
+                Haptics.selectionAsync();
+                setSearchVisible(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <Feather name="search" size={15} color={colors.dark.text2} />
+              {searchVisible ? (
                 <TextInput
                   style={styles.searchPillInput}
-                  placeholder="Search spots, cafes, coworking..."
+                  placeholder="Search cities, spots..."
                   placeholderTextColor={colors.dark.text3}
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -591,51 +653,88 @@ export default function ExploreScreen({ navigation, onSwitchToEvents }: { naviga
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => setSearchQuery('')}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Feather name="x-circle" size={14} color={colors.dark.text3} />
-                  </TouchableOpacity>
-                )}
-              </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.filterContent}
-                style={styles.filterRow}
-              >
-                {CATEGORIES.map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[
-                      styles.filterPill,
-                      category === cat && {
-                        backgroundColor: cat === 'all' ? colors.teal : (MARKER_COLORS[cat] || colors.teal),
-                        borderColor: cat === 'all' ? colors.teal : (MARKER_COLORS[cat] || colors.teal),
-                      },
-                    ]}
-                    onPress={() => {
-                      Haptics.selectionAsync();
-                      setCategory(cat);
-                      setSelectedSpot(null);
-                    }}
-                  >
-                    <Text style={[styles.filterText, category === cat && styles.filterTextActive]}>
-                      {CATEGORY_LABELS[cat]}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </>
+              ) : (
+                <Text style={styles.searchPillPlaceholder}>Search cities, spots...</Text>
+              )}
+              {searchVisible && searchQuery.length > 0 ? (
+                <TouchableOpacity
+                  onPress={() => setSearchQuery('')}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather name="x-circle" size={14} color={colors.dark.text3} />
+                </TouchableOpacity>
+              ) : searchVisible ? (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearchVisible(false);
+                    setSearchQuery('');
+                    Keyboard.dismiss();
+                  }}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
+                  <Feather name="x" size={14} color={colors.dark.text2} />
+                </TouchableOpacity>
+              ) : null}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => {
+                if (!user) {
+                  Alert.alert(
+                    'Sign in required',
+                    'Sign in to add spots to the map.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Sign In', onPress: () => navigation.navigate('Auth') },
+                    ],
+                  );
+                  return;
+                }
+                navigation.navigate('AddSpot');
+              }}
+            >
+              <Feather name="plus" size={18} color={colors.dark.bg} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Row 3: Category filters — shown when search is active */}
+          {searchVisible && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filterContent}
+              style={styles.filterRow}
+            >
+              {CATEGORIES.map((cat) => (
+                <TouchableOpacity
+                  key={cat}
+                  style={[
+                    styles.filterPill,
+                    category === cat && {
+                      backgroundColor: cat === 'all' ? colors.teal : (MARKER_COLORS[cat] || colors.teal),
+                      borderColor: cat === 'all' ? colors.teal : (MARKER_COLORS[cat] || colors.teal),
+                    },
+                  ]}
+                  onPress={() => {
+                    Haptics.selectionAsync();
+                    setCategory(cat);
+                    setSelectedSpot(null);
+                  }}
+                >
+                  <Text style={[styles.filterText, category === cat && styles.filterTextActive]}>
+                    {CATEGORY_LABELS[cat]}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           )}
 
-          {/* Show active filter indicator when search is closed but filter is active */}
+          {/* Active filter indicator when search is closed but filter is active */}
           {!searchVisible && category !== 'all' && (
             <TouchableOpacity
               style={styles.activeFilterBadge}
-              onPress={() => { setSearchVisible(true); }}
+              onPress={() => setSearchVisible(true)}
             >
               <Feather name="filter" size={12} color={colors.teal} />
               <Text style={styles.activeFilterText}>{CATEGORY_LABELS[category]}</Text>
@@ -721,40 +820,19 @@ export default function ExploreScreen({ navigation, onSwitchToEvents }: { naviga
         </View>
       )}
 
-      {/* Bottom-right action buttons: Add Spot + My Location */}
-      <View style={styles.bottomActions}>
-        <TouchableOpacity
-          style={styles.addBtn}
-          onPress={() => {
-            if (!user) {
-              Alert.alert(
-                'Sign in required',
-                'Sign in to add spots to the map.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { text: 'Sign In', onPress: () => navigation.navigate('Auth') },
-                ],
-              );
-              return;
-            }
-            navigation.navigate('AddSpot');
-          }}
-        >
-          <Feather name="plus" size={20} color={colors.dark.bg} />
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={styles.locationBtnBlur}
-          onPress={handleLocationPress}
-        >
-          <BlurView tint="dark" intensity={70} style={styles.locationBlur}>
-            <Feather
-              name="crosshair"
-              size={18}
-              color={userLocation ? colors.teal : colors.dark.text2}
-            />
-          </BlurView>
-        </TouchableOpacity>
-      </View>
+      {/* My location button */}
+      <TouchableOpacity
+        style={styles.locationBtn}
+        onPress={handleLocationPress}
+      >
+        <BlurView tint="dark" intensity={70} style={styles.locationBlur}>
+          <Feather
+            name="crosshair"
+            size={18}
+            color={userLocation ? colors.teal : colors.dark.text2}
+          />
+        </BlurView>
+      </TouchableOpacity>
 
       {/* Spot bottom sheet */}
       <SpotBottomSheet
@@ -830,14 +908,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     gap: spacing.sm,
   },
-  headerRow1: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    minHeight: 40,
+  headerOnlyContainer: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.dark.bg,
   },
-  segmentedToggle: {
-    flex: 1,
+  tabToggleRow: {
     flexDirection: 'row',
     backgroundColor: colors.dark.bg2,
     borderRadius: radius.full,
@@ -846,7 +922,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(46, 196, 160, 0.12)',
     gap: 3,
   },
-  segment: {
+  tabToggle: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -855,34 +931,26 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: radius.full,
   },
-  segmentActive: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.full,
+  tabToggleActive: {
     backgroundColor: colors.teal,
   },
-  segmentText: {
+  tabToggleText: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 11,
     color: colors.dark.text2,
+    letterSpacing: 0.2,
   },
-  segmentTextActive: {
-    fontFamily: fonts.bodyBold,
-    fontSize: 13,
+  tabToggleTextActive: {
     color: colors.dark.bg,
+    fontFamily: fonts.bodyBold,
   },
-  searchBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: 'rgba(44,44,46,0.9)',
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 0.5,
-    borderColor: colors.dark.border,
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   searchPill: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     height: 42,
@@ -893,6 +961,38 @@ const styles = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: colors.dark.border,
   },
+  searchPillPlaceholder: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.dark.text3,
+  },
+  searchPillInput: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.dark.text,
+    paddingVertical: 0,
+  },
+  addBtn: {
+    width: 42, height: 42, borderRadius: 21,
+    backgroundColor: colors.amber,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  filterRow: {
+    marginHorizontal: -spacing.md,
+  },
+  filterContent: { paddingHorizontal: spacing.md, gap: spacing.sm },
+  filterPill: {
+    backgroundColor: 'rgba(44,44,46,0.85)',
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(72,72,74,0.5)',
+  },
+  filterText: { fontFamily: fonts.body, fontSize: 11, color: colors.dark.text2 },
+  filterTextActive: { color: colors.dark.bg, fontFamily: fonts.bodyBold },
   activeFilterBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -910,34 +1010,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.teal,
   },
-  searchPillPlaceholder: {
-    flex: 1,
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.dark.text3,
-  },
-  searchPillInput: {
-    flex: 1,
-    fontFamily: fonts.body,
-    fontSize: 14,
-    color: colors.dark.text,
-    paddingVertical: 0,
-  },
-  filterRow: {
-    marginTop: 2,
-    marginHorizontal: -spacing.md,
-  },
-  filterContent: { paddingHorizontal: spacing.md, gap: spacing.sm },
-  filterPill: {
-    backgroundColor: 'rgba(44,44,46,0.85)',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: 'rgba(72,72,74,0.5)',
-  },
-  filterText: { fontFamily: fonts.body, fontSize: 12, color: colors.dark.text2 },
-  filterTextActive: { color: colors.dark.bg, fontFamily: fonts.bodyBold },
 
   countBadge: {
     position: 'absolute',
@@ -1037,24 +1109,11 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 
-  bottomActions: {
+  locationBtn: {
     position: 'absolute',
     right: spacing.lg,
     bottom: 170,
-    gap: spacing.sm,
-    alignItems: 'center',
   },
-  addBtn: {
-    width: 48, height: 48, borderRadius: 24,
-    backgroundColor: colors.amber,
-    alignItems: 'center', justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  locationBtnBlur: {},
   locationBlur: {
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
