@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -13,7 +14,7 @@ import { colors, fonts, spacing, radius } from '../theme';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { Post, Comment } from '../types';
-import BrandHeader from '../components/BrandHeader';
+
 import ReportModal from '../components/ReportModal';
 import Skeleton from '../components/Skeleton';
 import { usePostHog } from '../lib/posthog';
@@ -21,9 +22,11 @@ import { formatTimeAgo } from '../utils/formatTime';
 import { checkTextSafety } from '../lib/contentModeration';
 import { getRateLimitError } from '../lib/rateLimiter';
 
-export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}) {
+export default function FeedScreen({ navigation, hideHeader }: { navigation?: any; hideHeader?: boolean }) {
   const { user, session } = useAuth();
-  const navigation = useNavigation<any>();
+  const fallbackNav = useNavigation<any>();
+  const nav = navigation || fallbackNav;
+  const insets = useSafeAreaInsets();
   const posthog = usePostHog();
   const composerRef = useRef<TextInput>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -61,7 +64,21 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
   if (!session) {
     return (
       <View style={styles.container}>
-        {!hideHeader && <BrandHeader />}
+        {!hideHeader && (
+          <View style={[styles.feedHeader, { paddingTop: insets.top }]}>
+            <Text style={styles.feedWordmark}>
+              <Text style={{ color: colors.amber }}>x</Text>
+              <Text style={{ color: colors.teal }}>/</Text>
+              <Text style={{ color: colors.dark.text }}>pat</Text>
+            </Text>
+            <TouchableOpacity
+              style={styles.searchUserBtn}
+              onPress={() => nav.navigate('NomadDiscovery')}
+            >
+              <Feather name="search" size={20} color={colors.dark.text2} />
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.authGate}>
           <View style={styles.authGateIconCircle}>
             <Feather name="message-circle" size={40} color={colors.teal} />
@@ -77,7 +94,7 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
           </Text>
           <TouchableOpacity
             style={styles.authGateBtn}
-            onPress={() => navigation.navigate('Auth')}
+            onPress={() => nav.navigate('Auth')}
             activeOpacity={0.8}
           >
             <Text style={styles.authGateBtnText}>Sign In</Text>
@@ -495,7 +512,21 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
 
   return (
     <View style={styles.container}>
-      {!hideHeader && <BrandHeader />}
+      {!hideHeader && (
+        <View style={[styles.feedHeader, { paddingTop: insets.top }]}>
+          <Text style={styles.feedWordmark}>
+            <Text style={{ color: colors.amber }}>x</Text>
+            <Text style={{ color: colors.teal }}>/</Text>
+            <Text style={{ color: colors.dark.text }}>pat</Text>
+          </Text>
+          <TouchableOpacity
+            style={styles.searchUserBtn}
+            onPress={() => nav.navigate('NomadDiscovery')}
+          >
+            <Feather name="search" size={20} color={colors.dark.text2} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       <View style={styles.composer}>
         <TextInput
@@ -599,6 +630,26 @@ export default function FeedScreen({ hideHeader }: { hideHeader?: boolean } = {}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.dark.bg },
+  feedHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.dark.bg,
+  },
+  feedWordmark: {
+    fontFamily: fonts.heading,
+    fontSize: 28,
+  },
+  searchUserBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.dark.bg2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   composer: {
     flexDirection: 'row',
     paddingHorizontal: spacing.lg,

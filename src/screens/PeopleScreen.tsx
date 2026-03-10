@@ -1,21 +1,19 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { Feather } from '@expo/vector-icons';
 import Animated from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, spacing, radius } from '../theme';
-import BrandHeader from '../components/BrandHeader';
 
 import ChatTab from './community/ChatTab';
 import MessagesTab from './community/MessagesTab';
-import DiscoverTab from './community/DiscoverTab';
 
 const TopTab = createMaterialTopTabNavigator();
 
 const TAB_CONFIG = [
   { name: 'Chat', icon: 'message-circle' },
   { name: 'Messages', icon: 'mail' },
-  { name: 'Discover', icon: 'compass' },
 ];
 
 function PeopleTabBar({ state, navigation }: any) {
@@ -56,10 +54,24 @@ function PeopleTabBar({ state, navigation }: any) {
   );
 }
 
-export default function PeopleScreen() {
+export default function PeopleScreen({ navigation }: any) {
+  const insets = useSafeAreaInsets();
+
   return (
     <View style={styles.container}>
-      <BrandHeader subtitle="People" />
+      <View style={[styles.header, { paddingTop: insets.top }]}>
+        <Text style={styles.wordmark}>
+          <Text style={{ color: colors.amber }}>x</Text>
+          <Text style={{ color: colors.teal }}>/</Text>
+          <Text style={{ color: colors.dark.text }}>pat</Text>
+        </Text>
+        <TouchableOpacity
+          style={styles.searchUserBtn}
+          onPress={() => navigation.navigate('NomadDiscovery')}
+        >
+          <Feather name="search" size={20} color={colors.dark.text2} />
+        </TouchableOpacity>
+      </View>
       <TopTab.Navigator
         tabBar={(props) => <PeopleTabBar {...props} />}
         screenOptions={{
@@ -70,7 +82,6 @@ export default function PeopleScreen() {
       >
         <TopTab.Screen name="Chat" component={ChatTab} />
         <TopTab.Screen name="Messages" component={MessagesTab} />
-        <TopTab.Screen name="Discover" component={DiscoverTab} />
       </TopTab.Navigator>
     </View>
   );
@@ -80,6 +91,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.dark.bg,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
+  wordmark: {
+    fontFamily: fonts.heading,
+    fontSize: 28,
+  },
+  searchUserBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.dark.bg2,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
 

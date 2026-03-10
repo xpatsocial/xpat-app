@@ -14,12 +14,11 @@ import { useModeration, useBlockedUsers } from '../../hooks/useModeration';
 import { ChatMessage, ReportCategory } from '../../types';
 import Avatar from '../../components/Avatar';
 
-type ChatScope = 'nearby' | 'global' | 'friends';
+type ChatScope = 'nearby' | 'global';
 
 const SCOPE_OPTIONS: { key: ChatScope; label: string; icon: string }[] = [
   { key: 'nearby', label: 'Nearby', icon: 'map-pin' },
   { key: 'global', label: 'Global', icon: 'globe' },
-  { key: 'friends', label: 'Friends', icon: 'users' },
 ];
 
 function ScopeToggle({ scope, setScope }: { scope: ChatScope; setScope: (s: ChatScope) => void }) {
@@ -80,18 +79,6 @@ export default function ChatTab() {
         <TouchableOpacity style={styles.authBtn} onPress={() => navigation.navigate('Settings')} activeOpacity={0.8}>
           <Text style={styles.authBtnText}>Go to Settings</Text>
         </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (scope === 'friends') {
-    return (
-      <View style={styles.chatRoot}>
-        <ScopeToggle scope={scope} setScope={setScope} />
-        <View style={styles.friendsPlaceholder}>
-          <Feather name="message-circle" size={40} color={colors.dark.text3} />
-          <Text style={styles.friendsPlaceholderText}>Direct messages coming soon</Text>
-        </View>
       </View>
     );
   }
@@ -411,17 +398,6 @@ const styles = StyleSheet.create({
   },
   scopePillTextActive: {
     color: colors.dark.bg,
-  },
-  friendsPlaceholder: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.sm,
-  },
-  friendsPlaceholderText: {
-    fontFamily: fonts.body,
-    fontSize: 13,
-    color: colors.dark.text2,
   },
 });
 

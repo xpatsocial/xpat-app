@@ -12,8 +12,9 @@ import Animated, {
 import { colors, fonts } from '../theme';
 
 const TAB_ICONS: Record<string, string> = {
-  Places: 'map-pin',
-  People: 'users',
+  Home: 'home',
+  Feed: 'grid',
+  Explore: 'map-pin',
   Profile: 'user',
 };
 
@@ -158,15 +159,17 @@ function TabButton({ icon, label, isFocused, onPress, onLongPress }: TabButtonPr
           color={isFocused ? colors.teal : colors.dark.text2}
         />
       </Animated.View>
-      <Animated.Text
-        style={[
-          styles.label,
-          { color: isFocused ? colors.teal : colors.dark.text2 },
-          labelStyle,
-        ]}
-      >
-        {label}
-      </Animated.Text>
+      {label !== 'Home' && (
+        <Animated.Text
+          style={[
+            styles.label,
+            { color: isFocused ? colors.teal : colors.dark.text2 },
+            labelStyle,
+          ]}
+        >
+          {label}
+        </Animated.Text>
+      )}
 
       {/* Active glow dot */}
       {isFocused && <View style={styles.glowDot} />}

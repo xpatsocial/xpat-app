@@ -604,44 +604,59 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
       {/* Floating header — tab toggle + search + categories */}
       <View style={styles.floatingHeader}>
         <BlurView tint="dark" intensity={70} style={[styles.headerBlur, { paddingTop: insets.top + 8 }]}>
-          {/* Row 1: Map / Events / Calendar toggle */}
-          {onTabChange && (
-            <View style={styles.tabToggleRow}>
-              {TABS.map((tab) => {
-                const isActive = activeTab === tab.name;
-                return (
-                  <TouchableOpacity
-                    key={tab.name}
-                    style={[styles.tabToggle, isActive && styles.tabToggleActive]}
-                    onPress={() => { Haptics.selectionAsync(); onTabChange(tab.name); }}
-                    activeOpacity={0.7}
-                  >
-                    <Feather
-                      name={tab.icon as any}
-                      size={13}
-                      color={isActive ? colors.dark.bg : colors.dark.text2}
-                    />
-                    <Text style={[styles.tabToggleText, isActive && styles.tabToggleTextActive]}>
-                      {tab.name}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
-
-          {/* Row 2: Search bar + Add button */}
-          <View style={styles.headerContent}>
+          {/* Row 1: Tab toggle + Search button */}
+          <View style={styles.headerRow1}>
+            {onTabChange && (
+              <View style={[styles.tabToggleRow, { flex: 1 }]}>
+                {TABS.map((tab) => {
+                  const isActive = activeTab === tab.name;
+                  return (
+                    <TouchableOpacity
+                      key={tab.name}
+                      style={[styles.tabToggle, isActive && styles.tabToggleActive]}
+                      onPress={() => { Haptics.selectionAsync(); onTabChange(tab.name); }}
+                      activeOpacity={0.7}
+                    >
+                      <Feather
+                        name={tab.icon as any}
+                        size={13}
+                        color={isActive ? colors.dark.bg : colors.dark.text2}
+                      />
+                      <Text style={[styles.tabToggleText, isActive && styles.tabToggleTextActive]}>
+                        {tab.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
             <TouchableOpacity
-              style={styles.searchPill}
+              style={styles.searchBtn}
               onPress={() => {
                 Haptics.selectionAsync();
-                setSearchVisible(true);
+                setSearchVisible(!searchVisible);
+                if (searchVisible) {
+                  setSearchQuery('');
+                  Keyboard.dismiss();
+                }
               }}
-              activeOpacity={0.8}
             >
-              <Feather name="search" size={15} color={colors.dark.text2} />
-              {searchVisible ? (
+              <Feather name={searchVisible ? 'x' : 'search'} size={18} color={colors.dark.text} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Expandable search + categories */}
+          {searchVisible && (
+            <>
+              <TouchableOpacity
+                style={styles.searchPill}
+                onPress={() => {
+                  Haptics.selectionAsync();
+                  setSearchVisible(true);
+                }}
+                activeOpacity={0.8}
+              >
+                <Feather name="search" size={15} color={colors.dark.text2} />
                 <TextInput
                   style={styles.searchPillInput}
                   placeholder="Search cities, spots..."
@@ -653,81 +668,45 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
-              ) : (
-                <Text style={styles.searchPillPlaceholder}>Search cities, spots...</Text>
-              )}
-              {searchVisible && searchQuery.length > 0 ? (
-                <TouchableOpacity
-                  onPress={() => setSearchQuery('')}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Feather name="x-circle" size={14} color={colors.dark.text3} />
-                </TouchableOpacity>
-              ) : searchVisible ? (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSearchVisible(false);
-                    setSearchQuery('');
-                    Keyboard.dismiss();
-                  }}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <Feather name="x" size={14} color={colors.dark.text2} />
-                </TouchableOpacity>
-              ) : null}
-            </TouchableOpacity>
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => setSearchQuery('')}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Feather name="x-circle" size={14} color={colors.dark.text3} />
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => {
-                if (!user) {
-                  Alert.alert(
-                    'Sign in required',
-                    'Sign in to add spots to the map.',
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { text: 'Sign In', onPress: () => navigation.navigate('Auth') },
-                    ],
-                  );
-                  return;
-                }
-                navigation.navigate('AddSpot');
-              }}
-            >
-              <Feather name="plus" size={18} color={colors.dark.bg} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Row 3: Category filters — shown when search is active */}
-          {searchVisible && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.filterContent}
-              style={styles.filterRow}
-            >
-              {CATEGORIES.map((cat) => (
-                <TouchableOpacity
-                  key={cat}
-                  style={[
-                    styles.filterPill,
-                    category === cat && {
-                      backgroundColor: cat === 'all' ? colors.teal : (MARKER_COLORS[cat] || colors.teal),
-                      borderColor: cat === 'all' ? colors.teal : (MARKER_COLORS[cat] || colors.teal),
-                    },
-                  ]}
-                  onPress={() => {
-                    Haptics.selectionAsync();
-                    setCategory(cat);
-                    setSelectedSpot(null);
-                  }}
-                >
-                  <Text style={[styles.filterText, category === cat && styles.filterTextActive]}>
-                    {CATEGORY_LABELS[cat]}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterContent}
+                style={styles.filterRow}
+              >
+                {CATEGORIES.map((cat) => (
+                  <TouchableOpacity
+                    key={cat}
+                    style={[
+                      styles.filterPill,
+                      category === cat && {
+                        backgroundColor: cat === 'all' ? colors.teal : (MARKER_COLORS[cat] || colors.teal),
+                        borderColor: cat === 'all' ? colors.teal : (MARKER_COLORS[cat] || colors.teal),
+                      },
+                    ]}
+                    onPress={() => {
+                      Haptics.selectionAsync();
+                      setCategory(cat);
+                      setSelectedSpot(null);
+                    }}
+                  >
+                    <Text style={[styles.filterText, category === cat && styles.filterTextActive]}>
+                      {CATEGORY_LABELS[cat]}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </>
           )}
 
           {/* Active filter indicator when search is closed but filter is active */}
@@ -820,19 +799,37 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
         </View>
       )}
 
-      {/* My location button */}
-      <TouchableOpacity
-        style={styles.locationBtn}
-        onPress={handleLocationPress}
-      >
-        <BlurView tint="dark" intensity={70} style={styles.locationBlur}>
-          <Feather
-            name="crosshair"
-            size={18}
-            color={userLocation ? colors.teal : colors.dark.text2}
-          />
-        </BlurView>
-      </TouchableOpacity>
+      {/* Bottom-right action buttons: Add + Locate */}
+      <View style={styles.bottomActions}>
+        <TouchableOpacity
+          style={styles.addBtn}
+          onPress={() => {
+            if (!user) {
+              Alert.alert(
+                'Sign in required',
+                'Sign in to add spots to the map.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  { text: 'Sign In', onPress: () => navigation.navigate('Auth') },
+                ],
+              );
+              return;
+            }
+            navigation.navigate('AddSpot');
+          }}
+        >
+          <Feather name="plus" size={20} color={colors.dark.bg} />
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.locationBtnBlur} onPress={handleLocationPress}>
+          <BlurView tint="dark" intensity={70} style={styles.locationBlur}>
+            <Feather
+              name="crosshair"
+              size={18}
+              color={userLocation ? colors.teal : colors.dark.text2}
+            />
+          </BlurView>
+        </TouchableOpacity>
+      </View>
 
       {/* Spot bottom sheet */}
       <SpotBottomSheet
@@ -944,13 +941,22 @@ const styles = StyleSheet.create({
     color: colors.dark.bg,
     fontFamily: fonts.bodyBold,
   },
-  headerContent: {
+  headerRow1: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
   },
+  searchBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(44,44,46,0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 0.5,
+    borderColor: colors.dark.border,
+  },
   searchPill: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     height: 42,
@@ -975,9 +981,17 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   addBtn: {
-    width: 42, height: 42, borderRadius: 21,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     backgroundColor: colors.amber,
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
   filterRow: {
     marginHorizontal: -spacing.md,
@@ -1109,11 +1123,14 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
   },
 
-  locationBtn: {
+  bottomActions: {
     position: 'absolute',
     right: spacing.lg,
     bottom: 170,
+    gap: spacing.sm,
+    alignItems: 'center',
   },
+  locationBtnBlur: {},
   locationBlur: {
     width: 44, height: 44, borderRadius: 22,
     alignItems: 'center', justifyContent: 'center',
