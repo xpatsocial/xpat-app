@@ -68,7 +68,7 @@ export default function ChatTab() {
     );
   }
 
-  if (!profile?.current_city || !profile?.current_country) {
+  if (!profile?.current_city) {
     return (
       <View style={styles.authGate}>
         <View style={styles.iconCircle}>
@@ -84,7 +84,7 @@ export default function ChatTab() {
   }
 
   const chatCity = scope === 'global' ? 'global' : profile.current_city;
-  const chatCountry = scope === 'global' ? 'global' : profile.current_country;
+  const chatCountry = scope === 'global' ? 'global' : (profile.current_country || profile.current_city);
 
   return (
     <CityChat

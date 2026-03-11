@@ -123,7 +123,7 @@ const OPEN_TO_OPTIONS = [
 export default function SettingsScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, signOut, refreshProfile } = useAuth();
   const posthog = usePostHog();
   const { preferences, updatePreference, updatePreferences } = usePreferences();
   const [settings, setSettings] = useState<SettingsState>(DEFAULT_SETTINGS);
@@ -310,6 +310,7 @@ export default function SettingsScreen() {
       Alert.alert('Error', error.message);
     } else {
       posthog.capture('profile_updated', { completion: calculateProfileCompletion({ ...profile, ...profileData } as any) });
+      await refreshProfile();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setHasChanges(false);
     }

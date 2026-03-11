@@ -24,6 +24,7 @@ import EventSwipeScreen from '../screens/EventSwipeScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import BlockedUsersScreen from '../screens/BlockedUsersScreen';
 import AskAIScreen from '../screens/AskAIScreen';
+import DirectMessageScreen from '../screens/DirectMessageScreen';
 import GDPRConsent from '../components/GDPRConsent';
 
 import { useAuth } from '../hooks/useAuth';
@@ -166,6 +167,11 @@ export default function AppNavigator() {
         <Stack.Screen
           name="AskAI"
           component={AskAIScreen}
+          options={{ presentation: 'card' }}
+        />
+        <Stack.Screen
+          name="DirectMessage"
+          component={DirectMessageScreen}
           options={{ presentation: 'card' }}
         />
       </Stack.Navigator>
