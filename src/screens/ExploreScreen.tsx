@@ -1181,7 +1181,7 @@ const styles = StyleSheet.create({
   bottomActions: {
     position: 'absolute',
     right: spacing.lg,
-    bottom: 170,
+    bottom: 100,
     gap: spacing.sm,
     alignItems: 'center',
   },
