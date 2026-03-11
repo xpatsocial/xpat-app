@@ -542,7 +542,16 @@ export default function SettingsScreen() {
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+        <TouchableOpacity onPress={() => {
+          if (hasChanges) {
+            Alert.alert('Unsaved Changes', 'You have unsaved changes. Discard them?', [
+              { text: 'Keep Editing', style: 'cancel' },
+              { text: 'Discard', style: 'destructive', onPress: () => navigation.goBack() },
+            ]);
+          } else {
+            navigation.goBack();
+          }
+        }} style={styles.backBtn}>
           <Feather name="arrow-left" size={20} color={colors.dark.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Settings</Text>

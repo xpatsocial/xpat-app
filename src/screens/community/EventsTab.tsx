@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -10,7 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts, spacing, radius } from '../../theme';
 import { useAuth } from '../../hooks/useAuth';
@@ -69,7 +69,7 @@ export default function EventsTab({ searchQuery = '' }: { searchQuery?: string }
   });
   const [rsvpStates, setRsvpStates] = useState<Record<string, string>>({});
 
-  const dates = getNext14Days();
+  const dates = useMemo(() => getNext14Days(), []);
 
   // -----------------------------------------------------------------------
   // Fetch events
@@ -100,6 +100,13 @@ export default function EventsTab({ searchQuery = '' }: { searchQuery?: string }
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
+
+  // Refetch when screen regains focus (e.g. after creating an event)
+  useFocusEffect(
+    useCallback(() => {
+      fetchEvents();
+    }, [fetchEvents])
+  );
 
   // -----------------------------------------------------------------------
   // Filter by selected date

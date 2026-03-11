@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Feather } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { colors, fonts, spacing, radius } from '../../theme';
 import { useEvents } from '../../hooks/useEvents';
 import { AppEvent } from '../../types';
@@ -45,7 +46,7 @@ function formatTime(dateString: string): string {
 }
 
 export default function CalendarTab({ searchQuery = '' }: { searchQuery?: string }) {
-  const today = new Date();
+  const today = useMemo(() => new Date(), []);
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<Date>(today);
@@ -54,13 +55,20 @@ export default function CalendarTab({ searchQuery = '' }: { searchQuery?: string
   const [events, setEvents] = useState<AppEvent[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const fetchEvents = useCallback(() => {
     setLoading(true);
     upcomingEvents(200).then((data) => {
       setEvents(data);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
+
+  // Refetch events when screen gains focus (e.g. after creating an event)
+  useFocusEffect(
+    useCallback(() => {
+      fetchEvents();
+    }, [fetchEvents])
+  );
 
   const searchFilteredEvents = useMemo(() => {
     if (!searchQuery.trim()) return events;
@@ -249,7 +257,11 @@ export default function CalendarTab({ searchQuery = '' }: { searchQuery?: string
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Feather name="calendar" size={40} color={colors.dark.text3} />
-      <Text style={styles.emptyText}>No events this day</Text>
+      <Text style={styles.emptyText}>
+        {searchQuery.trim()
+          ? `No events matching "${searchQuery.trim()}"`
+          : 'No events this day'}
+      </Text>
     </View>
   );
 
