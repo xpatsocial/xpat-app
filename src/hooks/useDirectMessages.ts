@@ -23,7 +23,8 @@ export function useDirectMessages() {
       .from('direct_messages')
       .select('*')
       .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(500);
 
     if (error || !allMessages) {
       setLoading(false);

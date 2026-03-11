@@ -19,7 +19,8 @@ import { DirectMessage } from '../types';
 import Avatar from '../components/Avatar';
 
 export default function DirectMessageScreen({ route, navigation }: any) {
-  const { partnerId, partnerName } = route.params;
+  const partnerId = route?.params?.partnerId ?? '';
+  const partnerName = route?.params?.partnerName ?? 'User';
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
   const { messages, loading, sending, sendMessage } = useConversation(partnerId);
@@ -73,7 +74,7 @@ export default function DirectMessageScreen({ route, navigation }: any) {
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      keyboardVerticalOffset={0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
@@ -144,9 +145,6 @@ export default function DirectMessageScreen({ route, navigation }: any) {
           placeholderTextColor={colors.dark.text3}
           multiline
           maxLength={2000}
-          returnKeyType="send"
-          blurOnSubmit={false}
-          onSubmitEditing={handleSend}
         />
         <TouchableOpacity
           style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}

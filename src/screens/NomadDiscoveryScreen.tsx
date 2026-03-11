@@ -46,7 +46,14 @@ export default function NomadDiscoveryScreen() {
     setLoading(true);
     setSearched(true);
 
-    const searchTerm = `%${q.trim()}%`;
+    // Sanitize input: strip PostgREST filter special chars to prevent injection
+    const sanitized = q.trim().replace(/[,().*+?^${}|[\]\\]/g, '');
+    if (!sanitized) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
+    const searchTerm = `%${sanitized}%`;
     const { data, error } = await supabase
       .from('profiles')
       .select('id, display_name, username, avatar_url, bio, current_city, current_country, interests')
