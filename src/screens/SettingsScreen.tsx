@@ -144,6 +144,7 @@ export default function SettingsScreen() {
   const [showArrivalPicker, setShowArrivalPicker] = useState(false);
   const [showDeparturePicker, setShowDeparturePicker] = useState(false);
   const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [langPickerVisible, setLangPickerVisible] = useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
 
   // Load analytics consent state
@@ -1137,20 +1138,14 @@ export default function SettingsScreen() {
             right={
               <TouchableOpacity
                 style={styles.langPicker}
-                onPress={() => {
-                  const currentIdx = LANGUAGES.findIndex((l) => l.code === preferences.preferred_language);
-                  const nextIdx = (currentIdx + 1) % LANGUAGES.length;
-                  const next = LANGUAGES[nextIdx];
-                  updatePreference('preferred_language', next.code);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
+                onPress={() => setLangPickerVisible(true)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.langPickerText}>
                   {LANGUAGES.find((l) => l.code === preferences.preferred_language)?.flag || ''}{' '}
                   {LANGUAGES.find((l) => l.code === preferences.preferred_language)?.name || preferences.preferred_language}
                 </Text>
-                <Feather name="chevron-right" size={12} color={colors.dark.text3} />
+                <Feather name="chevron-down" size={12} color={colors.dark.text3} />
               </TouchableOpacity>
             }
           />
@@ -1381,6 +1376,49 @@ export default function SettingsScreen() {
         </Pressable>
       </Modal>
 
+      {/* Language picker modal */}
+      <Modal
+        visible={langPickerVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setLangPickerVisible(false)}
+      >
+        <Pressable style={styles.langModalOverlay} onPress={() => setLangPickerVisible(false)}>
+          <Pressable style={styles.langModalSheet} onPress={() => {}}>
+            <View style={styles.langModalHandle} />
+            <Text style={styles.langModalTitle}>Select Language</Text>
+            <FlatList
+              data={LANGUAGES}
+              keyExtractor={(item) => item.code}
+              showsVerticalScrollIndicator={false}
+              style={styles.langList}
+              renderItem={({ item }) => {
+                const isActive = item.code === preferences.preferred_language;
+                return (
+                  <TouchableOpacity
+                    style={[styles.langOption, isActive && styles.langOptionActive]}
+                    onPress={() => {
+                      updatePreference('preferred_language', item.code);
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      setLangPickerVisible(false);
+                    }}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.langFlag}>{item.flag}</Text>
+                    <Text style={[styles.langName, isActive && styles.langNameActive]}>
+                      {item.name}
+                    </Text>
+                    {isActive && (
+                      <Feather name="check" size={18} color={colors.teal} />
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <FeedbackSheet
         visible={feedbackVisible}
         onClose={() => setFeedbackVisible(false)}
@@ -1544,6 +1582,63 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 11,
     color: colors.dark.text,
+  },
+
+  // Language picker modal
+  langModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  langModalSheet: {
+    backgroundColor: colors.dark.bg2,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: '60%',
+    paddingBottom: spacing.xl,
+  },
+  langModalHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: colors.dark.text3,
+    alignSelf: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  langModalTitle: {
+    fontFamily: fonts.heading,
+    fontSize: 18,
+    color: colors.dark.text,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  langList: {
+    paddingHorizontal: spacing.lg,
+  },
+  langOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.md,
+    borderRadius: radius.md,
+    gap: spacing.md,
+  },
+  langOptionActive: {
+    backgroundColor: 'rgba(46,196,160,0.1)',
+  },
+  langFlag: {
+    fontSize: 22,
+  },
+  langName: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.dark.text,
+  },
+  langNameActive: {
+    fontFamily: fonts.bodyBold,
+    color: colors.teal,
   },
 
   // Amber chip variant for travel style
