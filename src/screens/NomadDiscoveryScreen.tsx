@@ -1,27 +1,21 @@
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
-  Dimensions,
+  TextInput,
+  FlatList,
+  ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
-import { colors, fonts, spacing, radius, shadows } from '../theme';
-import SwipeCardDeck, {
-  SwipeCardDeckRef,
-  SwipeDirection,
-} from '../components/SwipeCardDeck';
 import { useNavigation } from '@react-navigation/native';
+import { colors, fonts, spacing, radius } from '../theme';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
+import Avatar from '../components/Avatar';
 
 interface NomadProfile {
   id: string;
@@ -32,220 +26,85 @@ interface NomadProfile {
   current_city: string | null;
   current_country: string | null;
   interests: string[];
-  mutual_connections: number;
 }
-
-// ---------------------------------------------------------------------------
-// Mock data (replace with real query when backend wired)
-// ---------------------------------------------------------------------------
-
-const MOCK_NOMADS: NomadProfile[] = [
-  {
-    id: '1',
-    display_name: 'Sofia Martinez',
-    username: 'sofiamar',
-    avatar_url: null,
-    bio: 'Full-stack dev exploring Southeast Asia. Coffee addict.',
-    current_city: 'Chiang Mai',
-    current_country: 'Thailand',
-    interests: ['coworking', 'hiking', 'specialty coffee'],
-    mutual_connections: 3,
-  },
-  {
-    id: '2',
-    display_name: 'Liam Chen',
-    username: 'liamdigital',
-    avatar_url: null,
-    bio: 'Product designer chasing surf and sunsets.',
-    current_city: 'Bali',
-    current_country: 'Indonesia',
-    interests: ['surfing', 'design', 'street food'],
-    mutual_connections: 1,
-  },
-  {
-    id: '3',
-    display_name: 'Amara Osei',
-    username: 'amarawanders',
-    avatar_url: null,
-    bio: 'Content creator | 42 countries | Plant mom',
-    current_city: 'Lisbon',
-    current_country: 'Portugal',
-    interests: ['photography', 'coworking', 'vegan food'],
-    mutual_connections: 5,
-  },
-  {
-    id: '4',
-    display_name: 'Jonas Eriksson',
-    username: 'jonasnomad',
-    avatar_url: null,
-    bio: 'Backend engineer from Stockholm. Love a good co-live.',
-    current_city: 'Mexico City',
-    current_country: 'Mexico',
-    interests: ['co-living', 'mezcal', 'running'],
-    mutual_connections: 0,
-  },
-  {
-    id: '5',
-    display_name: 'Priya Patel',
-    username: 'priyaontheroad',
-    avatar_url: null,
-    bio: 'Yoga teacher & UX writer bouncing between cities.',
-    current_city: 'Medellín',
-    current_country: 'Colombia',
-    interests: ['yoga', 'writing', 'cafe culture'],
-    mutual_connections: 2,
-  },
-];
-
-// ---------------------------------------------------------------------------
-// Helper: avatar placeholder
-// ---------------------------------------------------------------------------
-
-function AvatarPlaceholder({ name }: { name: string }) {
-  const initial = name.charAt(0).toUpperCase();
-  return (
-    <View style={cardStyles.avatarPlaceholder}>
-      <Text style={cardStyles.avatarInitial}>{initial}</Text>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Card content
-// ---------------------------------------------------------------------------
-
-function NomadCard({ nomad }: { nomad: NomadProfile }) {
-  return (
-    <View style={cardStyles.card}>
-      {/* Top: large avatar area */}
-      <View style={cardStyles.avatarArea}>
-        {nomad.avatar_url ? (
-          <Image source={{ uri: nomad.avatar_url }} style={cardStyles.avatar} />
-        ) : (
-          <AvatarPlaceholder name={nomad.display_name} />
-        )}
-      </View>
-
-      {/* Info section */}
-      <View style={cardStyles.info}>
-        <Text style={cardStyles.name}>{nomad.display_name}</Text>
-        {nomad.username && (
-          <Text style={cardStyles.username}>@{nomad.username}</Text>
-        )}
-
-        {/* Location pill */}
-        <View style={cardStyles.locationRow}>
-          <Feather name="map-pin" size={13} color={colors.amber} />
-          <Text style={cardStyles.location}>
-            {nomad.current_city}
-            {nomad.current_country ? `, ${nomad.current_country}` : ''}
-          </Text>
-        </View>
-
-        {/* Bio */}
-        {nomad.bio && (
-          <Text style={cardStyles.bio} numberOfLines={2}>
-            {nomad.bio}
-          </Text>
-        )}
-
-        {/* Shared interests */}
-        <View style={cardStyles.interestsRow}>
-          {nomad.interests.slice(0, 3).map((interest) => (
-            <View key={interest} style={cardStyles.interestPill}>
-              <Text style={cardStyles.interestText}>{interest}</Text>
-            </View>
-          ))}
-        </View>
-
-        {/* Mutual connections */}
-        {nomad.mutual_connections > 0 && (
-          <View style={cardStyles.mutualRow}>
-            <Feather name="users" size={12} color={colors.teal} />
-            <Text style={cardStyles.mutualText}>
-              {nomad.mutual_connections} mutual connection
-              {nomad.mutual_connections !== 1 ? 's' : ''}
-            </Text>
-          </View>
-        )}
-      </View>
-    </View>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Custom overlays
-// ---------------------------------------------------------------------------
-
-function ConnectOverlay() {
-  return (
-    <View style={[overlayBadge, { borderColor: colors.teal }]}>
-      <Feather name="user-plus" size={32} color={colors.teal} />
-      <Text style={[overlayLabel, { color: colors.teal }]}>CONNECT</Text>
-    </View>
-  );
-}
-
-function SkipOverlay() {
-  return (
-    <View style={[overlayBadge, { borderColor: colors.red }]}>
-      <Feather name="x" size={32} color={colors.red} />
-      <Text style={[overlayLabel, { color: colors.red }]}>SKIP</Text>
-    </View>
-  );
-}
-
-function SuperLikeOverlay() {
-  return (
-    <View style={[overlayBadge, { borderColor: colors.amber }]}>
-      <Feather name="star" size={32} color={colors.amber} />
-      <Text style={[overlayLabel, { color: colors.amber }]}>SUPER</Text>
-    </View>
-  );
-}
-
-const overlayBadge: any = {
-  alignItems: 'center',
-  justifyContent: 'center',
-  paddingVertical: spacing.sm,
-  paddingHorizontal: spacing.lg,
-  borderRadius: radius.lg,
-  borderWidth: 3,
-  gap: spacing.xs,
-};
-
-const overlayLabel: any = {
-  fontFamily: fonts.bodyBold,
-  fontSize: 22,
-  letterSpacing: 3,
-};
-
-// ---------------------------------------------------------------------------
-// Screen
-// ---------------------------------------------------------------------------
 
 export default function NomadDiscoveryScreen() {
-  const navigation = useNavigation();
-  const deckRef = useRef<SwipeCardDeckRef>(null);
-  const [nomads] = useState<NomadProfile[]>(MOCK_NOMADS);
+  const navigation = useNavigation<any>();
+  const { user } = useAuth();
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState<NomadProfile[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searched, setSearched] = useState(false);
 
-  const handleSwipe = useCallback((nomad: NomadProfile, direction: SwipeDirection) => {
-    switch (direction) {
-      case 'right':
-        // TODO: send connection request via supabase
-        break;
-      case 'left':
-        break;
-      case 'up':
-        // TODO: send connection request with message prompt
-        break;
+  const search = useCallback(async (q: string) => {
+    if (!q.trim()) {
+      setResults([]);
+      setSearched(false);
+      return;
     }
-  }, []);
+
+    setLoading(true);
+    setSearched(true);
+
+    const searchTerm = `%${q.trim()}%`;
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, display_name, username, avatar_url, bio, current_city, current_country, interests')
+      .or(`display_name.ilike.${searchTerm},username.ilike.${searchTerm},current_city.ilike.${searchTerm}`)
+      .neq('id', user?.id ?? '')
+      .limit(30);
+
+    if (!error && data) {
+      setResults(data as NomadProfile[]);
+    }
+    setLoading(false);
+  }, [user]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => search(query), 400);
+    return () => clearTimeout(timer);
+  }, [query, search]);
+
+  function renderNomad({ item }: { item: NomadProfile }) {
+    const location = [item.current_city, item.current_country].filter(Boolean).join(', ');
+
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        activeOpacity={0.7}
+        onPress={() => navigation.navigate('UserProfile', { userId: item.id })}
+      >
+        <Avatar
+          uri={item.avatar_url}
+          name={item.display_name}
+          userId={item.id}
+          size={48}
+        />
+        <View style={styles.cardInfo}>
+          <Text style={styles.cardName} numberOfLines={1}>{item.display_name}</Text>
+          {item.username && (
+            <Text style={styles.cardUsername}>@{item.username}</Text>
+          )}
+          {location ? (
+            <View style={styles.locationRow}>
+              <Feather name="map-pin" size={11} color={colors.amber} />
+              <Text style={styles.locationText}>{location}</Text>
+            </View>
+          ) : null}
+          {item.bio ? (
+            <Text style={styles.cardBio} numberOfLines={1}>{item.bio}</Text>
+          ) : null}
+        </View>
+        <Feather name="chevron-right" size={18} color={colors.dark.text3} />
+      </TouchableOpacity>
+    );
+  }
 
   return (
-    <SafeAreaView style={screenStyles.root} edges={['top']}>
+    <SafeAreaView style={styles.root} edges={['top']}>
       {/* Header */}
-      <View style={screenStyles.header}>
+      <View style={styles.header}>
         <TouchableOpacity
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
@@ -253,63 +112,68 @@ export default function NomadDiscoveryScreen() {
         >
           <Feather name="arrow-left" size={22} color={colors.dark.text} />
         </TouchableOpacity>
-        <Text style={screenStyles.title}>Discover Nomads</Text>
-        <TouchableOpacity
-          style={screenStyles.undoBtn}
-          onPress={() => deckRef.current?.undo()}
-          activeOpacity={0.7}
-        >
-          <Feather name="rotate-ccw" size={20} color={colors.dark.text2} />
-        </TouchableOpacity>
+        <Text style={styles.title}>Find People</Text>
+        <View style={{ width: 22 }} />
       </View>
 
-      {/* Card deck */}
-      <SwipeCardDeck
-        ref={deckRef}
-        data={nomads}
-        keyExtractor={(n) => n.id}
-        renderCard={(nomad) => <NomadCard nomad={nomad} />}
-        onSwipe={handleSwipe}
-        renderRightOverlay={() => <ConnectOverlay />}
-        renderLeftOverlay={() => <SkipOverlay />}
-        renderUpOverlay={() => <SuperLikeOverlay />}
-      />
-
-      {/* Action buttons */}
-      <View style={screenStyles.actions}>
-        <TouchableOpacity
-          style={[screenStyles.actionBtn, screenStyles.actionSkip]}
-          onPress={() => deckRef.current?.swipeLeft()}
-          activeOpacity={0.7}
-        >
-          <Feather name="x" size={28} color={colors.red} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[screenStyles.actionBtn, screenStyles.actionSuper]}
-          onPress={() => deckRef.current?.swipeUp()}
-          activeOpacity={0.7}
-        >
-          <Feather name="star" size={24} color={colors.amber} />
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[screenStyles.actionBtn, screenStyles.actionConnect]}
-          onPress={() => deckRef.current?.swipeRight()}
-          activeOpacity={0.7}
-        >
-          <Feather name="user-plus" size={28} color={colors.teal} />
-        </TouchableOpacity>
+      {/* Search bar */}
+      <View style={styles.searchRow}>
+        <View style={styles.searchBar}>
+          <Feather name="search" size={16} color={colors.dark.text3} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by name, username, or city..."
+            placeholderTextColor={colors.dark.text3}
+            value={query}
+            onChangeText={setQuery}
+            autoFocus
+            autoCapitalize="none"
+            autoCorrect={false}
+            returnKeyType="search"
+          />
+          {query.length > 0 && (
+            <TouchableOpacity
+              onPress={() => { setQuery(''); Keyboard.dismiss(); }}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="x-circle" size={16} color={colors.dark.text3} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
+
+      {/* Results */}
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator color={colors.teal} size="large" />
+        </View>
+      ) : !searched ? (
+        <View style={styles.center}>
+          <Feather name="users" size={48} color={colors.dark.text3} />
+          <Text style={styles.hintTitle}>Discover Nomads</Text>
+          <Text style={styles.hintText}>Search for people by name, username, or city</Text>
+        </View>
+      ) : results.length === 0 ? (
+        <View style={styles.center}>
+          <Feather name="user-x" size={40} color={colors.dark.text3} />
+          <Text style={styles.hintTitle}>No results</Text>
+          <Text style={styles.hintText}>Try a different name or city</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={results}
+          keyExtractor={(item) => item.id}
+          renderItem={renderNomad}
+          contentContainerStyle={styles.list}
+          keyboardDismissMode="on-drag"
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
-// ---------------------------------------------------------------------------
-// Styles
-// ---------------------------------------------------------------------------
-
-const screenStyles = StyleSheet.create({
+const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.dark.bg,
@@ -323,140 +187,93 @@ const screenStyles = StyleSheet.create({
   },
   title: {
     fontFamily: fonts.heading,
-    fontSize: 26,
-    color: colors.dark.text,
-  },
-  undoBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.full,
-    backgroundColor: colors.dark.bg2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: colors.dark.border,
-  },
-  actions: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    gap: spacing.lg,
-    paddingVertical: spacing.lg,
-    paddingBottom: spacing.xl,
-  },
-  actionBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: radius.full,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    ...shadows.sm,
-  },
-  actionSkip: {
-    backgroundColor: colors.dark.bg2,
-    borderColor: colors.red,
-  },
-  actionSuper: {
-    width: 50,
-    height: 50,
-    backgroundColor: colors.dark.bg2,
-    borderColor: colors.amber,
-  },
-  actionConnect: {
-    backgroundColor: colors.dark.bg2,
-    borderColor: colors.teal,
-  },
-});
-
-const cardStyles = StyleSheet.create({
-  card: {
-    flex: 1,
-  },
-  avatarArea: {
-    flex: 1,
-    backgroundColor: colors.dark.bg3,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatar: {
-    width: '100%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  avatarPlaceholder: {
-    width: 100,
-    height: 100,
-    borderRadius: radius.full,
-    backgroundColor: colors.dark.bg4,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarInitial: {
-    fontFamily: fonts.heading,
-    fontSize: 42,
-    color: colors.teal,
-  },
-  info: {
-    padding: spacing.md,
-    gap: spacing.xs,
-  },
-  name: {
-    fontFamily: fonts.heading,
     fontSize: 22,
     color: colors.dark.text,
   },
-  username: {
+  searchRow: {
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.dark.bg2,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    height: 44,
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
+  searchInput: {
+    flex: 1,
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 14,
+    color: colors.dark.text,
+    paddingVertical: 0,
+  },
+  list: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: 100,
+  },
+  card: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.dark.bg2,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    gap: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+  },
+  cardInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  cardName: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
+    color: colors.dark.text,
+  },
+  cardUsername: {
+    fontFamily: fonts.body,
+    fontSize: 12,
     color: colors.dark.text3,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
+    gap: 4,
+    marginTop: 2,
   },
-  location: {
+  locationText: {
     fontFamily: fonts.body,
-    fontSize: 13,
+    fontSize: 12,
     color: colors.amber,
   },
-  bio: {
+  cardBio: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.dark.text2,
+    marginTop: 2,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: spacing.xl,
+    gap: spacing.sm,
+  },
+  hintTitle: {
+    fontFamily: fonts.heading,
+    fontSize: 20,
+    color: colors.dark.text,
+  },
+  hintText: {
     fontFamily: fonts.body,
     fontSize: 13,
     color: colors.dark.text2,
-    lineHeight: 19,
-    marginTop: spacing.xs,
-  },
-  interestsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  interestPill: {
-    backgroundColor: colors.glass.medium,
-    paddingVertical: 4,
-    paddingHorizontal: 10,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.glass.border,
-  },
-  interestText: {
-    fontFamily: fonts.body,
-    fontSize: 11,
-    color: colors.teal,
-  },
-  mutualRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  mutualText: {
-    fontFamily: fonts.body,
-    fontSize: 12,
-    color: colors.teal,
+    textAlign: 'center',
   },
 });

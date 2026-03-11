@@ -14,7 +14,7 @@ const TopTab = createMaterialTopTabNavigator();
 
 const TAB_CONFIG = [
   { name: 'Feed', icon: 'grid' },
-  { name: 'Chat', icon: 'message-circle' },
+  { name: 'Explore', icon: 'compass' },
   { name: 'Messages', icon: 'mail' },
 ];
 
@@ -85,7 +85,7 @@ export default function PeopleScreen({ navigation }: any) {
         <TopTab.Screen name="Feed">
           {() => <FeedScreen navigation={navigation} hideHeader />}
         </TopTab.Screen>
-        <TopTab.Screen name="Chat" component={ChatTab} />
+        <TopTab.Screen name="Explore" component={ChatTab} />
         <TopTab.Screen name="Messages" component={MessagesTab} />
       </TopTab.Navigator>
     </View>

@@ -42,7 +42,7 @@ function MainTabs() {
       }}
     >
       <Tab.Screen name="Home">{(props: any) => <ErrorBoundary><PeopleScreen {...props} /></ErrorBoundary>}</Tab.Screen>
-      <Tab.Screen name="Explore">{(props: any) => <ErrorBoundary><PlacesScreen {...props} /></ErrorBoundary>}</Tab.Screen>
+      <Tab.Screen name="Discover">{(props: any) => <ErrorBoundary><PlacesScreen {...props} /></ErrorBoundary>}</Tab.Screen>
       <Tab.Screen name="Profile">{(props: any) => <ErrorBoundary><ProfileScreen {...props} /></ErrorBoundary>}</Tab.Screen>
     </Tab.Navigator>
   );
