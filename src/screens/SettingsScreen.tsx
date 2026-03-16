@@ -441,7 +441,9 @@ export default function SettingsScreen() {
       {
         text: 'Send Link',
         onPress: async () => {
-          const { error } = await supabase.auth.resetPasswordForEmail(user.email!);
+          const { error } = await supabase.auth.resetPasswordForEmail(user.email!, {
+                    redirectTo: 'xpat://auth/callback',
+                  });
           if (error) Alert.alert('Error', error.message);
           else Alert.alert('Sent', 'Check your email for the reset link.');
         },

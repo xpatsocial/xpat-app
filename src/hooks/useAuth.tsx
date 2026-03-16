@@ -81,7 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { full_name: name, ...(birthdate ? { birthdate } : {}) } },
+      options: {
+        data: { full_name: name, ...(birthdate ? { birthdate } : {}) },
+        emailRedirectTo: 'xpat://auth/callback',
+      },
     });
     return { error };
   }
