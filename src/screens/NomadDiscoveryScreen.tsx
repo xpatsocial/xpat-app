@@ -46,23 +46,29 @@ export default function NomadDiscoveryScreen() {
     setLoading(true);
     setSearched(true);
 
-    // Sanitize input: strip PostgREST filter special chars to prevent injection
-    const sanitized = q.trim().replace(/[,().*+?^${}|[\]\\]/g, '');
-    if (!sanitized) {
-      setResults([]);
-      setLoading(false);
-      return;
-    }
-    const searchTerm = `%${sanitized}%`;
+    const term = q.trim();
+    // Use textSearch or fetch all and filter client-side to avoid PostgREST
+    // .or() parsing issues with commas/special chars in search values.
+    // Fetching a bounded set and filtering client-side is safest.
     const { data, error } = await supabase
       .from('profiles')
       .select('id, display_name, username, avatar_url, bio, current_city, current_country, interests')
-      .or(`display_name.ilike.${searchTerm},username.ilike.${searchTerm},current_city.ilike.${searchTerm}`)
       .neq('id', user?.id ?? '')
-      .limit(30);
+      .limit(100);
 
-    if (!error && data) {
-      setResults(data as NomadProfile[]);
+    if (error) {
+      console.error('[NomadDiscovery] search error:', error);
+    }
+
+    const lowerTerm = term.toLowerCase();
+    const filtered = (data ?? []).filter((p: any) =>
+      p.display_name?.toLowerCase().includes(lowerTerm) ||
+      p.username?.toLowerCase().includes(lowerTerm) ||
+      p.current_city?.toLowerCase().includes(lowerTerm)
+    );
+
+    if (!error) {
+      setResults(filtered as NomadProfile[]);
     }
     setLoading(false);
   }, [user]);
