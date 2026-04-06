@@ -7,6 +7,8 @@ import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
+import { queryClient, createPersister } from './src/lib/queryClient';
 
 import { AuthProvider } from './src/hooks/useAuth';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -46,6 +48,9 @@ if (Platform.OS === 'android') {
 
 SplashScreen.preventAutoHideAsync();
 
+// Create persister once at module level (stable reference)
+const persister = createPersister();
+
 function App() {
   const [fontsLoaded] = useFonts({
     'DMSerifDisplay-Regular': require('./assets/fonts/DMSerifDisplay-Regular.ttf'),
@@ -79,19 +84,21 @@ function App() {
   }
 
   return (
-    <SafeAreaProvider onLayout={onLayoutRootView}>
-      <StatusBar style="light" />
-      <PostHogProvider>
-        <AuthProvider>
-          <NavigationContainer linking={linking as any}>
-            <ReducedMotionConfig mode={ReduceMotion.System} />
-            <ErrorBoundary>
-              <AppNavigator />
-            </ErrorBoundary>
-          </NavigationContainer>
-        </AuthProvider>
-      </PostHogProvider>
-    </SafeAreaProvider>
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+      <SafeAreaProvider onLayout={onLayoutRootView}>
+        <StatusBar style="light" />
+        <PostHogProvider>
+          <AuthProvider>
+            <NavigationContainer linking={linking as any}>
+              <ReducedMotionConfig mode={ReduceMotion.System} />
+              <ErrorBoundary>
+                <AppNavigator />
+              </ErrorBoundary>
+            </NavigationContainer>
+          </AuthProvider>
+        </PostHogProvider>
+      </SafeAreaProvider>
+    </PersistQueryClientProvider>
   );
 }
 
