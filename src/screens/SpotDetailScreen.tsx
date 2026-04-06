@@ -73,6 +73,7 @@ export default function SpotDetailScreen() {
   const [votes, setVotes] = useState(spot.votes || 0);
   const [hasVoted, setHasVoted] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>((spot as any).ai_summary ?? null);
 
   // Track screen view
   useEffect(() => {
@@ -92,6 +93,16 @@ export default function SpotDetailScreen() {
       setComments(data as SpotComment[]);
     }
     setLoadingComments(false);
+  }, [spot.id]);
+
+  // Fetch AI summary lazily (only if not cached on the spot object)
+  useEffect(() => {
+    if (aiSummary) return;
+    supabase.functions.invoke<{ summary: string }>('spot-summary', {
+      body: { spotId: spot.id },
+    }).then(({ data }) => {
+      if (data?.summary) setAiSummary(data.summary);
+    }).catch(() => {/* non-critical */});
   }, [spot.id]);
 
   // Fetch similar spots
@@ -335,15 +346,23 @@ export default function SpotDetailScreen() {
               </View>
             )}
 
-            {/* Note / Description */}
-            {(spot.note || spot.description) && (
+            {/* AI Summary or community note */}
+            {aiSummary ? (
+              <View style={styles.noteSection}>
+                <Feather name="zap" size={14} color={colors.teal} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.noteText}>{aiSummary}</Text>
+                  <Text style={styles.aiLabel}>AI summary</Text>
+                </View>
+              </View>
+            ) : (spot.note || (spot as any).description) ? (
               <View style={styles.noteSection}>
                 <Feather name="message-circle" size={14} color={colors.teal} />
                 <Text style={styles.noteText}>
-                  {spot.description || spot.note}
+                  {(spot as any).description || spot.note}
                 </Text>
               </View>
-            )}
+            ) : null}
 
             {/* Tags */}
             {spot.tags && spot.tags.length > 0 && (
@@ -671,6 +690,13 @@ const styles = StyleSheet.create({
     color: colors.dark.text,
     lineHeight: 20,
     flex: 1,
+  },
+  aiLabel: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.teal,
+    marginTop: 4,
+    opacity: 0.7,
   },
 
   // Tags
