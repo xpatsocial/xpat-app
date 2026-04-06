@@ -186,7 +186,12 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
     };
     if (photo_url) insertData.photo_url = photo_url;
 
-    const { error } = await supabase.from('posts').insert(insertData);
+    const { data: insertedPost, error } = await supabase
+      .from('posts')
+      .insert(insertData)
+      .select('id')
+      .single();
+
     if (error) {
       Alert.alert('Error', error.message);
     } else {
@@ -195,6 +200,22 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
       setNewPost('');
       setSelectedImage(null);
       fetchPosts();
+
+      // Fire-and-forget: moderate content + award XP (non-blocking)
+      if (insertedPost?.id && user?.id) {
+        supabase.functions.invoke('moderate-content', {
+          body: {
+            content_type: 'post',
+            content_id: String(insertedPost.id),
+            text: insertData.content,
+            user_id: user.id,
+          },
+        }).catch(() => {});
+
+        supabase.functions.invoke('award-xp', {
+          body: { reason: 'post_created', reference_id: String(insertedPost.id) },
+        }).catch(() => {});
+      }
     }
     setPosting(false);
   }
