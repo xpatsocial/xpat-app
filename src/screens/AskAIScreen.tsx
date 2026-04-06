@@ -85,10 +85,12 @@ function TypingIndicator() {
 // ---------------------------------------------------------------------------
 
 const SUGGESTED_PROMPTS = [
-  'Best coworking in Bangkok?',
-  'Visa tips for Portugal?',
-  'Safety in Mexico City?',
-  'Budget tips for digital nomads?',
+  'Best coworking with fast wifi in Bangkok?',
+  'Digital nomad visa for Portugal?',
+  'Is Mexico City safe for solo nomads?',
+  'Quiet cafes to work in Lisbon?',
+  'Cost of living Bangkok vs Lisbon?',
+  'eSIM options for Southeast Asia?',
 ];
 
 function SuggestedPrompts({ onSelect }: { onSelect: (prompt: string) => void }) {
@@ -167,7 +169,7 @@ function Header({ navigation }: { navigation: any }) {
 
 export default function AskAIScreen({ navigation }: any) {
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const flatListRef = useRef<FlatList>(null);
 
   const [messages, setMessages] = useState<Message[]>([]);
@@ -214,7 +216,11 @@ export default function AskAIScreen({ navigation }: any) {
       const history = updatedMessages.map(({ role, content }) => ({ role, content }));
 
       const { data, error } = await supabase.functions.invoke('ask-ai', {
-        body: { message: trimmed, history },
+        body: {
+          message: trimmed,
+          history,
+          city: (profile as any)?.current_city ?? null,
+        },
       });
 
       if (error) throw error;

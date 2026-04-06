@@ -29,6 +29,7 @@ import BlockedUsersScreen from '../screens/BlockedUsersScreen';
 import AskAIScreen from '../screens/AskAIScreen';
 import DirectMessageScreen from '../screens/DirectMessageScreen';
 import GDPRConsent from '../components/GDPRConsent';
+import OfflineBanner from '../components/OfflineBanner';
 
 import { useAuth } from '../hooks/useAuth';
 import { useStreaks } from '../hooks/useStreaks';
@@ -221,6 +222,9 @@ export default function AppNavigator() {
         onAccept={handleGDPRAccept}
         onDecline={handleGDPRDecline}
       />
+
+      {/* Global offline indicator */}
+      <OfflineBanner />
     </>
   );
 }
