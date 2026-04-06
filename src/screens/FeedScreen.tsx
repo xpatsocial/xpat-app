@@ -459,6 +459,7 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
             contentFit="cover"
             transition={200}
             cachePolicy="memory-disk"
+            recyclingKey={String(item.id)}
           />
         )}
         {item.spots && (

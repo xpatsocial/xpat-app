@@ -18,7 +18,9 @@ interface SpotCardProps {
   onPress?: () => void;
 }
 
-export default function SpotCard({ spot, onPress }: SpotCardProps) {
+// React.memo: prevents re-render when parent re-renders with same spot/onPress
+// Critical for FlashList performance in feeds (RN Performance 2026 research)
+const SpotCard = React.memo(function SpotCard({ spot, onPress }: SpotCardProps) {
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
       <View style={styles.header}>
@@ -47,7 +49,9 @@ export default function SpotCard({ spot, onPress }: SpotCardProps) {
       </View>
     </TouchableOpacity>
   );
-}
+});
+
+export default SpotCard;
 
 const styles = StyleSheet.create({
   card: {

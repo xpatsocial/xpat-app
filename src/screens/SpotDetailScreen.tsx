@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   TextInput, Linking, Share, Platform, ActivityIndicator,
-  KeyboardAvoidingView, Alert, Dimensions,
+  KeyboardAvoidingView, Alert, Dimensions, InteractionManager,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -132,9 +132,14 @@ export default function SpotDetailScreen() {
       });
   }, [user, spot.id]);
 
+  // Defer heavy fetches until after navigation animation completes
+  // Eliminates navigation jank on Android (RN Performance 2026 research)
   useEffect(() => {
-    fetchComments();
-    fetchSimilar();
+    const task = InteractionManager.runAfterInteractions(() => {
+      fetchComments();
+      fetchSimilar();
+    });
+    return () => task.cancel();
   }, [fetchComments, fetchSimilar]);
 
   // -- Actions --
