@@ -4,7 +4,7 @@ import {
   ActivityIndicator, Platform, Alert, TextInput, Keyboard,
 } from 'react-native';
 import MapView, { Marker, Region, Circle } from 'react-native-maps';
-import { BlurView } from 'expo-blur';
+import GlassView from '../components/GlassView';
 import { Feather } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
@@ -600,6 +600,7 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
               key={`spot-${cluster.spots[0].id}`}
               coordinate={cluster.coordinate}
               pinColor={MARKER_COLORS[cluster.spots[0].category] || colors.teal}
+              tracksViewChanges={false}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setPulseSheetVisible(false);
@@ -610,6 +611,7 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
             <Marker
               key={cluster.id}
               coordinate={cluster.coordinate}
+              tracksViewChanges={false}
               onPress={() => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 // Zoom into the cluster
@@ -646,7 +648,7 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
 
       {/* Floating header — tab toggle + search + categories */}
       <View style={styles.floatingHeader}>
-        <BlurView tint="dark" intensity={70} style={[styles.headerBlur, { paddingTop: insets.top + 8 }]}>
+        <GlassView tint="dark" intensity={70} style={[styles.headerBlur, { paddingTop: insets.top + 8 }]}>
           {/* Row 1: Tab toggle + Search button */}
           <View style={styles.headerRow1}>
             {onTabChange && (
@@ -768,7 +770,7 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
               </TouchableOpacity>
             </TouchableOpacity>
           )}
-        </BlurView>
+        </GlassView>
       </View>
 
       {/* Neighborhood Pulse card (shows at neighborhood zoom) */}
@@ -791,23 +793,23 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
       {/* Spot count badge (hidden when presence badge is shown) */}
       {!loading && filteredSpots.length > 0 && !selectedSpot && !showPulseCard && !pulseSheetVisible && nomadsInCity === 0 && (
         <View style={styles.countBadge}>
-          <BlurView tint="dark" intensity={80} style={styles.countBlur}>
+          <GlassView tint="dark" intensity={80} style={styles.countBlur}>
             <Feather name="map-pin" size={12} color={colors.teal} />
             <Text style={styles.countText}>
               {filteredSpots.length} spot{filteredSpots.length !== 1 ? 's' : ''}
               {searchQuery.trim() ? ` matching "${searchQuery.trim()}"` : ''}
             </Text>
-          </BlurView>
+          </GlassView>
         </View>
       )}
 
       {/* Long-press hint at neighborhood zoom */}
       {isNeighborhoodZoom && !selectedSpot && !pulseSheetVisible && (
         <View style={styles.hintContainer}>
-          <BlurView tint="dark" intensity={60} style={styles.hintBlur}>
+          <GlassView tint="dark" intensity={60} style={styles.hintBlur}>
             <Feather name="zap" size={10} color={colors.amber} />
             <Text style={styles.hintText}>Long-press to rate this neighborhood</Text>
-          </BlurView>
+          </GlassView>
         </View>
       )}
 
@@ -864,13 +866,13 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
           <Feather name="plus" size={20} color={colors.dark.bg} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.locationBtnBlur} onPress={handleLocationPress}>
-          <BlurView tint="dark" intensity={70} style={styles.locationBlur}>
+          <GlassView tint="dark" intensity={70} style={styles.locationBlur}>
             <Feather
               name="crosshair"
               size={18}
               color={userLocation ? colors.teal : colors.dark.text2}
             />
-          </BlurView>
+          </GlassView>
         </TouchableOpacity>
       </View>
 

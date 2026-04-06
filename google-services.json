@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "328376586898",
+    "project_id": "xpat-a69e2",
+    "storage_bucket": "xpat-a69e2.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:328376586898:android:57674a2cf9e8c660818c4b",
+        "android_client_info": {
+          "package_name": "com.aycholdings.xpat"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-ES7KcUBdmjFcvc7m_hdowPpSmCdCsoU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

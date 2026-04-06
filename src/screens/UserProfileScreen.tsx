@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  ActivityIndicator, Alert, Image, RefreshControl,
+  ActivityIndicator, Alert, RefreshControl,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -328,7 +329,7 @@ export default function UserProfileScreen() {
         {/* Avatar */}
         <View style={styles.avatarContainer}>
           {profile.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} />
+            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} transition={200} cachePolicy="memory-disk" />
           ) : (
             <View style={styles.avatarFallback}>
               <Text style={styles.avatarText}>{initials}</Text>

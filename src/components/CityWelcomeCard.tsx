@@ -2,7 +2,7 @@ import React from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Animated,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius } from '../theme';
 
@@ -50,7 +50,7 @@ export default function CityWelcomeCard({
     <Animated.View
       style={[styles.container, { transform: [{ translateY }] }]}
     >
-      <BlurView tint="dark" intensity={90} style={styles.blur}>
+      <GlassView tint="dark" intensity={90} style={styles.blur}>
         <TouchableOpacity style={styles.closeBtn} onPress={handleDismiss}>
           <Feather name="x" size={16} color={colors.dark.text2} />
         </TouchableOpacity>
@@ -79,7 +79,7 @@ export default function CityWelcomeCard({
         </View>
 
         <Text style={styles.disclosure}>Partner links</Text>
-      </BlurView>
+      </GlassView>
     </Animated.View>
   );
 }

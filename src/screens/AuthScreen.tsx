@@ -276,6 +276,21 @@ export default function AuthScreen() {
           </>
         )}
 
+        {/* TODO: Install @react-native-google-signin/google-signin and wire to Supabase signInWithIdToken */}
+        {!appleAgeGatePending && Platform.OS === 'android' && (
+          <>
+            <TouchableOpacity style={styles.googleButton} disabled>
+              <Feather name="chrome" size={20} color={colors.dark.text2} style={{ marginRight: spacing.sm }} />
+              <Text style={styles.googleButtonText}>Google Sign-In — coming soon</Text>
+            </TouchableOpacity>
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerText}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+          </>
+        )}
+
         {/* Age verification gate — shown before signup form */}
         {!appleAgeGatePending && isSignUp && !ageVerified && (
           <>
@@ -492,6 +507,24 @@ const styles = StyleSheet.create({
     height: 50,
     width: '100%',
     marginBottom: spacing.md,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 50,
+    width: '100%',
+    marginBottom: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: 'rgba(44, 44, 46, 0.6)',
+    borderWidth: 1,
+    borderColor: 'rgba(46, 196, 160, 0.12)',
+    opacity: 0.5,
+  },
+  googleButtonText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 15,
+    color: colors.dark.text2,
   },
   dividerRow: {
     flexDirection: 'row',

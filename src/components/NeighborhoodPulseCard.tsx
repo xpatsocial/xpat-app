@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius } from '../theme';
 import { NeighborhoodTag, SAFETY_TAGS } from '../types';
@@ -50,7 +50,7 @@ export default function NeighborhoodPulseCard({
 
   return (
     <View style={styles.container}>
-      <BlurView tint="dark" intensity={80} style={styles.blur}>
+      <GlassView tint="dark" intensity={80} style={styles.blur}>
         <View style={styles.row}>
           <View style={[styles.safetyDot, { backgroundColor: safety.color }]} />
           <Feather name={safety.icon as any} size={12} color={safety.color} />
@@ -69,7 +69,7 @@ export default function NeighborhoodPulseCard({
             ))}
           </View>
         )}
-      </BlurView>
+      </GlassView>
     </View>
   );
 }

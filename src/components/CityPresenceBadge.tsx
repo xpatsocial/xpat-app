@@ -6,7 +6,7 @@ import Animated, {
   withSpring,
   withSequence,
 } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
+import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts, spacing, radius, animation } from '../theme';
@@ -47,14 +47,14 @@ export default function CityPresenceBadge({ city, count, onPress }: CityPresence
         }}
         activeOpacity={0.8}
       >
-        <BlurView intensity={70} tint="dark" style={styles.blur}>
+        <GlassView intensity={70} tint="dark" style={styles.blur}>
           <Feather name="users" size={13} color={colors.teal} />
           <Text style={styles.count}>{count}</Text>
           <Text style={styles.label}>
             nomad{count !== 1 ? 's' : ''} in {city}
           </Text>
           <Feather name="chevron-right" size={12} color={colors.dark.text3} />
-        </BlurView>
+        </GlassView>
       </TouchableOpacity>
     </Animated.View>
   );

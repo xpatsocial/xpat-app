@@ -52,14 +52,66 @@ export async function requestNotificationConsent(userId?: string): Promise<strin
 }
 
 /**
- * Register for push notifications. Requests OS permission if not already granted,
- * stores token in Supabase, and configures the Android notification channel.
+ * Create Android notification channels. Must be called BEFORE requesting
+ * permissions so users see granular channel controls in system settings.
+ * No-op on iOS.
+ */
+async function createNotificationChannels() {
+  if (Platform.OS !== 'android') return;
+
+  await Notifications.setNotificationChannelAsync('chat', {
+    name: 'Messages',
+    description: 'Direct messages and chat notifications',
+    importance: Notifications.AndroidImportance.HIGH,
+    vibrationPattern: [0, 250, 250, 250],
+    sound: 'default',
+  });
+
+  await Notifications.setNotificationChannelAsync('social', {
+    name: 'Social',
+    description: 'Follows, likes, comments, and connections',
+    importance: Notifications.AndroidImportance.DEFAULT,
+    sound: 'default',
+  });
+
+  await Notifications.setNotificationChannelAsync('spots', {
+    name: 'Spots',
+    description: 'New spots nearby and recommendations',
+    importance: Notifications.AndroidImportance.LOW,
+  });
+
+  await Notifications.setNotificationChannelAsync('events', {
+    name: 'Events',
+    description: 'Event invites, RSVPs, and reminders',
+    importance: Notifications.AndroidImportance.DEFAULT,
+    sound: 'default',
+  });
+
+  await Notifications.setNotificationChannelAsync('nearby', {
+    name: 'Nearby Nomads',
+    description: 'Nomads near your location',
+    importance: Notifications.AndroidImportance.LOW,
+  });
+
+  await Notifications.setNotificationChannelAsync('system', {
+    name: 'System',
+    description: 'Account updates and app announcements',
+    importance: Notifications.AndroidImportance.MIN,
+  });
+}
+
+/**
+ * Register for push notifications. Creates Android channels, requests OS
+ * permission if not already granted, and stores token in Supabase.
  *
  * NOTE: Do not call directly on sign-in — use requestNotificationConsent() instead
  * to ensure proper user consent is collected first.
  */
 export async function registerForPushNotifications(userId?: string): Promise<string | null> {
   try {
+    // Create Android channels before requesting permissions
+    await createNotificationChannels();
+
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 
@@ -81,15 +133,6 @@ export async function registerForPushNotifications(userId?: string): Promise<str
       await supabase
         .from('push_tokens')
         .upsert({ user_id: userId, token, platform: Platform.OS }, { onConflict: 'user_id' });
-    }
-
-    // Android notification channel
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'Default',
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-      });
     }
 
     return token;

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius } from '../theme';
 
@@ -49,7 +49,7 @@ export default function AffiliateCard({
   const primary = CATEGORY_PARTNERS[category];
 
   return (
-    <BlurView tint="dark" intensity={60} style={styles.container}>
+    <GlassView tint="dark" intensity={60} style={styles.container}>
       <Text style={styles.badge}>Sponsored</Text>
 
       {primary && (
@@ -83,7 +83,7 @@ export default function AffiliateCard({
       <Text style={styles.disclosure}>
         x/pat earns a commission at no extra cost to you
       </Text>
-    </BlurView>
+    </GlassView>
   );
 }
 

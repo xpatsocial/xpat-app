@@ -8,7 +8,7 @@ import {
   Animated,
   Linking,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius } from '../theme';
 
@@ -50,7 +50,7 @@ export default function GDPRConsent({
 
   return (
     <Modal transparent visible={visible} animationType="none">
-      <BlurView intensity={80} tint="dark" style={styles.overlay}>
+      <GlassView intensity={80} tint="dark" style={styles.overlay}>
         <Animated.View
           style={[
             styles.card,
@@ -128,7 +128,7 @@ export default function GDPRConsent({
             <Text style={styles.declineText}>Decline</Text>
           </TouchableOpacity>
         </Animated.View>
-      </BlurView>
+      </GlassView>
     </Modal>
   );
 }

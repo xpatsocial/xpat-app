@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, Image, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { fonts } from '../theme';
 
 // 10 premium dark-mode palette colors for initials backgrounds
@@ -44,6 +45,8 @@ export default function Avatar({ uri, name, userId, size = 40 }: AvatarProps) {
       <Image
         source={{ uri }}
         style={[styles.image, { width: size, height: size, borderRadius }]}
+        transition={200}
+        cachePolicy="memory-disk"
       />
     );
   }

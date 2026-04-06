@@ -15,7 +15,7 @@ export const colors = {
     bg3: '#3A3A3C',
     bg4: '#48484A',
     text: '#F5F5F5',
-    text2: '#A1A1A6',
+    text2: '#BABABF',
     text3: '#636366',
     border: '#48484A',
     borderLight: '#5A5A5E',

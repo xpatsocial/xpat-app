@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Platform, Alert, BackHandler } from 'react-native';
+import { enableFreeze } from 'react-native-screens';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useNavigationState } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors } from '../theme';
 import GlassTabBar from '../components/GlassTabBar';
@@ -31,6 +34,8 @@ import { useAuth } from '../hooks/useAuth';
 import { initSentry } from '../lib/sentry';
 import { optOutPostHog, optInPostHog } from '../lib/posthog';
 
+enableFreeze(true);
+
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
 
@@ -52,6 +57,32 @@ function MainTabs() {
 export default function AppNavigator() {
   const { loading } = useAuth();
   const [gdprAccepted, setGdprAccepted] = useState<boolean | null>(null);
+  const navigationState = useNavigationState((state) => state);
+
+  // Android hardware back button: confirm exit on main tab, normal back elsewhere
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+
+    const onBackPress = () => {
+      // Check if we're at the root (Main tabs) with no stack screens above
+      const routes = navigationState?.routes ?? [];
+      const currentIndex = navigationState?.index ?? 0;
+      const currentRoute = routes[currentIndex];
+
+      if (currentRoute?.name === 'Main') {
+        Alert.alert('Exit x/pat?', '', [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Exit', onPress: () => BackHandler.exitApp() },
+        ]);
+        return true; // Prevent default back behavior
+      }
+
+      return false; // Allow normal back navigation
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [navigationState]);
 
   useEffect(() => {
     AsyncStorage.getItem('gdpr_accepted').then((val) => {
@@ -84,6 +115,7 @@ export default function AppNavigator() {
           headerShown: false,
           contentStyle: { backgroundColor: colors.dark.bg },
           animation: 'slide_from_right',
+          animationDuration: 250,
           gestureEnabled: true,
         }}
       >
@@ -91,27 +123,30 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Auth"
           component={AuthScreen}
-          options={{ presentation: 'modal', gestureEnabled: true }}
+          options={{ presentation: 'modal', gestureEnabled: true, animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
         />
         <Stack.Screen
           name="Onboarding"
           component={OnboardingScreen}
-          options={{ presentation: 'modal', gestureEnabled: true }}
+          options={{ presentation: 'modal', gestureEnabled: true, animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
         />
         <Stack.Screen
           name="AddSpot"
           component={AddSpotScreen}
-          options={{ presentation: 'modal' }}
+          options={{ presentation: 'modal', animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
         />
         <Stack.Screen
           name="SpotDetail"
           component={SpotDetailScreen}
           options={{
-            presentation: 'formSheet',
+            presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
             gestureEnabled: true,
-            sheetAllowedDetents: [0.75, 1.0],
-            sheetGrabberVisible: true,
-            sheetCornerRadius: 20,
+            ...(Platform.OS === 'android' && { animation: 'fade_from_bottom' }),
+            ...(Platform.OS === 'ios' && {
+              sheetAllowedDetents: [0.75, 1.0],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 20,
+            }),
           }}
         />
         <Stack.Screen
@@ -122,12 +157,12 @@ export default function AppNavigator() {
         <Stack.Screen
           name="PrivacyPolicy"
           component={PrivacyPolicyScreen}
-          options={{ presentation: 'modal' }}
+          options={{ presentation: 'modal', animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
         />
         <Stack.Screen
           name="Terms"
           component={TermsOfServiceScreen}
-          options={{ presentation: 'modal' }}
+          options={{ presentation: 'modal', animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
         />
         <Stack.Screen
           name="NomadToolkit"
@@ -162,7 +197,7 @@ export default function AppNavigator() {
         <Stack.Screen
           name="CreateEvent"
           component={CreateEventScreen}
-          options={{ presentation: 'modal' }}
+          options={{ presentation: 'modal', animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
         />
         <Stack.Screen
           name="AskAI"

@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  View, Text, FlatList, StyleSheet, TouchableOpacity,
-  RefreshControl, ActivityIndicator, TextInput, Alert, Share, Image,
+  View, Text, StyleSheet, TouchableOpacity,
+  RefreshControl, ActivityIndicator, TextInput, Alert, Share,
 } from 'react-native';
+import { Image } from 'expo-image';
+import { FlashList } from '@shopify/flash-list';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -369,7 +371,7 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
       const spotInfo = item.spots ? ` at ${item.spots?.name}, ${item.spots?.city}` : '';
       posthog.capture('post_shared', { post_id: item.id });
       await Share.share({
-        message: `${authorName}${spotInfo}: "${item.content}" — shared via x/pat\n\nhttps://xpat.social/feed`,
+        message: `${authorName}${spotInfo}: "${item.content}" — shared via x/pat\n\nhttps://xpat.social/feed?utm_source=share&utm_medium=app${user?.id ? `&ref=${user.id}` : ''}`,
       });
     } catch (_) {
       // user cancelled
@@ -433,7 +435,9 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
           <Image
             source={{ uri: item.photo_url }}
             style={styles.postImage}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={200}
+            cachePolicy="memory-disk"
           />
         )}
         {item.spots && (
@@ -556,7 +560,7 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
       {selectedImage && (
         <View style={styles.imagePreviewContainer}>
           <View>
-            <Image source={{ uri: selectedImage }} style={styles.imagePreview} />
+            <Image source={{ uri: selectedImage }} style={styles.imagePreview} transition={200} cachePolicy="memory-disk" />
             <TouchableOpacity
               style={styles.removeImageBtn}
               onPress={() => setSelectedImage(null)}
@@ -605,7 +609,7 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
           </TouchableOpacity>
         </View>
       ) : (
-        <FlatList
+        <FlashList
           data={posts}
           keyExtractor={(item) => item.id.toString()}
           renderItem={renderPost}

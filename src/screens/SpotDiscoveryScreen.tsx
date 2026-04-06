@@ -4,8 +4,8 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -182,7 +182,7 @@ function SpotSwipeCard({ spot }: { spot: Spot & { distance_km?: number; rating?:
       {/* Hero area */}
       <View style={cardStyles.hero}>
         {spot.photo_url ? (
-          <Image source={{ uri: spot.photo_url }} style={cardStyles.heroImage} />
+          <Image source={{ uri: spot.photo_url }} style={cardStyles.heroImage} contentFit="cover" transition={200} cachePolicy="memory-disk" />
         ) : (
           <View style={cardStyles.heroPlaceholder}>
             <Text style={cardStyles.heroEmoji}>{emoji}</Text>
@@ -447,7 +447,7 @@ const cardStyles = StyleSheet.create({
   heroImage: {
     width: '100%',
     height: '100%',
-    resizeMode: 'cover',
+    // contentFit="cover" is set as a prop on expo-image
   },
   heroPlaceholder: {
     flex: 1,

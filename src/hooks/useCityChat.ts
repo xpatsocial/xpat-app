@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { ChatMessage, ChatChannel } from '../types';
 import { useAuth } from './useAuth';
@@ -108,6 +108,22 @@ export function useCityChat({ city, country }: UseCityChatOptions) {
         supabase.removeChannel(realtimeRef.current);
       }
     };
+  }, [joinAndFetch]);
+
+  // Reconnect realtime on Android resume (Doze mode kills WebSockets)
+  useEffect(() => {
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        joinAndFetch();
+      } else if (nextState === 'background') {
+        if (realtimeRef.current) {
+          realtimeRef.current.unsubscribe();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppState);
+    return () => subscription.remove();
   }, [joinAndFetch]);
 
   // Send a message

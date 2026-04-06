@@ -5,12 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Image,
   Modal,
   Pressable,
   Platform,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -92,7 +91,7 @@ export default function NomadListSheet({
         {/* Avatar */}
         <View style={styles.avatarContainer}>
           {item.profiles?.avatar_url ? (
-            <Image source={{ uri: item.profiles.avatar_url }} style={styles.avatar} />
+            <Image source={{ uri: item.profiles.avatar_url }} style={styles.avatar} transition={200} cachePolicy="memory-disk" />
           ) : (
             <View style={[styles.avatar, styles.avatarPlaceholder]}>
               <Feather name="user" size={18} color={colors.dark.text3} />

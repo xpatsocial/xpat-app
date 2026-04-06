@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
-import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
+import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
@@ -61,13 +61,9 @@ export default function GlassTabBar({ state, descriptors, navigation }: GlassTab
         }}
       >
         {/* Glass background */}
-        {Platform.OS === 'ios' ? (
-          <BlurView tint="dark" intensity={40} style={StyleSheet.absoluteFill}>
-            <View style={styles.glassOverlay} />
-          </BlurView>
-        ) : (
-          <View style={[StyleSheet.absoluteFill, styles.androidBg]} />
-        )}
+        <GlassView tint="dark" intensity={40} style={StyleSheet.absoluteFill}>
+          <View style={styles.glassOverlay} />
+        </GlassView>
 
         {/* Glass border */}
         <View style={styles.glassBorder} />

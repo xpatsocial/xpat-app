@@ -252,7 +252,7 @@ function CityChat({ city, country, userId, scope, setScope }: CityChatProps) {
   return (
     <KeyboardAvoidingView
       style={styles.chatRoot}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={180}
     >
       <ScopeToggle scope={scope} setScope={setScope} />

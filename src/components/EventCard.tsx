@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, Image, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Image } from 'expo-image';
 import { Feather } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius } from '../theme';
 import { AppEvent, EventRsvp, EventCategory } from '../types';
@@ -147,6 +148,8 @@ export default function EventCard({ event, onPress, onRSVP, myRsvpStatus }: Even
                     <Image
                       source={{ uri: rsvp.profiles.avatar_url }}
                       style={styles.avatarImage}
+                      transition={200}
+                      cachePolicy="memory-disk"
                     />
                   ) : (
                     <Text style={styles.avatarText}>

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
-  Image,
 } from 'react-native';
+import { Image } from 'expo-image';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
@@ -291,7 +291,7 @@ export default function AddSpotScreen({ navigation }: any) {
         <Text style={styles.label}>Photo (optional)</Text>
         {photoUri ? (
           <TouchableOpacity onPress={handlePickPhoto} activeOpacity={0.8}>
-            <Image source={{ uri: photoUri }} style={styles.photoPreview} />
+            <Image source={{ uri: photoUri }} style={styles.photoPreview} contentFit="cover" transition={200} cachePolicy="memory-disk" />
             <Text style={styles.photoChangeHint}>Tap to change</Text>
           </TouchableOpacity>
         ) : (

@@ -6,7 +6,7 @@ import {
   StyleSheet,
   Animated,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { colors, fonts, spacing, radius } from '../theme';
@@ -54,7 +54,7 @@ export default function SearchBar({
     <Animated.View
       style={[styles.wrapper, { transform: [{ translateY: slideAnim }] }]}
     >
-      <BlurView intensity={50} tint="dark" style={styles.blur}>
+      <GlassView intensity={50} tint="dark" style={styles.blur}>
         <View style={styles.inputContainer}>
           <Feather
             name="search"
@@ -80,7 +80,7 @@ export default function SearchBar({
             </TouchableOpacity>
           )}
         </View>
-      </BlurView>
+      </GlassView>
     </Animated.View>
   );
 }

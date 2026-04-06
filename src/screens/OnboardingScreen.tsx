@@ -8,7 +8,7 @@ import Animated, {
   withSequence, interpolateColor, FadeIn, FadeOut, SlideInRight,
   SlideOutLeft,
 } from 'react-native-reanimated';
-import { BlurView } from 'expo-blur';
+import GlassView from '../components/GlassView';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fonts, spacing, radius } from '../theme';
@@ -157,7 +157,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
                     onPress={() => toggleVibe(vibe)}
                     activeOpacity={0.7}
                   >
-                    <BlurView
+                    <GlassView
                       intensity={isSelected ? 40 : 20}
                       tint="dark"
                       style={[
@@ -173,7 +173,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
                       >
                         {vibe}
                       </Text>
-                    </BlurView>
+                    </GlassView>
                   </TouchableOpacity>
                 );
               })}
@@ -225,7 +225,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
                         onPress={() => selectCity(city.name)}
                         activeOpacity={0.7}
                       >
-                        <BlurView
+                        <GlassView
                           intensity={isSelected ? 40 : 20}
                           tint="dark"
                           style={[
@@ -252,7 +252,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
                               <Text style={styles.checkmarkText}>✓</Text>
                             </View>
                           )}
-                        </BlurView>
+                        </GlassView>
                       </TouchableOpacity>
                     );
                   })}
@@ -262,7 +262,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
                     onPress={handleOtherCity}
                     activeOpacity={0.7}
                   >
-                    <BlurView
+                    <GlassView
                       intensity={showOtherInput ? 40 : 20}
                       tint="dark"
                       style={[
@@ -282,7 +282,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
                         </Text>
                         <Text style={styles.citySpots}>Tell us where</Text>
                       </View>
-                    </BlurView>
+                    </GlassView>
                   </TouchableOpacity>
 
                   {showOtherInput && (

@@ -64,7 +64,7 @@ x/pat is free for life. No subscriptions. No hidden fees. Just the best spots, s
 
 - **Apple ID:** 6760299061
 - **SKU:** xpat-social
-- **Bundle ID:** com.aychholdings.xpat
+- **Bundle ID:** com.aycholdings.xpat
 - **Copyright:** 2026 Aych Holdings LLC
 
 ---

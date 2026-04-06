@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, TouchableOpacity,
   Linking, Share,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
@@ -16,7 +16,7 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { colors, fonts, spacing, radius } from '../theme';
 import { Spot } from '../types';
 import CheckInButton from './CheckInButton';
-import AffiliateCard from './AffiliateCard';
+// AffiliateCard removed pre-launch — re-add when partner agreements signed
 
 const SHEET_HEIGHT = 380;
 const DISMISS_THRESHOLD = 80;
@@ -105,7 +105,7 @@ export default function SpotBottomSheet({ spot, onClose, onSave, onAddNote, dist
 
       <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.container, sheetStyle]}>
-          <BlurView tint="dark" intensity={90} style={styles.blur}>
+          <GlassView tint="dark" intensity={90} style={styles.blur}>
             <View style={styles.handle} />
 
             <View style={styles.header}>
@@ -171,7 +171,7 @@ export default function SpotBottomSheet({ spot, onClose, onSave, onAddNote, dist
               />
               <TouchableOpacity style={styles.actionIcon} onPress={() => {
                 Share.share({
-                  message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!\n\nhttps://xpat.social/spot/${spot.id}`,
+                  message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!\n\nhttps://xpat.social/spot/${spot.id}?utm_source=share&utm_medium=app${userId ? `&ref=${userId}` : ''}`,
                   title: spot.name,
                 });
               }}>
@@ -186,13 +186,7 @@ export default function SpotBottomSheet({ spot, onClose, onSave, onAddNote, dist
               </TouchableOpacity>
             </View>
 
-            <AffiliateCard
-              category={spot.category}
-              city={spot.city}
-              country={spot.country}
-              onPress={(_partner, url) => Linking.openURL(url)}
-            />
-          </BlurView>
+          </GlassView>
         </Animated.View>
       </GestureDetector>
     </>

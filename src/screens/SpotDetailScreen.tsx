@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, Image, Linking, Share, Platform, ActivityIndicator,
+  TextInput, Linking, Share, Platform, ActivityIndicator,
   KeyboardAvoidingView, Alert, Dimensions,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -16,7 +17,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../lib/posthog';
 import { Spot, Profile } from '../types';
 import CheckInButton from '../components/CheckInButton';
-import AffiliateCard from '../components/AffiliateCard';
+// AffiliateCard removed pre-launch — re-add when partner agreements signed
 import SpotCard from '../components/SpotCard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -179,7 +180,7 @@ export default function SpotDetailScreen() {
   async function handleShare() {
     posthog.capture('spot_shared', { spot_id: spot.id });
     await Share.share({
-      message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!\n\nhttps://xpat.social/spot/${spot.id}`,
+      message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!\n\nhttps://xpat.social/spot/${spot.id}?utm_source=share&utm_medium=app${user?.id ? `&ref=${user.id}` : ''}`,
       title: spot.name,
     });
   }
@@ -233,7 +234,7 @@ export default function SpotDetailScreen() {
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={insets.top}
       >
         {/* Back button overlay */}
@@ -257,7 +258,7 @@ export default function SpotDetailScreen() {
         >
           {/* Hero */}
           {spot.photo_url ? (
-            <Image source={{ uri: spot.photo_url }} style={styles.hero} />
+            <Image source={{ uri: spot.photo_url }} style={styles.hero} contentFit="cover" transition={200} cachePolicy="memory-disk" />
           ) : (
             <LinearGradient colors={gradient} style={styles.hero}>
               <Text style={styles.heroEmoji}>{CATEGORY_EMOJI[spot.category] || '📌'}</Text>
@@ -313,6 +314,8 @@ export default function SpotDetailScreen() {
                     <Image
                       source={{ uri: spot.profiles.avatar_url }}
                       style={styles.authorAvatarImg}
+                      transition={200}
+                      cachePolicy="memory-disk"
                     />
                   ) : (
                     <Text style={styles.authorAvatarText}>
@@ -386,20 +389,6 @@ export default function SpotDetailScreen() {
             {/* Divider */}
             <View style={styles.divider} />
 
-            {/* Affiliate Card */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Nomad Tools</Text>
-              <AffiliateCard
-                category={spot.category}
-                city={spot.city}
-                country={spot.country}
-                onPress={(_partner, url) => Linking.openURL(url)}
-              />
-            </View>
-
-            {/* Divider */}
-            <View style={styles.divider} />
-
             {/* Comments */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>
@@ -421,6 +410,8 @@ export default function SpotDetailScreen() {
                         <Image
                           source={{ uri: c.profiles.avatar_url }}
                           style={styles.commentAvatarImg}
+                          transition={200}
+                          cachePolicy="memory-disk"
                         />
                       ) : (
                         <Text style={styles.commentAvatarText}>

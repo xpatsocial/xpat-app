@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Alert } from 'react-native';
+import { Alert, AppState, AppStateStatus } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { DirectMessage, DMConversation, Profile } from '../types';
 import { useAuth } from './useAuth';
@@ -99,7 +99,7 @@ export function useDirectMessages() {
   }, [fetchConversations]);
 
   // Subscribe to new DMs via Realtime
-  useEffect(() => {
+  const subscribe = useCallback(() => {
     if (!user) return;
 
     if (realtimeRef.current) {
@@ -124,13 +124,34 @@ export function useDirectMessages() {
       .subscribe();
 
     realtimeRef.current = sub;
+  }, [user, fetchConversations]);
+
+  useEffect(() => {
+    subscribe();
 
     return () => {
       if (realtimeRef.current) {
         supabase.removeChannel(realtimeRef.current);
       }
     };
-  }, [user, fetchConversations]);
+  }, [subscribe]);
+
+  // Reconnect realtime on Android resume (Doze mode kills WebSockets)
+  useEffect(() => {
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        subscribe();
+        fetchConversations();
+      } else if (nextState === 'background') {
+        if (realtimeRef.current) {
+          realtimeRef.current.unsubscribe();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppState);
+    return () => subscription.remove();
+  }, [subscribe, fetchConversations]);
 
   return {
     conversations,
@@ -179,7 +200,7 @@ export function useConversation(partnerId: string) {
   }, [fetchMessages]);
 
   // Real-time subscription for this conversation
-  useEffect(() => {
+  const subscribeConversation = useCallback(() => {
     if (!user || !partnerId) return;
 
     if (realtimeRef.current) {
@@ -223,13 +244,34 @@ export function useConversation(partnerId: string) {
       .subscribe();
 
     realtimeRef.current = sub;
+  }, [user, partnerId]);
+
+  useEffect(() => {
+    subscribeConversation();
 
     return () => {
       if (realtimeRef.current) {
         supabase.removeChannel(realtimeRef.current);
       }
     };
-  }, [user, partnerId]);
+  }, [subscribeConversation]);
+
+  // Reconnect realtime on Android resume (Doze mode kills WebSockets)
+  useEffect(() => {
+    const handleAppState = (nextState: AppStateStatus) => {
+      if (nextState === 'active') {
+        subscribeConversation();
+        fetchMessages();
+      } else if (nextState === 'background') {
+        if (realtimeRef.current) {
+          realtimeRef.current.unsubscribe();
+        }
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppState);
+    return () => subscription.remove();
+  }, [subscribeConversation, fetchMessages]);
 
   const sendMessage = useCallback(
     async (content: string) => {

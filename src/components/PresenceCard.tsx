@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius } from '../theme';
 
@@ -14,14 +14,14 @@ export default function PresenceCard({ city, count }: PresenceCardProps) {
 
   return (
     <View style={styles.wrapper}>
-      <BlurView intensity={60} tint="dark" style={styles.blur}>
+      <GlassView intensity={60} tint="dark" style={styles.blur}>
         <View style={styles.content}>
           <Feather name="users" size={14} color={colors.teal} />
           <Text style={styles.text}>
             {count} x/pat{count !== 1 ? 's' : ''} in {city}
           </Text>
         </View>
-      </BlurView>
+      </GlassView>
     </View>
   );
 }

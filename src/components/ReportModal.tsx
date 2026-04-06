@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
@@ -83,7 +83,7 @@ export default function ReportModal({
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.container, sheetStyle]}>
-        <BlurView tint="dark" intensity={90} style={styles.blur}>
+        <GlassView tint="dark" intensity={90} style={styles.blur}>
           <View style={styles.handle} />
 
           <View style={styles.header}>
@@ -136,7 +136,7 @@ export default function ReportModal({
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
-        </BlurView>
+        </GlassView>
       </Animated.View>
     </GestureDetector>
   );

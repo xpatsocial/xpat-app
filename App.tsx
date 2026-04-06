@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text, TextInput, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
@@ -34,6 +34,14 @@ const linking = {
     },
   },
 };
+
+// Disable Android extra font padding globally
+if (Platform.OS === 'android') {
+  const defaultTextProps = (Text as any).defaultProps || {};
+  (Text as any).defaultProps = { ...defaultTextProps, includeFontPadding: false };
+  const defaultInputProps = (TextInput as any).defaultProps || {};
+  (TextInput as any).defaultProps = { ...defaultInputProps, includeFontPadding: false };
+}
 
 SplashScreen.preventAutoHideAsync();
 

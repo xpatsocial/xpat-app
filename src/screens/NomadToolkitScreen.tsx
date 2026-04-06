@@ -12,7 +12,7 @@ import {
   getEasiestApplications,
   getNewestPrograms,
 } from '../lib/data/nomadVisas';
-import { AFFILIATE_PARTNERS } from '../types';
+// AFFILIATE_PARTNERS removed pre-launch — re-add when agreements signed
 import BrandHeader from '../components/BrandHeader';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -216,7 +216,7 @@ export default function NomadToolkitScreen() {
     return results.sort((a, b) => b.attractiveness - a.attractiveness);
   }, [search, activeFilter]);
 
-  const partners = useMemo(() => Object.values(AFFILIATE_PARTNERS), []);
+  // Affiliate partners removed pre-launch
 
   const renderVisaCard = useCallback(
     ({ item }: { item: NomadVisa }) => <VisaCard visa={item} />,
@@ -300,49 +300,9 @@ export default function NomadToolkitScreen() {
 
   const ListFooter = useMemo(
     () => (
-      <View style={styles.partnerSection}>
-        <View style={styles.sectionHeader}>
-          <Feather name="briefcase" size={18} color={colors.amber} />
-          <Text style={styles.sectionTitle}>Partner Tools</Text>
-        </View>
-
-        <View style={styles.disclosureCard}>
-          <Text style={styles.disclosureText}>
-            These partnerships keep x/pat free forever. We earn a small commission when you sign up.
-          </Text>
-        </View>
-
-        <Text style={styles.partnerIntro}>
-          Essential tools for the nomad lifestyle. Partner integrations launching soon.
-        </Text>
-
-        {partners.map((partner) => (
-          <View key={partner.name} style={styles.partnerRow}>
-            <View style={styles.partnerIcon}>
-              <Feather name={partner.icon as any} size={18} color={colors.teal} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={styles.partnerTitleRow}>
-                <Text style={styles.partnerLabel}>{partner.label}</Text>
-                <View style={styles.partnerBadge}>
-                  <Text style={styles.partnerBadgeText}>Coming Soon</Text>
-                </View>
-              </View>
-              <Text style={styles.partnerName}>{partner.name}</Text>
-              <Text style={styles.partnerSubtitle}>{partner.subtitle}</Text>
-            </View>
-            <Feather name="lock" size={14} color={colors.dark.text2} />
-          </View>
-        ))}
-
-        <Text style={styles.affiliateDisclosure}>
-          Partner integrations coming soon
-        </Text>
-
-        <View style={{ height: 100 }} />
-      </View>
+      <View style={{ height: 100 }} />
     ),
-    [partners]
+    []
   );
 
   return (

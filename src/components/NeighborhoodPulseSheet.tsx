@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
+import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import Animated, {
   useSharedValue,
@@ -104,7 +104,7 @@ export default function NeighborhoodPulseSheet({
   return (
     <GestureDetector gesture={panGesture}>
       <Animated.View style={[styles.container, sheetStyle]}>
-        <BlurView tint="dark" intensity={90} style={styles.blur}>
+        <GlassView tint="dark" intensity={90} style={styles.blur}>
           <View style={styles.handle} />
 
           <View style={styles.header}>
@@ -223,7 +223,7 @@ export default function NeighborhoodPulseSheet({
               Share pulse{selectedTags.length > 0 ? ` (${selectedTags.length})` : ''}
             </Text>
           </TouchableOpacity>
-        </BlurView>
+        </GlassView>
       </Animated.View>
     </GestureDetector>
   );

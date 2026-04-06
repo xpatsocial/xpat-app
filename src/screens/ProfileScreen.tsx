@@ -15,7 +15,7 @@ import Constants from 'expo-constants';
 import { colors, fonts, spacing, radius } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { Spot, AFFILIATE_PARTNERS } from '../types';
+import { Spot } from '../types';
 import BrandHeader from '../components/BrandHeader';
 import SwipeableRow from '../components/SwipeableRow';
 import Avatar from '../components/Avatar';
@@ -196,7 +196,7 @@ export default function ProfileScreen() {
     .toUpperCase()
     .slice(0, 2);
 
-  const partners = Object.values(AFFILIATE_PARTNERS);
+  // Affiliate partners removed pre-launch — re-add when agreements signed
 
   // Group spots by country for collapsible display
   const spotsByCountry = useMemo(() => {
@@ -457,7 +457,7 @@ export default function ProfileScreen() {
                     color: colors.teal,
                     bgColor: 'rgba(46, 196, 160, 0.15)',
                     onPress: () => Share.share({
-                      message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!\n\nhttps://xpat.social/spot/${spot.id}`,
+                      message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!\n\nhttps://xpat.social/spot/${spot.id}?utm_source=share&utm_medium=app${user?.id ? `&ref=${user.id}` : ''}`,
                     }),
                   },
                   {
@@ -540,30 +540,6 @@ export default function ProfileScreen() {
           <Feather name="chevron-right" size={18} color={colors.dark.text2} />
         </AnimatedPressable>
 
-        {partners.map((partner) => (
-          <View
-            key={partner.name}
-            style={styles.partnerRow}
-          >
-            <View style={styles.partnerIcon}>
-              <Feather name={partner.icon as any} size={18} color={colors.teal} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <View style={styles.partnerTitleRow}>
-                <Text style={styles.partnerLabel}>{partner.label}</Text>
-                <View style={styles.partnerBadge}>
-                  <Text style={styles.partnerBadgeText}>Coming Soon</Text>
-                </View>
-              </View>
-              <Text style={styles.partnerSubtitle}>{partner.subtitle}</Text>
-            </View>
-            <Feather name="lock" size={14} color={colors.dark.text2} />
-          </View>
-        ))}
-
-        <Text style={styles.affiliateDisclosure}>
-          Partner integrations coming soon
-        </Text>
 
         {/* Legal Links */}
         <View style={styles.legalRow}>
