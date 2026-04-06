@@ -21,6 +21,7 @@ import NeighborhoodPulseCard from '../components/NeighborhoodPulseCard';
 import CityPresenceBadge from '../components/CityPresenceBadge';
 import NomadListSheet from '../components/NomadListSheet';
 import { useCityPresence } from '../hooks/useCityPresence';
+import { useSemanticSearch } from '../hooks/useSemanticSearch';
 import { usePostHog } from '../lib/posthog';
 import { clusterSpots, Cluster } from '../utils/mapClustering';
 
@@ -154,6 +155,21 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
     nearbyNomads,
     isJustArrived,
   } = useCityPresence(currentCity, currentCountry);
+
+  // Semantic search
+  const { search: semanticSearch, clear: clearSemantic, results: semanticResults, loading: semanticLoading, isSemantic } = useSemanticSearch();
+
+  // Trigger semantic search when query or category changes
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      semanticSearch(searchQuery, {
+        city: currentCity ?? undefined,
+        category: category !== 'all' ? category : undefined,
+      });
+    } else {
+      clearSemantic();
+    }
+  }, [searchQuery, category, currentCity]);
 
   // Onboarding tooltip state
   const [showPulseTooltip, setShowPulseTooltip] = useState(false);
@@ -303,6 +319,9 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
 
   const filteredSpots = useMemo(() => {
     if (!searchQuery.trim()) return spots;
+    // Use semantic/FTS results from Edge Function when available
+    if (semanticResults.length > 0) return semanticResults;
+    // Fall back to client-side filter while semantic search is loading
     const q = searchQuery.toLowerCase();
     return spots.filter(
       (s) =>
@@ -310,7 +329,7 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
         s.city?.toLowerCase().includes(q) ||
         s.country?.toLowerCase().includes(q),
     );
-  }, [spots, searchQuery]);
+  }, [spots, searchQuery, semanticResults]);
 
   // ---------- Neighborhood Pulse ----------
 
@@ -794,11 +813,21 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
       {!loading && filteredSpots.length > 0 && !selectedSpot && !showPulseCard && !pulseSheetVisible && nomadsInCity === 0 && (
         <View style={styles.countBadge}>
           <GlassView tint="dark" intensity={80} style={styles.countBlur}>
-            <Feather name="map-pin" size={12} color={colors.teal} />
+            {isSemantic && searchQuery.trim() ? (
+              <Feather name="zap" size={12} color={colors.teal} />
+            ) : (
+              <Feather name="map-pin" size={12} color={colors.teal} />
+            )}
             <Text style={styles.countText}>
-              {filteredSpots.length} spot{filteredSpots.length !== 1 ? 's' : ''}
-              {searchQuery.trim() ? ` matching "${searchQuery.trim()}"` : ''}
+              {semanticLoading && searchQuery.trim()
+                ? 'Searching...'
+                : `${filteredSpots.length} spot${filteredSpots.length !== 1 ? 's' : ''}${searchQuery.trim() ? ` for "${searchQuery.trim()}"` : ''}`}
             </Text>
+            {isSemantic && searchQuery.trim() && (
+              <View style={styles.aiBadge}>
+                <Text style={styles.aiBadgeText}>AI</Text>
+              </View>
+            )}
           </GlassView>
         </View>
       )}
@@ -1099,6 +1128,14 @@ const styles = StyleSheet.create({
     borderColor: colors.dark.border,
   },
   countText: { fontFamily: fonts.body, fontSize: 12, color: colors.teal },
+  aiBadge: {
+    marginLeft: spacing.xs,
+    backgroundColor: colors.teal,
+    borderRadius: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+  },
+  aiBadgeText: { fontFamily: fonts.mono, fontSize: 9, color: colors.dark.bg, fontWeight: '700' },
 
   hintContainer: {
     position: 'absolute',

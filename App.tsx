@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, Text, TextInput, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
+import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -83,6 +84,7 @@ function App() {
       <PostHogProvider>
         <AuthProvider>
           <NavigationContainer linking={linking as any}>
+            <ReducedMotionConfig mode={ReduceMotion.System} />
             <ErrorBoundary>
               <AppNavigator />
             </ErrorBoundary>
