@@ -19,13 +19,14 @@ import { Post, Comment } from '../types';
 
 import ReportModal from '../components/ReportModal';
 import Skeleton from '../components/Skeleton';
+import ForYouSection from '../components/ForYouSection';
 import { usePostHog } from '../lib/posthog';
 import { formatTimeAgo } from '../utils/formatTime';
 import { checkTextSafety } from '../lib/contentModeration';
 import { getRateLimitError } from '../lib/rateLimiter';
 
 export default function FeedScreen({ navigation, hideHeader }: { navigation?: any; hideHeader?: boolean }) {
-  const { user, session } = useAuth();
+  const { user, session, profile } = useAuth();
   const fallbackNav = useNavigation<any>();
   const nav = navigation || fallbackNav;
   const insets = useSafeAreaInsets();
@@ -637,6 +638,14 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
           renderItem={renderPost}
           contentContainerStyle={styles.list}
           keyboardDismissMode="on-drag"
+          ListHeaderComponent={
+            (profile as any)?.current_city ? (
+              <ForYouSection
+                city={(profile as any).current_city}
+                workStyle={(profile as any)?.work_style}
+              />
+            ) : null
+          }
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPosts(); }} tintColor={colors.teal} />
           }
