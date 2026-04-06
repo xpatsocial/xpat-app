@@ -31,6 +31,7 @@ import DirectMessageScreen from '../screens/DirectMessageScreen';
 import GDPRConsent from '../components/GDPRConsent';
 
 import { useAuth } from '../hooks/useAuth';
+import { useStreaks } from '../hooks/useStreaks';
 import { initSentry } from '../lib/sentry';
 import { optOutPostHog, optInPostHog } from '../lib/posthog';
 
@@ -55,7 +56,10 @@ function MainTabs() {
 }
 
 export default function AppNavigator() {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
+
+  // Track daily login streak — fires once per calendar day
+  useStreaks(user?.id);
   const [gdprAccepted, setGdprAccepted] = useState<boolean | null>(null);
   const navigationState = useNavigationState((state) => state);
 
