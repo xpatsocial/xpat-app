@@ -165,7 +165,7 @@ export default function AddSpotScreen({ navigation }: any) {
       }
     }
 
-    const { error } = await supabase.from('spots').insert({
+    const { data: newSpot, error } = await supabase.from('spots').insert({
       name: name.trim(),
       city: city.trim(),
       country: country.trim(),
@@ -175,7 +175,7 @@ export default function AddSpotScreen({ navigation }: any) {
       created_by: user.id,
       lat,
       lng,
-    });
+    }).select('id').single();
 
     setLoading(false);
     if (error) {
@@ -183,7 +183,25 @@ export default function AddSpotScreen({ navigation }: any) {
     } else {
       posthog.capture('spot_created', { category, city: city.trim(), country: country.trim() });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Spot added!', `${name} has been shared with the community.`);
+
+      // Moderate spot name/note and award XP (fire-and-forget)
+      if (newSpot?.id) {
+        const moderationText = [name.trim(), note.trim()].filter(Boolean).join(' ');
+        supabase.functions.invoke('moderate-content', {
+          body: {
+            content_type: 'spot',
+            content_id: String(newSpot.id),
+            text: moderationText,
+            user_id: user.id,
+          },
+        }).catch(() => {});
+
+        supabase.functions.invoke('award-xp', {
+          body: { reason: 'spot_added', reference_id: String(newSpot.id) },
+        }).catch(() => {});
+      }
+
+      Alert.alert('Spot added! +25 XP', `${name} has been shared with the community.`);
       navigation.goBack();
     }
   }
