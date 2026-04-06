@@ -1,18 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, TouchableOpacity, StyleSheet, Dimensions,
-  TextInput, KeyboardAvoidingView, Platform, ScrollView,
+  TextInput, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import Animated, {
   useSharedValue, useAnimatedStyle, withTiming, withRepeat,
   withSequence, interpolateColor, FadeIn, FadeOut, SlideInRight,
   SlideOutLeft,
 } from 'react-native-reanimated';
+import { Feather } from '@expo/vector-icons';
 import GlassView from '../components/GlassView';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fonts, spacing, radius } from '../theme';
 import { usePostHog } from '../lib/posthog';
+import { supabase } from '../lib/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -37,6 +39,9 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
   const [otherCity, setOtherCity] = useState('');
   const [showOtherInput, setShowOtherInput] = useState(false);
+  const [selfDescription, setSelfDescription] = useState('');
+  const [parsingPrefs, setParsingPrefs] = useState(false);
+  const [parsedPrefs, setParsedPrefs] = useState<Record<string, any> | null>(null);
   const posthog = usePostHog();
 
   // Track onboarding_started on mount
@@ -86,14 +91,43 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
     setShowOtherInput(true);
   }, []);
 
+  async function handleParseDescription() {
+    if (!selfDescription.trim() || parsingPrefs) return;
+    setParsingPrefs(true);
+    try {
+      const { data } = await supabase.functions.invoke<{ preferences: Record<string, any> }>(
+        'parse-preferences',
+        { body: { text: selfDescription } },
+      );
+      if (data?.preferences) {
+        setParsedPrefs(data.preferences);
+        // Auto-fill city if extracted and user hasn't selected one
+        if (data.preferences.current_city && !selectedCity) {
+          setSelectedCity(data.preferences.current_city);
+        }
+      }
+    } catch {
+      // Non-critical — user can skip
+    } finally {
+      setParsingPrefs(false);
+    }
+  }
+
   async function handleFinish() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const city = selectedCity || otherCity || 'Unknown';
+    const city = selectedCity || otherCity || parsedPrefs?.current_city || 'Unknown';
     posthog.capture('onboarding_city_selected', { city });
-    posthog.capture('onboarding_completed', { vibes: selectedVibes, city });
+    posthog.capture('onboarding_completed', {
+      vibes: selectedVibes,
+      city,
+      used_ai_parse: !!parsedPrefs,
+    });
     await AsyncStorage.setItem('onboarding_complete', 'true');
     await AsyncStorage.setItem('onboarding_vibes', JSON.stringify(selectedVibes));
     await AsyncStorage.setItem('onboarding_city', city);
+    if (parsedPrefs) {
+      await AsyncStorage.setItem('onboarding_parsed_prefs', JSON.stringify(parsedPrefs));
+    }
     navigation.replace('Auth');
   }
 
@@ -308,19 +342,85 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
                   styles.primaryButton,
                   !selectedCity && !otherCity.trim() && styles.buttonDisabled,
                 ]}
-                onPress={handleFinish}
+                onPress={() => handleNext()}
                 disabled={!selectedCity && !otherCity.trim()}
               >
-                <Text style={styles.primaryButtonText}>Let's go!</Text>
+                <Text style={styles.primaryButtonText}>Continue →</Text>
               </TouchableOpacity>
             </View>
           </KeyboardAvoidingView>
         </Animated.View>
       )}
 
+      {/* Step 4: AI Preference Capture (optional) */}
+      {step === 3 && (
+        <Animated.View
+          entering={SlideInRight.duration(300)}
+          exiting={SlideOutLeft.duration(300)}
+          style={styles.stepContainer}
+        >
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+            <View style={styles.aiStepHeader}>
+              <View style={styles.aiBadge}>
+                <Feather name="zap" size={12} color={colors.dark.bg} />
+                <Text style={styles.aiBadgeText}>AI</Text>
+              </View>
+              <Text style={styles.stepTitle}>Tell us about yourself</Text>
+              <Text style={styles.stepSubtitle}>Optional — describe your work style in your own words</Text>
+            </View>
+
+            <GlassView tint="dark" intensity={40} style={styles.descriptionBox}>
+              <TextInput
+                style={styles.descriptionInput}
+                placeholder={'e.g. "I\'m a designer who loves quiet cafes with good coffee and fast wifi in Bangkok"'}
+                placeholderTextColor={colors.dark.text3}
+                value={selfDescription}
+                onChangeText={setSelfDescription}
+                multiline
+                maxLength={300}
+                autoFocus
+              />
+              {selfDescription.length > 10 && (
+                <TouchableOpacity
+                  style={[styles.parseBtn, parsingPrefs && { opacity: 0.5 }]}
+                  onPress={handleParseDescription}
+                  disabled={parsingPrefs}
+                >
+                  {parsingPrefs ? (
+                    <ActivityIndicator size="small" color={colors.dark.bg} />
+                  ) : (
+                    <Feather name="zap" size={14} color={colors.dark.bg} />
+                  )}
+                  <Text style={styles.parseBtnText}>
+                    {parsingPrefs ? 'Analyzing...' : 'Extract my preferences'}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </GlassView>
+
+            {parsedPrefs && Object.keys(parsedPrefs).length > 0 && (
+              <View style={styles.parsedResult}>
+                <Feather name="check-circle" size={14} color={colors.teal} />
+                <Text style={styles.parsedText}>
+                  Got it! We'll personalize your experience.
+                  {parsedPrefs.current_city ? ` City: ${parsedPrefs.current_city}.` : ''}
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.nextButton} onPress={handleFinish} activeOpacity={0.85}>
+              <Text style={styles.nextButtonText}>Get Started →</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleFinish} style={styles.skipBtn}>
+              <Text style={styles.skipText}>Skip for now</Text>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </Animated.View>
+      )}
+
       {/* Step indicators */}
       <View style={styles.dots}>
-        {[0, 1, 2].map((i) => (
+        {[0, 1, 2, 3].map((i) => (
           <View
             key={i}
             style={[styles.dot, step === i && styles.dotActive]}
@@ -512,6 +612,96 @@ const styles = StyleSheet.create({
     fontFamily: fonts.bodyBold,
     fontSize: 16,
     color: colors.dark.bg,
+  },
+
+  // AI Step styles
+  aiStepHeader: {
+    marginBottom: spacing.lg,
+  },
+  aiBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.teal,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    alignSelf: 'flex-start',
+    marginBottom: spacing.sm,
+  },
+  aiBadgeText: {
+    fontFamily: fonts.mono,
+    fontSize: 10,
+    color: colors.dark.bg,
+    fontWeight: '700',
+  },
+  descriptionBox: {
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    marginBottom: spacing.md,
+    minHeight: 120,
+  },
+  descriptionInput: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.dark.text,
+    lineHeight: 22,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  parseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.teal,
+    borderRadius: radius.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    alignSelf: 'flex-start',
+    marginTop: spacing.sm,
+  },
+  parseBtnText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 13,
+    color: colors.dark.bg,
+  },
+  parsedResult: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: colors.teal + '15',
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.md,
+  },
+  parsedText: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.teal,
+    flex: 1,
+  },
+  nextButton: {
+    backgroundColor: colors.teal,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  nextButtonText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 16,
+    color: colors.dark.bg,
+  },
+  skipBtn: {
+    alignItems: 'center',
+    padding: spacing.sm,
+  },
+  skipText: {
+    fontFamily: fonts.body,
+    fontSize: 14,
+    color: colors.dark.text3,
   },
 
   // Step dots
