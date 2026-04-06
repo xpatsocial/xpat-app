@@ -15,6 +15,8 @@ import { Profile, Spot, Post, Connection, TravelOverlap, ReportCategory } from '
 import { useTravelPlans } from '../hooks/useTravelPlans';
 import { useModeration } from '../hooks/useModeration';
 import ReportModal from '../components/ReportModal';
+import Avatar from '../components/Avatar';
+import XPBadge from '../components/XPBadge';
 
 type UserProfileParams = {
   UserProfile: { userId: string };
@@ -328,15 +330,25 @@ export default function UserProfileScreen() {
       >
         {/* Avatar */}
         <View style={styles.avatarContainer}>
-          {profile.avatar_url ? (
-            <Image source={{ uri: profile.avatar_url }} style={styles.avatar} transition={200} cachePolicy="memory-disk" />
-          ) : (
-            <View style={styles.avatarFallback}>
-              <Text style={styles.avatarText}>{initials}</Text>
-            </View>
-          )}
+          <Avatar
+            uri={profile.avatar_url}
+            name={profile.display_name}
+            userId={userId}
+            size={80}
+            verified={profile.is_identity_verified}
+            trusted={!profile.is_identity_verified && (profile.verification_level ?? 0) >= 1}
+          />
 
-          <Text style={styles.name}>{profile.display_name || 'Anonymous'}</Text>
+          <View style={styles.nameRow}>
+            <Text style={styles.name}>{profile.display_name || 'Anonymous'}</Text>
+            {profile.is_identity_verified && (
+              <Feather name="shield" size={14} color={colors.teal} style={{ marginLeft: 4, marginTop: 2 }} />
+            )}
+          </View>
+
+          {(profile.xp_level !== undefined && (profile.xp_level ?? 0) > 0) && (
+            <XPBadge level={profile.xp_level ?? 1} xp={profile.xp_total} showTitle />
+          )}
 
           {profile.tagline && (
             <Text style={styles.tagline}>{profile.tagline}</Text>
@@ -605,6 +617,12 @@ const styles = StyleSheet.create({
   avatarContainer: {
     alignItems: 'center',
     marginBottom: spacing.md,
+    gap: spacing.xs,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.sm,
   },
   avatar: {
     width: 88,

@@ -1,7 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Image } from 'expo-image';
-import { fonts } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
+import { colors, fonts } from '../theme';
 
 // 10 premium dark-mode palette colors for initials backgrounds
 const AVATAR_COLORS = [
@@ -33,27 +34,57 @@ interface AvatarProps {
   name?: string | null;
   userId?: string;
   size?: number;
+  /** Show identity-verified shield badge */
+  verified?: boolean;
+  /** Show community-vouched badge (lighter than full ID verification) */
+  trusted?: boolean;
 }
 
-export default function Avatar({ uri, name, userId, size = 40 }: AvatarProps) {
+export default function Avatar({ uri, name, userId, size = 40, verified, trusted }: AvatarProps) {
   const borderRadius = size / 2;
   const fontSize = size * 0.38;
   const bgColor = userId ? getAvatarColor(userId) : AVATAR_COLORS[0];
 
-  if (uri) {
-    return (
-      <Image
-        source={{ uri }}
-        style={[styles.image, { width: size, height: size, borderRadius }]}
-        transition={200}
-        cachePolicy="memory-disk"
-      />
-    );
-  }
+  const badgeSize = Math.max(14, size * 0.36);
+  const badgeOffset = size * 0.04;
 
-  return (
+  const avatarNode = uri ? (
+    <Image
+      source={{ uri }}
+      style={[styles.image, { width: size, height: size, borderRadius }]}
+      transition={200}
+      cachePolicy="memory-disk"
+    />
+  ) : (
     <View style={[styles.fallback, { width: size, height: size, borderRadius, backgroundColor: bgColor }]}>
       <Text style={[styles.initials, { fontSize }]}>{getInitials(name)}</Text>
+    </View>
+  );
+
+  if (!verified && !trusted) return avatarNode;
+
+  return (
+    <View style={{ width: size, height: size }}>
+      {avatarNode}
+      <View
+        style={[
+          styles.badge,
+          {
+            width: badgeSize,
+            height: badgeSize,
+            borderRadius: badgeSize / 2,
+            bottom: -badgeOffset,
+            right: -badgeOffset,
+            backgroundColor: verified ? colors.teal : colors.dark.bg3,
+          },
+        ]}
+      >
+        <Ionicons
+          name={verified ? 'shield-checkmark' : 'checkmark-circle'}
+          size={badgeSize - 2}
+          color={verified ? colors.dark.bg : colors.teal}
+        />
+      </View>
     </View>
   );
 }
@@ -69,5 +100,12 @@ const styles = StyleSheet.create({
   initials: {
     fontFamily: fonts.bodyBold,
     color: '#1C1C1E',
+  },
+  badge: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: colors.dark.bg,
   },
 });

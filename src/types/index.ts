@@ -31,6 +31,14 @@ export interface Profile {
   custom_status?: string | null;
   custom_status_emoji?: string | null;
   profile_completion_score?: number;
+  // Gamification (from migration 20260406000005)
+  xp_total?: number;
+  xp_level?: number;
+  // Trust & verification (from migration 20260406000006)
+  verification_level?: number;
+  trust_score?: number;
+  is_identity_verified?: boolean;
+  verified_at?: string | null;
 }
 
 export interface Spot {
