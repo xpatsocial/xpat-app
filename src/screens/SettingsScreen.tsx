@@ -311,6 +311,15 @@ export default function SettingsScreen() {
       Alert.alert('Error', error.message);
     } else {
       posthog.capture('profile_updated', { completion: calculateProfileCompletion({ ...profile, ...profileData } as any) });
+
+      // Fire city-brief when user moves to a new city (fire-and-forget)
+      const newCity = settings.currentCity.trim();
+      if (newCity && newCity !== profile?.current_city) {
+        supabase.functions.invoke('city-brief', {
+          body: { userId: user.id, city: newCity },
+        }).catch(() => {/* non-critical */});
+      }
+
       await refreshProfile();
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setHasChanges(false);
