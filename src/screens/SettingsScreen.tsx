@@ -23,6 +23,8 @@ import {
   calculateProfileCompletion,
 } from '../lib/profilePrompts';
 import FeedbackSheet from '../components/FeedbackSheet';
+import PMFSurvey from '../components/PMFSurvey';
+import { trackPMFSurveyShown, trackPMFSurveyDismissed } from '../lib/analytics';
 import { initSentry } from '../lib/sentry';
 import { optOutPostHog, optInPostHog, usePostHog } from '../lib/posthog';
 
@@ -144,6 +146,7 @@ export default function SettingsScreen() {
   const [showArrivalPicker, setShowArrivalPicker] = useState(false);
   const [showDeparturePicker, setShowDeparturePicker] = useState(false);
   const [feedbackVisible, setFeedbackVisible] = useState(false);
+  const [pmfSurveyVisible, setPmfSurveyVisible] = useState(false);
   const [langPickerVisible, setLangPickerVisible] = useState(false);
   const [analyticsEnabled, setAnalyticsEnabled] = useState(false);
 
@@ -1202,6 +1205,16 @@ export default function SettingsScreen() {
             sublabel="Help us improve x/pat"
             onPress={() => setFeedbackVisible(true)}
           />
+          <View style={styles.divider} />
+          <SettingRow
+            icon="bar-chart-2"
+            label="Quick Survey"
+            sublabel="60 seconds — help us build what matters"
+            onPress={() => {
+              trackPMFSurveyShown();
+              setPmfSurveyVisible(true);
+            }}
+          />
         </View>
 
         {/* DANGER ZONE */}
@@ -1452,6 +1465,14 @@ export default function SettingsScreen() {
         visible={feedbackVisible}
         onClose={() => setFeedbackVisible(false)}
         screenContext="settings"
+      />
+
+      <PMFSurvey
+        visible={pmfSurveyVisible}
+        onClose={() => {
+          if (pmfSurveyVisible) trackPMFSurveyDismissed();
+          setPmfSurveyVisible(false);
+        }}
       />
     </View>
   );

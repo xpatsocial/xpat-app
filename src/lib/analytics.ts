@@ -47,6 +47,11 @@ export function getSessionNumber(): number {
   return next;
 }
 
+/** Read the current session count without incrementing. */
+export function peekSessionCount(): number {
+  return store.getNumber(KEY_SESSION_COUNT) ?? 0;
+}
+
 /** Calculate days elapsed since the first recorded app open. */
 export function getDaysSinceInstall(): number {
   const installDate = store.getString(KEY_INSTALL_DATE);
@@ -327,6 +332,30 @@ export function trackCardShared(properties: {
 
 export function trackCardSaved(properties: { card_type?: string }): void {
   posthogTrack('card_saved', properties);
+}
+
+// ---------------------------------------------------------------------------
+// PMF Survey events (Rahul Vohra / Sean Ellis methodology)
+// ---------------------------------------------------------------------------
+
+export function trackPMFSurveyShown(): void {
+  posthogTrack('pmf_survey_shown');
+}
+
+export function trackPMFSurveyCompleted(properties: {
+  disappointment_level: string;
+  has_ideal_user: boolean;
+  has_main_benefit: boolean;
+  has_improvement: boolean;
+}): void {
+  posthogTrack('pmf_survey_completed', {
+    ...properties,
+    pmf_score: properties.disappointment_level === 'very_disappointed' ? 1 : 0,
+  });
+}
+
+export function trackPMFSurveyDismissed(): void {
+  posthogTrack('pmf_survey_dismissed');
 }
 
 // ---------------------------------------------------------------------------

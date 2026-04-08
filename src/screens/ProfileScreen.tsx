@@ -30,7 +30,9 @@ import { useAvatar } from '../hooks/useAvatar';
 import AnimatedPressable from '../components/AnimatedPressable';
 import AvailabilityToggle from '../components/AvailabilityToggle';
 import { calculateProfileCompletion } from '../lib/profilePrompts';
-import { trackScreenTime, trackProfileCompleted, identifyUser } from '../lib/analytics';
+import { trackScreenTime, trackProfileCompleted, identifyUser, getDaysSinceInstall, peekSessionCount, trackPMFSurveyShown } from '../lib/analytics';
+import { shouldShowPMFSurvey, markPMFSurveyShown } from '../components/PMFSurvey';
+import PMFSurvey from '../components/PMFSurvey';
 import CelebrationOverlay, { CelebrationOverlayRef } from '../components/CelebrationOverlay';
 import ShareCardModal from '../components/ShareCardModal';
 import type { ShareableCardData } from '../components/ShareableCard';
@@ -58,6 +60,7 @@ export default function ProfileScreen() {
   const [currentCity, setCurrentCity] = useState('');
   const [saving, setSaving] = useState(false);
   const [spotsExpanded, setSpotsExpanded] = useState(false);
+  const [pmfSurveyVisible, setPmfSurveyVisible] = useState(false);
   const [shareCardVisible, setShareCardVisible] = useState(false);
   const [shareCardData, setShareCardData] = useState<ShareableCardData | null>(null);
   const SPOTS_PREVIEW_COUNT = 5;
@@ -105,6 +108,24 @@ export default function ProfileScreen() {
 
   // Track time spent on Profile screen
   useEffect(() => trackScreenTime('Profile'), []);
+
+  // Auto-trigger PMF survey for engaged users (14+ days, 5+ sessions, every 90 days)
+  useEffect(() => {
+    if (!user) return;
+    const days = getDaysSinceInstall();
+    const sessions = peekSessionCount();
+    shouldShowPMFSurvey(days, sessions).then((show) => {
+      if (show) {
+        // Delay slightly so it doesn't compete with screen load
+        const timer = setTimeout(() => {
+          trackPMFSurveyShown();
+          markPMFSurveyShown();
+          setPmfSurveyVisible(true);
+        }, 3000);
+        return () => clearTimeout(timer);
+      }
+    });
+  }, [user]);
 
   async function handleSave() {
     if (!user) return;
@@ -705,6 +726,10 @@ export default function ProfileScreen() {
         visible={shareCardVisible}
         card={shareCardData}
         onDismiss={() => setShareCardVisible(false)}
+      />
+      <PMFSurvey
+        visible={pmfSurveyVisible}
+        onClose={() => setPmfSurveyVisible(false)}
       />
     </View>
   );
