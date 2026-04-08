@@ -42,6 +42,10 @@ export default function Skeleton({ width, height, borderRadius = 8 }: SkeletonPr
         },
         animatedStyle,
       ]}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      accessibilityLabel="Loading"
+      accessibilityState={{ busy: true }}
     />
   );
 }

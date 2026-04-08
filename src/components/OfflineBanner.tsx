@@ -34,8 +34,8 @@ export default function OfflineBanner() {
   }));
 
   return (
-    <Animated.View style={[styles.container, { paddingTop: insets.top + 8 }, animStyle]}>
-      <View style={styles.pill}>
+    <Animated.View style={[styles.container, { paddingTop: insets.top + 8 }, animStyle]} accessibilityLiveRegion="polite">
+      <View style={styles.pill} accessible accessibilityRole="alert" accessibilityLabel="You are offline. Showing cached data">
         <Feather name="wifi-off" size={13} color={colors.amber} />
         <Text style={styles.text}>Offline — showing cached data</Text>
       </View>

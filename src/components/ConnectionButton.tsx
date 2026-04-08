@@ -42,7 +42,7 @@ export default function ConnectionButton({
 
   if (loading) {
     return (
-      <View style={[styles.button, styles.loadingButton, compact && styles.compact]}>
+      <View style={[styles.button, styles.loadingButton, compact && styles.compact]} accessibilityLabel="Loading" accessibilityState={{ busy: true }}>
         <ActivityIndicator size="small" color={colors.teal} />
       </View>
     );
@@ -55,6 +55,9 @@ export default function ConnectionButton({
           style={[styles.button, styles.connectButton, compact && styles.compact]}
           onPress={() => handlePress(onConnect)}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Connect"
+          accessibilityHint="Send a connection request"
         >
           <Feather name="user-plus" size={compact ? 14 : 16} color={colors.dark.bg} />
           {!compact && <Text style={styles.connectText}>Connect</Text>}
@@ -63,7 +66,7 @@ export default function ConnectionButton({
 
     case 'pending_sent':
       return (
-        <View style={[styles.button, styles.pendingButton, compact && styles.compact]}>
+        <View style={[styles.button, styles.pendingButton, compact && styles.compact]} accessible accessibilityLabel="Connection request pending">
           <Feather name="clock" size={compact ? 14 : 16} color={colors.dark.text2} />
           {!compact && <Text style={styles.pendingText}>Pending</Text>}
         </View>
@@ -76,6 +79,8 @@ export default function ConnectionButton({
             style={[styles.button, styles.acceptButton]}
             onPress={() => onAccept && handlePress(onAccept)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Accept connection request"
           >
             <Feather name="check" size={compact ? 14 : 16} color={colors.dark.bg} />
             {!compact && <Text style={styles.connectText}>Accept</Text>}
@@ -84,6 +89,8 @@ export default function ConnectionButton({
             style={[styles.button, styles.declineButton]}
             onPress={() => onDecline && handlePress(onDecline)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Decline connection request"
           >
             <Feather name="x" size={compact ? 14 : 16} color={colors.dark.text2} />
           </TouchableOpacity>
@@ -96,6 +103,8 @@ export default function ConnectionButton({
           style={[styles.button, styles.messageButton, compact && styles.compact]}
           onPress={onMessage}
           activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel="Send message"
         >
           <Feather
             name="message-circle"

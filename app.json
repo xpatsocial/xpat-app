@@ -181,6 +181,7 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
+      "windowSoftInputMode": "adjustResize",
       "blockedPermissions": [
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.RECORD_AUDIO"

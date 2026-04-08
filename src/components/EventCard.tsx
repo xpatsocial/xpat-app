@@ -88,6 +88,8 @@ export default function EventCard({ event, onPress, onRSVP, myRsvpStatus }: Even
       style={styles.card}
       onPress={() => onPress?.(event)}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${event.title}, ${cat.label}, ${formatEventTime(event.starts_at)}${event.venue_name ? `, at ${event.venue_name}` : ''}, ${goingCount} going`}
     >
       {/* Header: category + title + badge */}
       <View style={styles.header}>
@@ -188,6 +190,9 @@ export default function EventCard({ event, onPress, onRSVP, myRsvpStatus }: Even
                 ]}
                 onPress={() => onRSVP(event, 'interested')}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={isInterested ? 'Interested in event' : 'Mark as interested'}
+                accessibilityState={{ selected: isInterested }}
               >
                 <Feather
                   name="bell"
@@ -202,6 +207,9 @@ export default function EventCard({ event, onPress, onRSVP, myRsvpStatus }: Even
                 ]}
                 onPress={() => onRSVP(event, 'going')}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={isGoing ? 'Going to event' : 'Join event'}
+                accessibilityState={{ selected: isGoing }}
               >
                 <Text style={[styles.joinText, isGoing && styles.joinTextActive]}>
                   {isGoing ? 'Going' : 'Join'}

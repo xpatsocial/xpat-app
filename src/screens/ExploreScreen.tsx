@@ -534,6 +534,9 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
                     style={[styles.tabToggle, isActive && styles.tabToggleActive]}
                     onPress={() => { Haptics.selectionAsync(); onTabChange(tab.name); }}
                     activeOpacity={0.7}
+                    accessibilityRole="tab"
+                    accessibilityLabel={`${tab.name} tab`}
+                    accessibilityState={{ selected: isActive }}
                   >
                     <Feather
                       name={tab.icon as any}
@@ -558,6 +561,8 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
                 Keyboard.dismiss();
               }
             }}
+            accessibilityRole="button"
+            accessibilityLabel={searchVisible ? 'Close search' : 'Open search'}
           >
             <Feather name={searchVisible ? 'x' : 'search'} size={18} color={colors.dark.text} />
           </TouchableOpacity>
@@ -625,6 +630,7 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
                 setPulseSheetVisible(false);
                 setSelectedSpot(cluster.spots[0]);
               }}
+              accessibilityLabel={`${cluster.spots[0].name}, ${cluster.spots[0].category}`}
             />
           ) : (
             <Marker
@@ -680,6 +686,9 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
                       style={[styles.tabToggle, isActive && styles.tabToggleActive]}
                       onPress={() => { Haptics.selectionAsync(); onTabChange(tab.name); }}
                       activeOpacity={0.7}
+                      accessibilityRole="tab"
+                      accessibilityLabel={`${tab.name} tab`}
+                      accessibilityState={{ selected: isActive }}
                     >
                       <Feather
                         name={tab.icon as any}
@@ -704,6 +713,8 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
                   Keyboard.dismiss();
                 }
               }}
+              accessibilityRole="button"
+              accessibilityLabel={searchVisible ? 'Close search' : 'Open search'}
             >
               <Feather name={searchVisible ? 'x' : 'search'} size={18} color={colors.dark.text} />
             </TouchableOpacity>
@@ -719,6 +730,7 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
                   setSearchVisible(true);
                 }}
                 activeOpacity={0.8}
+                accessibilityRole="search"
               >
                 <Feather name="search" size={15} color={colors.dark.text2} />
                 <TextInput
@@ -731,6 +743,7 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
                   returnKeyType="search"
                   autoCapitalize="none"
                   autoCorrect={false}
+                  accessibilityLabel="Search cities and spots"
                 />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity
@@ -763,6 +776,9 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
                       setCategory(cat);
                       setSelectedSpot(null);
                     }}
+                    accessibilityRole="radio"
+                    accessibilityLabel={`Filter by ${CATEGORY_LABELS[cat]}`}
+                    accessibilityState={{ selected: category === cat }}
                   >
                     <Text style={[styles.filterText, category === cat && styles.filterTextActive]}>
                       {CATEGORY_LABELS[cat]}
@@ -851,6 +867,8 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
           <TouchableOpacity
             style={styles.emptyCardBtn}
             onPress={() => navigation.navigate('AddSpot')}
+            accessibilityRole="button"
+            accessibilityLabel="Add a spot"
           >
             <Text style={styles.emptyCardBtnText}>Add Spot</Text>
           </TouchableOpacity>
@@ -891,10 +909,12 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
             }
             navigation.navigate('AddSpot');
           }}
+          accessibilityRole="button"
+          accessibilityLabel="Add a new spot"
         >
           <Feather name="plus" size={20} color={colors.dark.bg} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.locationBtnBlur} onPress={handleLocationPress}>
+        <TouchableOpacity style={styles.locationBtnBlur} onPress={handleLocationPress} accessibilityRole="button" accessibilityLabel="Center map on my location">
           <GlassView tint="dark" intensity={70} style={styles.locationBlur}>
             <Feather
               name="crosshair"

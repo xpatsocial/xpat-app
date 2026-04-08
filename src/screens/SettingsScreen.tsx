@@ -483,7 +483,13 @@ export default function SettingsScreen() {
   }) {
     const Wrapper = onPress ? TouchableOpacity : View;
     return (
-      <Wrapper style={styles.settingRow} onPress={onPress} activeOpacity={0.7}>
+      <Wrapper
+        style={styles.settingRow}
+        onPress={onPress}
+        activeOpacity={0.7}
+        accessibilityRole={onPress ? 'button' : undefined}
+        accessibilityLabel={sublabel ? `${label}. ${sublabel}` : label}
+      >
         <View style={[styles.settingIcon, destructive && { backgroundColor: 'rgba(255,107,107,0.12)' }]}>
           <Feather name={icon as any} size={16} color={destructive ? colors.red : colors.teal} />
         </View>
@@ -514,6 +520,9 @@ export default function SettingsScreen() {
             trackColor={{ false: colors.dark.bg3, true: 'rgba(46,196,160,0.4)' }}
             thumbColor={value ? colors.teal : colors.dark.text2}
             ios_backgroundColor={colors.dark.bg3}
+            accessibilityLabel={label}
+            accessibilityRole="switch"
+            accessibilityState={{ checked: value }}
           />
         }
       />
@@ -537,6 +546,9 @@ export default function SettingsScreen() {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
             }}
             activeOpacity={0.7}
+            accessibilityRole="radio"
+            accessibilityLabel={opt.label}
+            accessibilityState={{ selected: value === opt.value }}
           >
             <Text style={[styles.segmentText, value === opt.value && styles.segmentTextActive]}>
               {opt.label}
@@ -563,12 +575,12 @@ export default function SettingsScreen() {
           } else {
             navigation.goBack();
           }
-        }} style={styles.backBtn}>
+        }} style={styles.backBtn} accessibilityRole="button" accessibilityLabel="Go back">
           <Feather name="arrow-left" size={20} color={colors.dark.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={styles.headerTitle} accessibilityRole="header">Settings</Text>
         {hasChanges ? (
-          <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.saveBtn}>
+          <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.saveBtn} accessibilityRole="button" accessibilityLabel="Save settings" accessibilityState={{ disabled: saving }}>
             {saving ? (
               <ActivityIndicator size="small" color={colors.teal} />
             ) : (
@@ -595,6 +607,7 @@ export default function SettingsScreen() {
               onChangeText={(v) => updateField('displayName', v)}
               placeholder="Your name"
               placeholderTextColor={colors.dark.text3}
+              accessibilityLabel="Display name"
             />
           </View>
           <View style={styles.divider} />
@@ -607,6 +620,7 @@ export default function SettingsScreen() {
               placeholder="@username"
               placeholderTextColor={colors.dark.text3}
               autoCapitalize="none"
+              accessibilityLabel="Username"
             />
           </View>
           <View style={styles.divider} />
@@ -620,6 +634,7 @@ export default function SettingsScreen() {
               placeholderTextColor={colors.dark.text3}
               multiline
               maxLength={200}
+              accessibilityLabel="Bio"
             />
             <Text style={styles.charCount}>{settings.bio.length}/200</Text>
           </View>
@@ -632,6 +647,7 @@ export default function SettingsScreen() {
               onChangeText={(v) => updateField('currentCity', v)}
               placeholder="Where are you now?"
               placeholderTextColor={colors.dark.text3}
+              accessibilityLabel="Current city"
             />
           </View>
           <View style={styles.divider} />
@@ -643,6 +659,7 @@ export default function SettingsScreen() {
               onChangeText={(v) => updateField('homeCity', v)}
               placeholder="Where are you from?"
               placeholderTextColor={colors.dark.text3}
+              accessibilityLabel="Home city"
             />
           </View>
           <View style={styles.divider} />
@@ -654,6 +671,7 @@ export default function SettingsScreen() {
               onChangeText={(v) => updateField('nationality', v)}
               placeholder="e.g. American, Brazilian, German"
               placeholderTextColor={colors.dark.text3}
+              accessibilityLabel="Nationality"
             />
           </View>
         </View>

@@ -1,10 +1,11 @@
 import React, { useEffect } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity,
-  Linking, Share,
+  Linking, Share, Platform, Alert,
 } from 'react-native';
 import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
+import ContextMenu, { ContextMenuItem } from './ContextMenu';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -13,7 +14,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { colors, fonts, spacing, radius } from '../theme';
+import { colors, fonts, spacing, radius, shadows } from '../theme';
 import { Spot } from '../types';
 import CheckInButton from './CheckInButton';
 // AffiliateCard removed pre-launch — re-add when partner agreements signed
@@ -104,7 +105,7 @@ export default function SpotBottomSheet({ spot, onClose, onSave, onAddNote, dist
       <Animated.View style={[styles.backdrop, backdropStyle]} pointerEvents="none" />
 
       <GestureDetector gesture={panGesture}>
-        <Animated.View style={[styles.container, sheetStyle]}>
+        <Animated.View style={[styles.container, sheetStyle]} accessibilityViewIsModal accessibilityLabel={`Spot details for ${spot.name}`}>
           <GlassView tint="dark" intensity={90} style={styles.blur}>
             <View style={styles.handle} />
 
@@ -133,9 +134,59 @@ export default function SpotBottomSheet({ spot, onClose, onSave, onAddNote, dist
                   )}
                 </View>
               </View>
-              <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
-                <Feather name="x" size={18} color={colors.dark.text2} />
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+                <ContextMenu
+                  title={spot.name}
+                  items={[
+                    {
+                      label: 'Share',
+                      icon: 'share',
+                      onPress: () => {
+                        Share.share({
+                          message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!\n\nhttps://xpat.social/spot/${spot.id}?utm_source=share&utm_medium=app${userId ? `&ref=${userId}` : ''}`,
+                          title: spot.name,
+                        });
+                      },
+                    },
+                    {
+                      label: 'Get Directions',
+                      icon: 'navigation',
+                      onPress: () => {
+                        if (spot.lat && spot.lng) {
+                          const url = Platform.select({
+                            ios: `maps://app?daddr=${spot.lat},${spot.lng}`,
+                            android: `google.navigation:q=${spot.lat},${spot.lng}`,
+                            default: `https://maps.apple.com/?daddr=${spot.lat},${spot.lng}`,
+                          });
+                          Linking.openURL(url);
+                        }
+                      },
+                    },
+                    {
+                      label: 'Save Spot',
+                      icon: 'bookmark',
+                      onPress: () => onSave?.(spot),
+                    },
+                    {
+                      label: 'Copy Address',
+                      icon: 'copy',
+                      onPress: () => {
+                        // @ts-ignore
+                        const { Clipboard } = require('react-native');
+                        if (Clipboard?.setString) Clipboard.setString(`${spot.name}, ${spot.city}, ${spot.country}`);
+                        Alert.alert('Copied', 'Address copied to clipboard.');
+                      },
+                    },
+                  ] as ContextMenuItem[]}
+                >
+                  <View style={styles.closeBtn}>
+                    <Feather name="more-horizontal" size={18} color={colors.dark.text2} />
+                  </View>
+                </ContextMenu>
+                <TouchableOpacity style={styles.closeBtn} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close spot details">
+                  <Feather name="x" size={18} color={colors.dark.text2} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {spot.note && (
@@ -159,7 +210,7 @@ export default function SpotBottomSheet({ spot, onClose, onSave, onAddNote, dist
             )}
 
             <View style={styles.actions}>
-              <TouchableOpacity style={styles.actionPrimary} onPress={() => onSave?.(spot)}>
+              <TouchableOpacity style={styles.actionPrimary} onPress={() => onSave?.(spot)} accessibilityRole="button" accessibilityLabel={`Save ${spot.name}`}>
                 <Feather name="bookmark" size={16} color={colors.dark.bg} />
                 <Text style={styles.actionPrimaryText}>Save</Text>
               </TouchableOpacity>
@@ -174,14 +225,14 @@ export default function SpotBottomSheet({ spot, onClose, onSave, onAddNote, dist
                   message: `Check out ${spot.name} in ${spot.city}, ${spot.country} on x/pat!\n\nhttps://xpat.social/spot/${spot.id}?utm_source=share&utm_medium=app${userId ? `&ref=${userId}` : ''}`,
                   title: spot.name,
                 });
-              }}>
+              }} accessibilityRole="button" accessibilityLabel={`Share ${spot.name}`}>
                 <Feather name="share" size={16} color={colors.dark.text2} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.actionIcon} onPress={() => {
                 if (spot.lat && spot.lng) {
                   Linking.openURL(`https://maps.apple.com/?daddr=${spot.lat},${spot.lng}`);
                 }
-              }}>
+              }} accessibilityRole="button" accessibilityLabel={`Get directions to ${spot.name}`}>
                 <Feather name="navigation" size={16} color={colors.dark.text2} />
               </TouchableOpacity>
             </View>
@@ -214,6 +265,7 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     borderTopWidth: 0.5,
     borderColor: colors.dark.border,
+    ...shadows.sheet,
   },
   handle: {
     width: 36, height: 4, borderRadius: 2,

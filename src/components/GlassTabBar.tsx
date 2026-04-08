@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { View, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { colors, fonts } from '../theme';
 
 const TAB_ICONS: Record<string, string> = {
@@ -60,8 +61,8 @@ export default function GlassTabBar({ state, descriptors, navigation }: GlassTab
           tabWidth.value = e.nativeEvent.layout.width;
         }}
       >
-        {/* Glass background */}
-        <GlassView tint="dark" intensity={40} style={StyleSheet.absoluteFill}>
+        {/* Glass background — medium variant for tab bar vibrancy */}
+        <GlassView variant="medium" style={StyleSheet.absoluteFill}>
           <View style={styles.glassOverlay} />
         </GlassView>
 
@@ -90,6 +91,8 @@ export default function GlassTabBar({ state, descriptors, navigation }: GlassTab
                     canPreventDefault: true,
                   });
                   if (!isFocused && !event.defaultPrevented) {
+                    // Selection haptic — lightest feedback for tab switches (iOS HIG)
+                    Haptics.selectionAsync();
                     navigation.navigate(route.name);
                   }
                 }}
@@ -138,14 +141,15 @@ function TabButton({ icon, label, isFocused, onPress, onLongPress }: TabButtonPr
   }));
 
   return (
-    <TouchableOpacity
-      style={styles.tab}
+    <Pressable
+      style={({ pressed }) => [styles.tab, pressed && Platform.OS === 'ios' && { opacity: 0.7 }]}
       onPress={onPress}
       onLongPress={onLongPress}
-      activeOpacity={0.7}
-      accessibilityRole="button"
-      accessibilityState={isFocused ? { selected: true } : {}}
-      accessibilityLabel={label}
+      android_ripple={{ color: 'rgba(46,196,160,0.15)', borderless: false }}
+      accessibilityRole="tab"
+      accessibilityState={{ selected: isFocused }}
+      accessibilityLabel={`${label} tab`}
+      accessibilityHint={isFocused ? undefined : `Navigate to ${label}`}
     >
       <Animated.View style={iconStyle}>
         <Feather
@@ -161,6 +165,7 @@ function TabButton({ icon, label, isFocused, onPress, onLongPress }: TabButtonPr
             { color: isFocused ? colors.teal : colors.dark.text2 },
             labelStyle,
           ]}
+          maxFontSizeMultiplier={1.2}
         >
           {label}
         </Animated.Text>
@@ -168,7 +173,7 @@ function TabButton({ icon, label, isFocused, onPress, onLongPress }: TabButtonPr
 
       {/* Active glow dot */}
       {isFocused && <View style={styles.glowDot} />}
-    </TouchableOpacity>
+    </Pressable>
   );
 }
 
@@ -230,6 +235,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
+    ...(Platform.OS === 'android' && { textAlignVertical: 'center' as const }),
   },
   glowDot: {
     position: 'absolute',

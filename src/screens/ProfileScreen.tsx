@@ -1,9 +1,16 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  View, Text, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Linking, Share,
   LayoutAnimation, UIManager, Platform,
 } from 'react-native';
+import ReAnimated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 import { Feather } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -23,10 +30,15 @@ import { useAvatar } from '../hooks/useAvatar';
 import AnimatedPressable from '../components/AnimatedPressable';
 import AvailabilityToggle from '../components/AvailabilityToggle';
 import { calculateProfileCompletion } from '../lib/profilePrompts';
+import CelebrationOverlay, { CelebrationOverlayRef } from '../components/CelebrationOverlay';
+
+const PROFILE_HEADER_HEIGHT = 260;
 
 export default function ProfileScreen() {
   const { user, session, profile, signOut, refreshProfile } = useAuth();
   const navigation = useNavigation<any>();
+  const celebrationRef = useRef<CelebrationOverlayRef>(null);
+  const prevXpLevel = useRef<number | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const { pickAndUpload, uploading: avatarUploading } = useAvatar({
     userId: user?.id || '',
@@ -44,6 +56,15 @@ export default function ProfileScreen() {
   const [saving, setSaving] = useState(false);
   const [spotsExpanded, setSpotsExpanded] = useState(false);
   const SPOTS_PREVIEW_COUNT = 5;
+
+  // Detect XP level increase and trigger confetti
+  useEffect(() => {
+    const currentLevel = (profile as any)?.xp_level ?? 0;
+    if (prevXpLevel.current !== null && currentLevel > prevXpLevel.current) {
+      celebrationRef.current?.confetti();
+    }
+    prevXpLevel.current = currentLevel;
+  }, [(profile as any)?.xp_level]);
 
   useEffect(() => {
     if (profile) {
@@ -181,6 +202,8 @@ export default function ProfileScreen() {
             style={styles.authGateBtn}
             onPress={() => navigation.navigate('Auth')}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in"
           >
             <Text style={styles.authGateBtnText}>Sign In</Text>
           </TouchableOpacity>
@@ -217,22 +240,64 @@ export default function ProfileScreen() {
     setSpotsExpanded(!spotsExpanded);
   }
 
+  // Parallax scroll tracking
+  const profileScrollY = useSharedValue(0);
+  const profileScrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      profileScrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const headerParallaxStyle = useAnimatedStyle(() => {
+    const translateY = interpolate(
+      profileScrollY.value,
+      [-PROFILE_HEADER_HEIGHT, 0, PROFILE_HEADER_HEIGHT],
+      [-PROFILE_HEADER_HEIGHT * 0.3, 0, PROFILE_HEADER_HEIGHT * 0.4],
+      Extrapolation.CLAMP,
+    );
+    const scale = interpolate(
+      profileScrollY.value,
+      [-PROFILE_HEADER_HEIGHT, 0],
+      [1.15, 1],
+      Extrapolation.CLAMP,
+    );
+    return {
+      transform: [{ translateY }, { scale }],
+    };
+  });
+
+  const statsRowStickyStyle = useAnimatedStyle(() => {
+    const opacity = interpolate(
+      profileScrollY.value,
+      [PROFILE_HEADER_HEIGHT - 80, PROFILE_HEADER_HEIGHT],
+      [1, 0.95],
+      Extrapolation.CLAMP,
+    );
+    return { opacity };
+  });
+
   return (
     <View style={styles.container}>
       <BrandHeader rightAction={
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
-          <TouchableOpacity onPress={() => setEditing(!editing)}>
+          <TouchableOpacity onPress={() => setEditing(!editing)} accessibilityRole="button" accessibilityLabel={editing ? 'Cancel editing' : 'Edit profile'}>
             <Feather name={editing ? 'x' : 'edit-2'} size={18} color={colors.teal} />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Settings' as never)}>
+          <TouchableOpacity onPress={() => navigation.navigate('Settings' as never)} accessibilityRole="button" accessibilityLabel="Settings">
             <Feather name="settings" size={18} color={colors.dark.text2} />
           </TouchableOpacity>
         </View>
       } />
 
-      <ScrollView contentContainerStyle={styles.content}>
-        <View style={styles.avatarContainer}>
-          <TouchableOpacity onPress={pickAndUpload} activeOpacity={0.8} disabled={avatarUploading}>
+      <ReAnimated.ScrollView
+        contentContainerStyle={styles.content}
+        onScroll={profileScrollHandler}
+        scrollEventThrottle={16}
+        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
+      >
+        <ReAnimated.View style={[styles.avatarContainer, headerParallaxStyle]}>
+          <TouchableOpacity onPress={pickAndUpload} activeOpacity={0.8} disabled={avatarUploading} accessibilityRole="button" accessibilityLabel="Change profile photo" accessibilityState={{ busy: avatarUploading }}>
             <Avatar uri={avatarUrl} name={profile?.display_name} userId={user?.id} size={80} />
             <View style={styles.avatarEditBadge}>
               {avatarUploading ? (
@@ -251,6 +316,7 @@ export default function ProfileScreen() {
                 onChangeText={setDisplayName}
                 placeholder="Display name"
                 placeholderTextColor={colors.dark.text2}
+                accessibilityLabel="Display name"
               />
               <TextInput
                 style={styles.editInput}
@@ -258,6 +324,7 @@ export default function ProfileScreen() {
                 onChangeText={setCurrentCity}
                 placeholder="Current city"
                 placeholderTextColor={colors.dark.text2}
+                accessibilityLabel="Current city"
               />
               <TextInput
                 style={[styles.editInput, { minHeight: 60 }]}
@@ -266,6 +333,7 @@ export default function ProfileScreen() {
                 placeholder="Bio"
                 placeholderTextColor={colors.dark.text2}
                 multiline
+                accessibilityLabel="Bio"
               />
               <TouchableOpacity style={styles.saveBtn} onPress={handleSave} disabled={saving}>
                 {saving ? <ActivityIndicator color={colors.dark.bg} size="small" /> : <Text style={styles.saveBtnText}>Save Changes</Text>}
@@ -320,7 +388,7 @@ export default function ProfileScreen() {
               )}
             </>
           )}
-        </View>
+        </ReAnimated.View>
 
         {/* Profile Completion Bar */}
         {profile && (() => {
@@ -386,24 +454,24 @@ export default function ProfileScreen() {
           country={profile?.current_country}
         />
 
-        <View style={styles.statsRow}>
-          <View style={styles.stat}>
+        <ReAnimated.View style={[styles.statsRow, styles.statsRowSticky, statsRowStickyStyle]}>
+          <View style={styles.stat} accessible accessibilityLabel={`${mySpots.length} spots`}>
             <Text style={styles.statValue}>{mySpots.length}</Text>
             <Text style={styles.statLabel}>Spots</Text>
           </View>
-          <View style={[styles.stat, styles.statBorder]}>
+          <View style={[styles.stat, styles.statBorder]} accessible accessibilityLabel={`${new Set(mySpots.map(s => s.country)).size} countries`}>
             <Text style={[styles.statValue, { color: colors.amber }]}>
               {new Set(mySpots.map(s => s.country)).size}
             </Text>
             <Text style={styles.statLabel}>Countries</Text>
           </View>
-          <View style={styles.stat}>
+          <View style={styles.stat} accessible accessibilityLabel={`${new Set(mySpots.map(s => s.city)).size} cities`}>
             <Text style={styles.statValue}>
               {new Set(mySpots.map(s => s.city)).size}
             </Text>
             <Text style={styles.statLabel}>Cities</Text>
           </View>
-        </View>
+        </ReAnimated.View>
 
         <TouchableOpacity
           style={styles.sectionHeader}
@@ -569,7 +637,8 @@ export default function ProfileScreen() {
         </TouchableOpacity>
 
         <Text style={styles.version}>x/pat v{Constants.expoConfig?.version || '1.1.0'} beta</Text>
-      </ScrollView>
+      </ReAnimated.ScrollView>
+      <CelebrationOverlay ref={celebrationRef} />
     </View>
   );
 }
@@ -679,6 +748,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row', width: '100%',
     backgroundColor: colors.dark.bg2, borderRadius: radius.md,
     marginBottom: spacing.lg, borderWidth: 1, borderColor: colors.dark.border,
+  },
+  statsRowSticky: {
+    backgroundColor: colors.dark.bg,
+    zIndex: 10,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.xs,
   },
   stat: { flex: 1, alignItems: 'center', paddingVertical: spacing.md },
   statBorder: { borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.dark.border },

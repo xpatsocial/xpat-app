@@ -57,7 +57,7 @@ export default function ForYouSection({ city, workStyle, goals }: ForYouSectionP
           <Text style={styles.title}>Picked for you</Text>
           <Text style={styles.aiLabel}>AI</Text>
         </View>
-        <View style={styles.loadingRow}>
+        <View style={styles.loadingRow} accessibilityLiveRegion="polite" accessibilityLabel="Finding your spots" accessibilityState={{ busy: true }}>
           <ActivityIndicator color={colors.teal} size="small" />
           <Text style={styles.loadingText}>Finding your spots...</Text>
         </View>
@@ -91,6 +91,8 @@ export default function ForYouSection({ city, workStyle, goals }: ForYouSectionP
             style={styles.card}
             onPress={() => handleSpotPress(spot.id)}
             activeOpacity={0.85}
+            accessibilityRole="button"
+            accessibilityLabel={`${spot.name}, ${spot.category}. ${spot.reason || ''}. ${spot.votes ?? 0} votes`}
           >
             {/* Spot photo or gradient placeholder */}
             {spot.photo_url ? (

@@ -2,9 +2,10 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   Animated,
+  Platform,
 } from 'react-native';
 import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
@@ -55,7 +56,7 @@ export default function SearchBar({
       style={[styles.wrapper, { transform: [{ translateY: slideAnim }] }]}
     >
       <GlassView intensity={50} tint="dark" style={styles.blur}>
-        <View style={styles.inputContainer}>
+        <View style={styles.inputContainer} accessible accessibilityRole="search">
           <Feather
             name="search"
             size={16}
@@ -73,11 +74,19 @@ export default function SearchBar({
             returnKeyType="search"
             autoCorrect={false}
             autoCapitalize="none"
+            accessibilityLabel={placeholder}
+            accessibilityHint="Type to search for spots"
           />
           {text.length > 0 && (
-            <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
+            <Pressable
+              onPress={handleClear}
+              style={styles.clearButton}
+              android_ripple={{ color: 'rgba(46,196,160,0.15)', borderless: true }}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
               <Feather name="x" size={16} color={colors.dark.text2} />
-            </TouchableOpacity>
+            </Pressable>
           )}
         </View>
       </GlassView>
@@ -112,6 +121,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.dark.text,
     padding: 0,
+    ...(Platform.OS === 'android' && { textAlignVertical: 'center' as const }),
   },
   clearButton: {
     marginLeft: spacing.sm,

@@ -62,7 +62,7 @@ export default function ShareSpotSheet({ spot, style, variant = 'icon' }: ShareS
 
   if (variant === 'pill') {
     return (
-      <TouchableOpacity style={[styles.pill, style]} onPress={handleShare} activeOpacity={0.8}>
+      <TouchableOpacity style={[styles.pill, style]} onPress={handleShare} activeOpacity={0.8} accessibilityRole="button" accessibilityLabel={`Share ${spot.name}`}>
         <Feather name="share-2" size={14} color={colors.dark.text2} />
         <Text style={styles.pillText}>Share</Text>
       </TouchableOpacity>
@@ -70,7 +70,7 @@ export default function ShareSpotSheet({ spot, style, variant = 'icon' }: ShareS
   }
 
   return (
-    <TouchableOpacity style={[styles.iconBtn, style]} onPress={handleShare} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+    <TouchableOpacity style={[styles.iconBtn, style]} onPress={handleShare} activeOpacity={0.8} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} accessibilityRole="button" accessibilityLabel={`Share ${spot.name}`}>
       <Feather name="share-2" size={18} color={colors.dark.text2} />
     </TouchableOpacity>
   );

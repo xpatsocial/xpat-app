@@ -42,14 +42,14 @@ export default function XPBadge({ level, xp, showTitle = false, compact = false 
 
   if (compact) {
     return (
-      <View style={[styles.compact, { borderColor: color }]}>
+      <View style={[styles.compact, { borderColor: color }]} accessible accessibilityLabel={`Level ${cappedLevel} ${title}`}>
         <Text style={[styles.compactText, { color }]}>Lv.{cappedLevel}</Text>
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessible accessibilityLabel={`Level ${cappedLevel} ${title}${xp !== undefined ? `, ${xp.toLocaleString()} XP` : ''}`}>
       <View style={[styles.badge, { backgroundColor: `${color}22`, borderColor: color }]}>
         <Text style={[styles.levelText, { color }]}>Lv.{cappedLevel}</Text>
         {showTitle && <Text style={[styles.titleText, { color }]}>{title}</Text>}

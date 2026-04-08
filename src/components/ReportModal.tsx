@@ -82,13 +82,13 @@ export default function ReportModal({
 
   return (
     <GestureDetector gesture={panGesture}>
-      <Animated.View style={[styles.container, sheetStyle]}>
+      <Animated.View style={[styles.container, sheetStyle]} accessibilityViewIsModal accessibilityLabel={`Report ${targetType}`}>
         <GlassView tint="dark" intensity={90} style={styles.blur}>
           <View style={styles.handle} />
 
           <View style={styles.header}>
-            <Text style={styles.title}>Report {targetType}</Text>
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <Text style={styles.title} accessibilityRole="header">Report {targetType}</Text>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close report form">
               <Feather name="x" size={18} color={colors.dark.text2} />
             </TouchableOpacity>
           </View>
@@ -106,6 +106,9 @@ export default function ReportModal({
                   style={[styles.reasonPill, active && styles.reasonPillActive]}
                   onPress={() => setSelectedReason(reason)}
                   activeOpacity={0.7}
+                  accessibilityRole="radio"
+                  accessibilityLabel={reason}
+                  accessibilityState={{ selected: active }}
                 >
                   <Text
                     style={[
@@ -128,11 +131,14 @@ export default function ReportModal({
               ]}
               onPress={handleSubmit}
               disabled={!selectedReason}
+              accessibilityRole="button"
+              accessibilityLabel="Submit report"
+              accessibilityState={{ disabled: !selectedReason }}
             >
               <Text style={styles.submitText}>Submit Report</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={onClose} style={styles.cancelBtn}>
+            <TouchableOpacity onPress={onClose} style={styles.cancelBtn} accessibilityRole="button" accessibilityLabel="Cancel report">
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>

@@ -364,7 +364,7 @@ function SwipeCardDeckInner<T>(
   if (visibleCards.length === 0) {
     return (
       <View style={[styles.container, style]}>
-        <View style={styles.emptyState}>
+        <View style={styles.emptyState} accessible accessibilityRole="text" accessibilityLabel="All caught up. Check back soon for more discoveries">
           <Text style={styles.emptyEmoji}>🌎</Text>
           <Text style={styles.emptyTitle}>All caught up!</Text>
           <Text style={styles.emptySubtitle}>Check back soon for more discoveries</Text>
@@ -374,7 +374,30 @@ function SwipeCardDeckInner<T>(
   }
 
   return (
-    <View style={[styles.container, style]}>
+    <View
+      style={[styles.container, style]}
+      accessible
+      accessibilityRole="adjustable"
+      accessibilityLabel={`Card deck. ${visibleCards.length} cards remaining. Swipe right to connect, left to skip, or up for super like`}
+      accessibilityActions={[
+        { name: 'increment', label: 'Swipe right to connect' },
+        { name: 'decrement', label: 'Swipe left to skip' },
+        { name: 'activate', label: 'Super like' },
+      ]}
+      onAccessibilityAction={(event) => {
+        switch (event.nativeEvent.actionName) {
+          case 'increment':
+            animateSwipe('right');
+            break;
+          case 'decrement':
+            animateSwipe('left');
+            break;
+          case 'activate':
+            animateSwipe('up');
+            break;
+        }
+      }}
+    >
       {/* Render bottom-to-top so index 0 (top) is drawn last */}
       {[...visibleCards].reverse().map((item, reverseIdx) => {
         const stackIndex = visibleCards.length - 1 - reverseIdx;

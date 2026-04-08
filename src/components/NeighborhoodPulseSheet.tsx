@@ -114,7 +114,7 @@ export default function NeighborhoodPulseSheet({
                 {coordinate.latitude.toFixed(4)}, {coordinate.longitude.toFixed(4)}
               </Text>
             </View>
-            <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
+            <TouchableOpacity style={styles.closeBtn} onPress={onClose} accessibilityRole="button" accessibilityLabel="Close pulse sheet">
               <Feather name="x" size={18} color={colors.dark.text2} />
             </TouchableOpacity>
           </View>
@@ -217,6 +217,9 @@ export default function NeighborhoodPulseSheet({
             ]}
             onPress={handleSubmit}
             disabled={selectedTags.length === 0}
+            accessibilityRole="button"
+            accessibilityLabel={`Share pulse${selectedTags.length > 0 ? ` with ${selectedTags.length} tags` : ''}`}
+            accessibilityState={{ disabled: selectedTags.length === 0 }}
           >
             <Feather name="check" size={16} color={colors.dark.bg} />
             <Text style={styles.submitText}>

@@ -98,6 +98,8 @@ export default function GDPRConsent({
               onPress={() =>
                 Linking.openURL('https://xpat.social/privacy-policy')
               }
+              accessibilityRole="link"
+              accessibilityLabel="Read our Privacy Policy"
             >
               <Text style={styles.linkText}>Read our Privacy Policy</Text>
             </TouchableOpacity>
@@ -106,6 +108,8 @@ export default function GDPRConsent({
               onPress={() =>
                 Linking.openURL('https://xpat.social/terms-of-service')
               }
+              accessibilityRole="link"
+              accessibilityLabel="Terms of Service"
             >
               <Text style={styles.linkText}>Terms of Service</Text>
             </TouchableOpacity>
@@ -116,6 +120,9 @@ export default function GDPRConsent({
             style={styles.acceptButton}
             onPress={onAccept}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Accept and continue"
+            accessibilityHint="Accept privacy policy and terms of service"
           >
             <Text style={styles.acceptText}>Accept & Continue</Text>
           </TouchableOpacity>
@@ -124,6 +131,9 @@ export default function GDPRConsent({
             style={styles.declineButton}
             onPress={onDecline}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Decline"
+            accessibilityHint="Decline data collection consent"
           >
             <Text style={styles.declineText}>Decline</Text>
           </TouchableOpacity>

@@ -46,6 +46,8 @@ export default function CityPresenceBadge({ city, count, onPress }: CityPresence
           onPress();
         }}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={`${count} nomad${count !== 1 ? 's' : ''} in ${city}. Tap to view list`}
       >
         <GlassView intensity={70} tint="dark" style={styles.blur}>
           <Feather name="users" size={13} color={colors.teal} />

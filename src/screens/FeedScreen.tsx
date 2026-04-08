@@ -24,6 +24,9 @@ import { usePostHog } from '../lib/posthog';
 import { formatTimeAgo } from '../utils/formatTime';
 import { checkTextSafety } from '../lib/contentModeration';
 import { getRateLimitError } from '../lib/rateLimiter';
+import ContextMenu, { ContextMenuItem } from '../components/ContextMenu';
+import CelebrationOverlay, { CelebrationOverlayRef } from '../components/CelebrationOverlay';
+import { Toast } from '../components/ToastNotification';
 
 export default function FeedScreen({ navigation, hideHeader }: { navigation?: any; hideHeader?: boolean }) {
   const { user, session, profile } = useAuth();
@@ -32,6 +35,7 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
   const insets = useSafeAreaInsets();
   const posthog = usePostHog();
   const composerRef = useRef<TextInput>(null);
+  const celebrationRef = useRef<CelebrationOverlayRef>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -202,6 +206,10 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
       setSelectedImage(null);
       fetchPosts();
 
+      // Celebration: confetti on first post creation
+      celebrationRef.current?.confetti();
+      Toast.show({ type: 'success', title: 'Post shared!', message: 'Your post is now live.' });
+
       // Fire-and-forget: moderate content + award XP (non-blocking)
       if (insertedPost?.id && user?.id) {
         supabase.functions.invoke('moderate-content', {
@@ -267,6 +275,12 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
       await supabase
         .from('post_likes')
         .insert({ user_id: user.id, post_id: item.id });
+
+      // Milestone like celebrations (10, 50, 100)
+      const newCount = (item.post_likes?.length ?? 0) + 1;
+      if (newCount === 10 || newCount === 50 || newCount === 100) {
+        celebrationRef.current?.pulse();
+      }
     }
   }
 
@@ -421,6 +435,33 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
     );
   }
 
+  function getPostContextMenuItems(item: Post): ContextMenuItem[] {
+    const items: ContextMenuItem[] = [
+      { label: 'Share Post', icon: 'share', onPress: () => handleShare(item) },
+      {
+        label: 'Copy Text',
+        icon: 'copy',
+        onPress: () => {
+          // @ts-ignore — Clipboard deprecated but works without extra dependency
+          const { Clipboard } = require('react-native');
+          if (Clipboard?.setString) Clipboard.setString(item.content);
+          Alert.alert('Copied', 'Post text copied to clipboard.');
+        },
+      },
+      { label: 'Report Post', icon: 'flag', destructive: true, onPress: () => handleReport(item) },
+    ];
+    if (item.user_id === user?.id) {
+      // Insert own-post actions before Report
+      items.splice(items.length - 1, 0, {
+        label: 'Delete Post',
+        icon: 'trash-2',
+        destructive: true,
+        onPress: () => handleDeletePost(item),
+      });
+    }
+    return items;
+  }
+
   function renderPost({ item }: { item: Post }) {
     const initial = (item.profiles?.display_name || '?')[0].toUpperCase();
     const liked = isLikedByUser(item);
@@ -432,6 +473,7 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
     const isPostingComment = postingComment.has(item.id);
 
     return (
+      <ContextMenu items={getPostContextMenuItems(item)} longPress title={item.profiles?.display_name || 'Post'}>
       <View style={styles.postCard}>
         <View style={styles.postHeader}>
           <View style={styles.avatar}>
@@ -441,16 +483,11 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
             <Text style={styles.authorName}>{item.profiles?.display_name || 'Anonymous'}</Text>
             <Text style={styles.postTime}>{formatTimeAgo(item.created_at)}</Text>
           </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            {item.user_id === user?.id && (
-              <TouchableOpacity onPress={() => handleDeletePost(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                <Feather name="trash-2" size={14} color={colors.red} />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={() => handleReport(item)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <ContextMenu items={getPostContextMenuItems(item)}>
+            <View style={{ padding: 8 }}>
               <Feather name="more-horizontal" size={16} color={colors.dark.text2} />
-            </TouchableOpacity>
-          </View>
+            </View>
+          </ContextMenu>
         </View>
         <Text style={styles.postContent}>{item.content}</Text>
         {item.photo_url && (
@@ -534,6 +571,7 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
           </View>
         )}
       </View>
+      </ContextMenu>
     );
   }
 
@@ -638,6 +676,8 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
           renderItem={renderPost}
           contentContainerStyle={styles.list}
           keyboardDismissMode="on-drag"
+          scrollEventThrottle={16}
+          contentInsetAdjustmentBehavior="automatic"
           ListHeaderComponent={
             (profile as any)?.current_city ? (
               <ForYouSection
@@ -647,7 +687,15 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
             ) : null
           }
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); fetchPosts(); }} tintColor={colors.teal} />
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={() => { setRefreshing(true); fetchPosts(); }}
+              tintColor={colors.teal}
+              colors={[colors.teal, colors.amber]}
+              progressBackgroundColor={colors.dark.bg2}
+              title="Refreshing..."
+              titleColor={colors.dark.text2}
+            />
           }
         />
       )}
@@ -659,6 +707,8 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
         onClose={() => setReportTarget({ id: 0, visible: false })}
         onSubmit={submitReport}
       />
+
+      <CelebrationOverlay ref={celebrationRef} />
     </View>
   );
 }

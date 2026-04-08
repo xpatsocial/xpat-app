@@ -54,9 +54,10 @@ export default function Avatar({ uri, name, userId, size = 40, verified, trusted
       style={[styles.image, { width: size, height: size, borderRadius }]}
       transition={200}
       cachePolicy="memory-disk"
+      accessibilityLabel={name ? `${name}'s avatar` : 'User avatar'}
     />
   ) : (
-    <View style={[styles.fallback, { width: size, height: size, borderRadius, backgroundColor: bgColor }]}>
+    <View style={[styles.fallback, { width: size, height: size, borderRadius, backgroundColor: bgColor }]} accessible accessibilityRole="image" accessibilityLabel={name ? `${name}'s avatar` : 'User avatar'}>
       <Text style={[styles.initials, { fontSize }]}>{getInitials(name)}</Text>
     </View>
   );

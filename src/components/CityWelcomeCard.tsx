@@ -51,7 +51,7 @@ export default function CityWelcomeCard({
       style={[styles.container, { transform: [{ translateY }] }]}
     >
       <GlassView tint="dark" intensity={90} style={styles.blur}>
-        <TouchableOpacity style={styles.closeBtn} onPress={handleDismiss}>
+        <TouchableOpacity style={styles.closeBtn} onPress={handleDismiss} accessibilityRole="button" accessibilityLabel="Dismiss welcome card">
           <Feather name="x" size={16} color={colors.dark.text2} />
         </TouchableOpacity>
 
@@ -65,6 +65,8 @@ export default function CityWelcomeCard({
               style={styles.tile}
               onPress={() => onPartnerPress(tile.partner)}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${tile.label} via ${tile.partner}`}
             >
               <View style={styles.tileIcon}>
                 <Feather

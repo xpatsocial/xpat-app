@@ -30,6 +30,7 @@ import AskAIScreen from '../screens/AskAIScreen';
 import DirectMessageScreen from '../screens/DirectMessageScreen';
 import GDPRConsent from '../components/GDPRConsent';
 import OfflineBanner from '../components/OfflineBanner';
+import ToastNotification from '../components/ToastNotification';
 
 import { useAuth } from '../hooks/useAuth';
 import { useStreaks } from '../hooks/useStreaks';
@@ -128,17 +129,27 @@ export default function AppNavigator() {
         <Stack.Screen
           name="Auth"
           component={AuthScreen}
-          options={{ presentation: 'modal', gestureEnabled: true, animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
+          options={{ presentation: 'modal', gestureEnabled: true, animation: 'fade_from_bottom', animationDuration: 300 }}
         />
         <Stack.Screen
           name="Onboarding"
           component={OnboardingScreen}
-          options={{ presentation: 'modal', gestureEnabled: true, animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
+          options={{ presentation: 'modal', gestureEnabled: true, animation: 'fade_from_bottom', animationDuration: 300 }}
         />
         <Stack.Screen
           name="AddSpot"
           component={AddSpotScreen}
-          options={{ presentation: 'modal', animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
+          options={{
+            presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
+            gestureEnabled: true,
+            animation: 'fade_from_bottom',
+            animationDuration: 300,
+            ...(Platform.OS === 'ios' && {
+              sheetAllowedDetents: [0.75, 1.0],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+            }),
+          }}
         />
         <Stack.Screen
           name="SpotDetail"
@@ -146,73 +157,88 @@ export default function AppNavigator() {
           options={{
             presentation: Platform.OS === 'ios' ? 'formSheet' : 'modal',
             gestureEnabled: true,
-            ...(Platform.OS === 'android' && { animation: 'fade_from_bottom' }),
+            animation: 'fade_from_bottom',
+            animationDuration: 280,
             ...(Platform.OS === 'ios' && {
-              sheetAllowedDetents: [0.75, 1.0],
+              sheetAllowedDetents: [0.5, 0.75, 1.0],
+              sheetLargestUndimmedDetentIndex: 0,
               sheetGrabberVisible: true,
-              sheetCornerRadius: 20,
+              sheetCornerRadius: 24,
             }),
           }}
         />
         <Stack.Screen
           name="UserProfile"
           component={UserProfileScreen}
-          options={{ presentation: 'card' }}
+          options={{
+            presentation: 'card',
+            animation: 'slide_from_right',
+            animationDuration: 200,
+          }}
         />
         <Stack.Screen
           name="PrivacyPolicy"
           component={PrivacyPolicyScreen}
-          options={{ presentation: 'modal', animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
+          options={{ presentation: 'modal', animation: 'fade_from_bottom', animationDuration: 300 }}
         />
         <Stack.Screen
           name="Terms"
           component={TermsOfServiceScreen}
-          options={{ presentation: 'modal', animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
+          options={{ presentation: 'modal', animation: 'fade_from_bottom', animationDuration: 300 }}
         />
         <Stack.Screen
           name="NomadToolkit"
           component={NomadToolkitScreen}
-          options={{ presentation: 'card' }}
+          options={{ presentation: 'card', animation: 'slide_from_right', animationDuration: 250 }}
         />
         <Stack.Screen
           name="NomadDiscovery"
           component={NomadDiscoveryScreen}
-          options={{ presentation: 'card' }}
+          options={{ presentation: 'card', animation: 'slide_from_right', animationDuration: 250 }}
         />
         <Stack.Screen
           name="SpotDiscovery"
           component={SpotDiscoveryScreen}
-          options={{ presentation: 'card' }}
+          options={{ presentation: 'card', animation: 'slide_from_right', animationDuration: 250 }}
         />
         <Stack.Screen
           name="EventSwipe"
           component={EventSwipeScreen}
-          options={{ presentation: 'card' }}
+          options={{ presentation: 'card', animation: 'slide_from_right', animationDuration: 250 }}
         />
         <Stack.Screen
           name="Settings"
           component={SettingsScreen}
-          options={{ presentation: 'card' }}
+          options={{
+            presentation: Platform.OS === 'ios' ? 'formSheet' : 'card',
+            animation: Platform.OS === 'ios' ? 'fade_from_bottom' : 'slide_from_right',
+            animationDuration: 250,
+            ...(Platform.OS === 'ios' && {
+              sheetAllowedDetents: [0.75, 1.0],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: 24,
+            }),
+          }}
         />
         <Stack.Screen
           name="BlockedUsers"
           component={BlockedUsersScreen}
-          options={{ presentation: 'card' }}
+          options={{ presentation: 'card', animation: 'slide_from_right', animationDuration: 250 }}
         />
         <Stack.Screen
           name="CreateEvent"
           component={CreateEventScreen}
-          options={{ presentation: 'modal', animation: Platform.OS === 'ios' ? 'slide_from_bottom' : 'fade_from_bottom' }}
+          options={{ presentation: 'modal', animation: 'fade_from_bottom', animationDuration: 300 }}
         />
         <Stack.Screen
           name="AskAI"
           component={AskAIScreen}
-          options={{ presentation: 'card' }}
+          options={{ presentation: 'card', animation: 'slide_from_right', animationDuration: 250 }}
         />
         <Stack.Screen
           name="DirectMessage"
           component={DirectMessageScreen}
-          options={{ presentation: 'card' }}
+          options={{ presentation: 'card', animation: 'slide_from_right', animationDuration: 250 }}
         />
       </Stack.Navigator>
 
@@ -225,6 +251,9 @@ export default function AppNavigator() {
 
       {/* Global offline indicator */}
       <OfflineBanner />
+
+      {/* Global toast notification system */}
+      <ToastNotification />
     </>
   );
 }

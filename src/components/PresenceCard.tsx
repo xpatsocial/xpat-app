@@ -15,7 +15,7 @@ export default function PresenceCard({ city, count }: PresenceCardProps) {
   return (
     <View style={styles.wrapper}>
       <GlassView intensity={60} tint="dark" style={styles.blur}>
-        <View style={styles.content}>
+        <View style={styles.content} accessible accessibilityLabel={`${count} x/pat${count !== 1 ? 's' : ''} in ${city}`}>
           <Feather name="users" size={14} color={colors.teal} />
           <Text style={styles.text}>
             {count} x/pat{count !== 1 ? 's' : ''} in {city}

@@ -180,6 +180,8 @@ export default function NomadDiscoveryScreen() {
           contentContainerStyle={styles.list}
           keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
+          scrollEventThrottle={16}
+          contentInsetAdjustmentBehavior="automatic"
         />
       )}
     </SafeAreaView>

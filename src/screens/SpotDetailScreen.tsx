@@ -1,9 +1,16 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity,
   TextInput, Linking, Share, Platform, ActivityIndicator,
   KeyboardAvoidingView, Alert, Dimensions, InteractionManager,
 } from 'react-native';
+import Animated, {
+  useSharedValue,
+  useAnimatedScrollHandler,
+  useAnimatedStyle,
+  interpolate,
+  Extrapolation,
+} from 'react-native-reanimated';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather } from '@expo/vector-icons';
@@ -19,6 +26,8 @@ import { Spot, Profile } from '../types';
 import CheckInButton from '../components/CheckInButton';
 // AffiliateCard removed pre-launch — re-add when partner agreements signed
 import SpotCard from '../components/SpotCard';
+import ContextMenu, { ContextMenuItem } from '../components/ContextMenu';
+import CelebrationOverlay, { CelebrationOverlayRef } from '../components/CelebrationOverlay';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HERO_HEIGHT = 280;
@@ -62,6 +71,7 @@ export default function SpotDetailScreen() {
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
   const posthog = usePostHog();
+  const celebrationRef = useRef<CelebrationOverlayRef>(null);
 
   const { spot } = route.params;
 
@@ -167,6 +177,8 @@ export default function SpotDetailScreen() {
       setHasVoted(true);
       setVotes((v) => v + 1);
       posthog.capture('spot_upvoted', { spot_id: spot.id });
+      // Quick teal particles on first-time upvote
+      celebrationRef.current?.particles();
     }
   }
 
@@ -189,6 +201,8 @@ export default function SpotDetailScreen() {
       if (!error) {
         setSaved(true);
         posthog.capture('spot_saved', { spot_id: spot.id });
+        // Teal particles on save
+        celebrationRef.current?.particles();
       }
     }
   }
@@ -200,6 +214,52 @@ export default function SpotDetailScreen() {
       title: spot.name,
     });
   }
+
+  function handleCopyAddress() {
+    const address = `${spot.name}, ${spot.city}, ${spot.country}`;
+    try {
+      // @ts-ignore — Clipboard deprecated but works without extra dependency
+      const { Clipboard: RNClipboard } = require('react-native');
+      if (RNClipboard?.setString) RNClipboard.setString(address);
+    } catch {}
+    Alert.alert('Copied', 'Address copied to clipboard.');
+    posthog.capture('spot_address_copied', { spot_id: spot.id });
+  }
+
+  function handleReportSpot() {
+    if (!user) {
+      Alert.alert('Sign in required', 'Sign in to report content.');
+      return;
+    }
+    Alert.alert(
+      'Report Spot',
+      'Are you sure you want to report this spot?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Report',
+          style: 'destructive',
+          onPress: async () => {
+            await supabase.from('reports').insert({
+              reporter_id: user.id,
+              target_type: 'spot',
+              target_id: String(spot.id),
+              reason: 'Reported via context menu',
+            });
+            Alert.alert('Reported', 'Thanks for reporting. We will review this spot.');
+          },
+        },
+      ],
+    );
+  }
+
+  const spotContextMenuItems: ContextMenuItem[] = [
+    { label: 'Share Spot', icon: 'share-2', onPress: handleShare },
+    { label: 'Copy Address', icon: 'copy', onPress: handleCopyAddress },
+    { label: 'Save to Favorites', icon: 'bookmark', onPress: handleSave },
+    { label: 'Get Directions', icon: 'navigation', onPress: handleNavigate },
+    { label: 'Report Spot', icon: 'flag', destructive: true, onPress: handleReportSpot },
+  ];
 
   function handleNavigate() {
     if (!spot.lat || !spot.lng) return;
@@ -246,6 +306,39 @@ export default function SpotDetailScreen() {
 
   const gradient = CATEGORY_GRADIENTS[spot.category] || CATEGORY_GRADIENTS.other;
 
+  // Parallax scroll tracking
+  const scrollY = useSharedValue(0);
+  const scrollHandler = useAnimatedScrollHandler({
+    onScroll: (event) => {
+      scrollY.value = event.contentOffset.y;
+    },
+  });
+
+  const heroAnimatedStyle = useAnimatedStyle(() => {
+    const translateY = interpolate(
+      scrollY.value,
+      [-HERO_HEIGHT, 0, HERO_HEIGHT],
+      [-HERO_HEIGHT * 0.5, 0, HERO_HEIGHT * 0.5],
+      Extrapolation.CLAMP,
+    );
+    const opacity = interpolate(
+      scrollY.value,
+      [0, HERO_HEIGHT * 0.6, HERO_HEIGHT],
+      [1, 0.6, 0.2],
+      Extrapolation.CLAMP,
+    );
+    const scale = interpolate(
+      scrollY.value,
+      [-HERO_HEIGHT, 0],
+      [1.5, 1],
+      Extrapolation.CLAMP,
+    );
+    return {
+      transform: [{ translateY }, { scale }],
+      opacity,
+    };
+  });
+
   return (
     <View style={[styles.root, { paddingTop: insets.top }]}>
       <KeyboardAvoidingView
@@ -261,25 +354,34 @@ export default function SpotDetailScreen() {
           >
             <Feather name="arrow-left" size={20} color={colors.dark.text} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.backBtn} onPress={handleShare}>
-            <Feather name="share-2" size={18} color={colors.dark.text} />
-          </TouchableOpacity>
+          <ContextMenu items={spotContextMenuItems} title={spot.name}>
+            <View style={styles.backBtn}>
+              <Feather name="more-horizontal" size={18} color={colors.dark.text} />
+            </View>
+          </ContextMenu>
         </View>
 
-        <ScrollView
+        <Animated.ScrollView
           style={styles.scroll}
           contentContainerStyle={{ paddingBottom: insets.bottom + 100 }}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          onScroll={scrollHandler}
+          scrollEventThrottle={16}
+          contentInsetAdjustmentBehavior="automatic"
         >
-          {/* Hero */}
-          {spot.photo_url ? (
-            <Image source={{ uri: spot.photo_url }} style={styles.hero} contentFit="cover" transition={200} cachePolicy="memory-disk" />
-          ) : (
-            <LinearGradient colors={gradient} style={styles.hero}>
-              <Text style={styles.heroEmoji}>{CATEGORY_EMOJI[spot.category] || '📌'}</Text>
-            </LinearGradient>
-          )}
+          {/* Hero with parallax */}
+          <View style={styles.heroContainer}>
+            <Animated.View style={[styles.heroInner, heroAnimatedStyle]}>
+              {spot.photo_url ? (
+                <Image source={{ uri: spot.photo_url }} style={styles.hero} contentFit="cover" transition={200} cachePolicy="memory-disk" />
+              ) : (
+                <LinearGradient colors={gradient} style={styles.hero}>
+                  <Text style={styles.heroEmoji}>{CATEGORY_EMOJI[spot.category] || '📌'}</Text>
+                </LinearGradient>
+              )}
+            </Animated.View>
+          </View>
 
           <View style={styles.content}>
             {/* Title + Category */}
@@ -508,8 +610,9 @@ export default function SpotDetailScreen() {
               </View>
             )}
           </View>
-        </ScrollView>
+        </Animated.ScrollView>
       </KeyboardAvoidingView>
+      <CelebrationOverlay ref={celebrationRef} />
     </View>
   );
 }
@@ -539,6 +642,16 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+  },
+  heroContainer: {
+    width: SCREEN_WIDTH,
+    height: HERO_HEIGHT,
+    overflow: 'hidden',
+    backgroundColor: colors.dark.bg,
+  },
+  heroInner: {
+    width: SCREEN_WIDTH,
+    height: HERO_HEIGHT,
   },
   hero: {
     width: SCREEN_WIDTH,

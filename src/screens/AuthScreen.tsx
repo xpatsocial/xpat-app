@@ -214,7 +214,7 @@ export default function AuthScreen() {
         <Text style={styles.ageLabel}>Date of Birth</Text>
         <Text style={styles.ageSublabel}>You must be 13 or older to use x/pat</Text>
         {showParentalNotice && (
-          <View style={styles.parentalNotice}>
+          <View style={styles.parentalNotice} accessibilityRole="alert">
             <Feather name="info" size={14} color={colors.amber} />
             <Text style={styles.parentalNoticeText}>
               Under EU regulations, users aged 13–15 may need parental consent. By continuing, you confirm you have consent to use this service.
@@ -230,6 +230,7 @@ export default function AuthScreen() {
             onChangeText={(v) => setBirthMonth(v.replace(/[^0-9]/g, '').slice(0, 2))}
             keyboardType="number-pad"
             maxLength={2}
+            accessibilityLabel="Birth month"
           />
           <Text style={styles.dobSeparator}>/</Text>
           <TextInput
@@ -240,6 +241,7 @@ export default function AuthScreen() {
             onChangeText={(v) => setBirthDay(v.replace(/[^0-9]/g, '').slice(0, 2))}
             keyboardType="number-pad"
             maxLength={2}
+            accessibilityLabel="Birth day"
           />
           <Text style={styles.dobSeparator}>/</Text>
           <TextInput
@@ -250,12 +252,16 @@ export default function AuthScreen() {
             onChangeText={(v) => setBirthYear(v.replace(/[^0-9]/g, '').slice(0, 4))}
             keyboardType="number-pad"
             maxLength={4}
+            accessibilityLabel="Birth year"
           />
         </View>
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
           onPress={onVerify}
           disabled={loading}
+          accessibilityRole="button"
+          accessibilityLabel="Continue"
+          accessibilityState={{ disabled: loading }}
         >
           {loading ? <ActivityIndicator color={colors.dark.bg} /> : <Text style={styles.buttonText}>Continue</Text>}
         </TouchableOpacity>
@@ -275,6 +281,8 @@ export default function AuthScreen() {
           style={[styles.closeBtn, { top: insets.top + 12 }]}
           onPress={() => navigation.goBack()}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Close"
         >
           <Feather name="x" size={22} color={colors.dark.text2} />
         </TouchableOpacity>
@@ -320,6 +328,9 @@ export default function AuthScreen() {
                   style={[styles.socialButton, loading && styles.buttonDisabled]}
                   onPress={handleGoogleSignIn}
                   disabled={loading}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continue with Google"
+                  accessibilityState={{ disabled: loading }}
                 >
                   {loading ? (
                     <ActivityIndicator color={colors.dark.text} size="small" />
@@ -337,7 +348,7 @@ export default function AuthScreen() {
                   <View style={styles.dividerLine} />
                 </View>
 
-                <TouchableOpacity style={styles.emailOption} onPress={handleContinueWithEmail}>
+                <TouchableOpacity style={styles.emailOption} onPress={handleContinueWithEmail} accessibilityRole="button" accessibilityLabel="Continue with email">
                   <Feather name="mail" size={16} color={colors.teal} style={{ marginRight: spacing.sm }} />
                   <Text style={styles.emailOptionText}>Continue with email</Text>
                 </TouchableOpacity>
@@ -377,6 +388,7 @@ export default function AuthScreen() {
                       value={name}
                       onChangeText={setName}
                       autoCapitalize="words"
+                      accessibilityLabel="Your name"
                     />
                     <Text style={styles.ageLabel}>Date of Birth</Text>
                     <Text style={styles.ageSublabel}>You must be 13 or older to join</Text>
@@ -389,6 +401,7 @@ export default function AuthScreen() {
                         onChangeText={(v) => setBirthMonth(v.replace(/[^0-9]/g, '').slice(0, 2))}
                         keyboardType="number-pad"
                         maxLength={2}
+                        accessibilityLabel="Birth month"
                       />
                       <Text style={styles.dobSeparator}>/</Text>
                       <TextInput
@@ -399,6 +412,7 @@ export default function AuthScreen() {
                         onChangeText={(v) => setBirthDay(v.replace(/[^0-9]/g, '').slice(0, 2))}
                         keyboardType="number-pad"
                         maxLength={2}
+                        accessibilityLabel="Birth day"
                       />
                       <Text style={styles.dobSeparator}>/</Text>
                       <TextInput
@@ -409,10 +423,11 @@ export default function AuthScreen() {
                         onChangeText={(v) => setBirthYear(v.replace(/[^0-9]/g, '').slice(0, 4))}
                         keyboardType="number-pad"
                         maxLength={4}
+                        accessibilityLabel="Birth year"
                       />
                     </View>
                     {showParentalNotice && (
-                      <View style={styles.parentalNotice}>
+                      <View style={styles.parentalNotice} accessibilityRole="alert">
                         <Feather name="info" size={14} color={colors.amber} />
                         <Text style={styles.parentalNoticeText}>
                           Under EU regulations, users aged 13–15 may need parental consent.
@@ -441,11 +456,15 @@ export default function AuthScreen() {
                       autoCapitalize="none"
                       autoCorrect={false}
                       autoComplete="email"
+                      accessibilityLabel="Email address"
                     />
                     <TouchableOpacity
                       style={[styles.button, loading && styles.buttonDisabled]}
                       onPress={handleSendMagicLink}
                       disabled={loading}
+                      accessibilityRole="button"
+                      accessibilityLabel="Send magic link"
+                      accessibilityState={{ disabled: loading }}
                     >
                       {loading ? (
                         <ActivityIndicator color={colors.dark.bg} />

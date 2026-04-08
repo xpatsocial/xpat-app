@@ -22,7 +22,7 @@ interface SpotCardProps {
 // Critical for FlashList performance in feeds (RN Performance 2026 research)
 const SpotCard = React.memo(function SpotCard({ spot, onPress }: SpotCardProps) {
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`${spot.name}, ${spot.category} in ${spot.city}, ${spot.country}. ${spot.votes || 0} votes`}>
       <View style={styles.header}>
         <View style={styles.categoryPill}>
           <Text style={styles.categoryEmoji}>{CATEGORY_EMOJI[spot.category] || '📌'}</Text>

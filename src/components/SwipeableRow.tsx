@@ -102,7 +102,7 @@ export default function SwipeableRow({
             key={i}
             gesture={Gesture.Tap().onEnd(() => runOnJS(handleAction)(action))}
           >
-            <Animated.View style={[styles.actionBtn, { backgroundColor: action.bgColor }]}>
+            <Animated.View style={[styles.actionBtn, { backgroundColor: action.bgColor }]} accessible accessibilityRole="button" accessibilityLabel={action.icon}>
               <Feather name={action.icon as any} size={18} color={action.color} />
             </Animated.View>
           </GestureDetector>

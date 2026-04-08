@@ -83,6 +83,10 @@ export default function AvailabilityToggle({ userId, city, country, compact = fa
           updateStatus(STATUS_OPTIONS[nextIdx].value);
         }}
         activeOpacity={0.7}
+        accessibilityRole="togglebutton"
+        accessibilityLabel={`Availability status: ${currentOption.label}`}
+        accessibilityHint="Tap to cycle through availability statuses"
+        accessibilityState={{ selected: status !== 'offline' }}
       >
         <Animated.View style={[styles.compactPill, { borderColor: currentOption.color + '40' }, containerStyle]}>
           <View style={[styles.statusDot, { backgroundColor: currentOption.color }]} />
@@ -99,6 +103,10 @@ export default function AvailabilityToggle({ userId, city, country, compact = fa
       <TouchableOpacity
         onPress={() => setExpanded(!expanded)}
         activeOpacity={0.7}
+        accessibilityRole="togglebutton"
+        accessibilityLabel={`Availability status: ${currentOption.label}`}
+        accessibilityHint="Tap to expand status options"
+        accessibilityState={{ expanded }}
       >
         <Animated.View style={[styles.mainPill, { borderColor: currentOption.color + '40' }, containerStyle]}>
           <View style={[styles.statusDot, { backgroundColor: currentOption.color }]} />
@@ -125,6 +133,9 @@ export default function AvailabilityToggle({ userId, city, country, compact = fa
               ]}
               onPress={() => updateStatus(option.value)}
               activeOpacity={0.7}
+              accessibilityRole="menuitem"
+              accessibilityLabel={`Set status to ${option.label}`}
+              accessibilityState={{ selected: status === option.value }}
             >
               <Feather name={option.icon as any} size={16} color={option.color} />
               <Text style={[styles.dropdownText, { color: option.color }]}>

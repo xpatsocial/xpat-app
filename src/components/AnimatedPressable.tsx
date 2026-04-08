@@ -14,6 +14,8 @@ const SPRING_CONFIG = {
   mass: 0.6,
 };
 
+type HapticStyle = 'light' | 'medium' | 'heavy' | 'selection' | 'success' | 'error' | 'warning';
+
 interface AnimatedPressableProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
@@ -21,7 +23,39 @@ interface AnimatedPressableProps {
   onLongPress?: () => void;
   scaleDown?: number;
   haptic?: boolean;
+  /** Haptic feedback style for tap. Defaults to 'light'. */
+  hapticStyle?: HapticStyle;
   disabled?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+  accessibilityRole?: 'button' | 'link' | 'tab' | 'menuitem' | 'imagebutton' | 'none';
+  accessibilityState?: { selected?: boolean; disabled?: boolean; checked?: boolean | 'mixed'; expanded?: boolean; busy?: boolean };
+}
+
+function triggerHaptic(style: HapticStyle) {
+  switch (style) {
+    case 'light':
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      break;
+    case 'medium':
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      break;
+    case 'heavy':
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+      break;
+    case 'selection':
+      Haptics.selectionAsync();
+      break;
+    case 'success':
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      break;
+    case 'error':
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      break;
+    case 'warning':
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      break;
+  }
 }
 
 export default function AnimatedPressable({
@@ -31,7 +65,12 @@ export default function AnimatedPressable({
   onLongPress,
   scaleDown = 0.96,
   haptic = true,
+  hapticStyle = 'light',
   disabled = false,
+  accessibilityLabel,
+  accessibilityHint,
+  accessibilityRole = 'button',
+  accessibilityState,
 }: AnimatedPressableProps) {
   const scale = useSharedValue(1);
   const pressed = useSharedValue(false);
@@ -47,7 +86,7 @@ export default function AnimatedPressable({
       pressed.value = false;
       if (success && onPress) {
         if (haptic) {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          triggerHaptic(hapticStyle);
         }
         onPress();
       }
@@ -61,7 +100,8 @@ export default function AnimatedPressable({
     })
     .onStart(() => {
       if (haptic) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        // Long press activation always uses heavy impact (iOS HIG pattern)
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       }
       if (onLongPress) onLongPress();
     })
@@ -79,7 +119,14 @@ export default function AnimatedPressable({
 
   return (
     <GestureDetector gesture={gesture}>
-      <Animated.View style={[style, animatedStyle]}>
+      <Animated.View
+        style={[style, animatedStyle]}
+        accessible
+        accessibilityRole={accessibilityRole}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={{ disabled, ...accessibilityState }}
+      >
         {children}
       </Animated.View>
     </GestureDetector>

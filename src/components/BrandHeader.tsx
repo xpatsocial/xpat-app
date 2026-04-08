@@ -13,7 +13,7 @@ export default function BrandHeader({ subtitle, rightAction }: BrandHeaderProps)
   return (
     <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
       <View style={styles.row}>
-        <Text style={styles.wordmark}>
+        <Text style={styles.wordmark} accessibilityRole="header" accessibilityLabel="x/pat">
           <Text style={styles.x}>x</Text>
           <Text style={styles.slash}>/</Text>
           <Text style={styles.pat}>pat</Text>

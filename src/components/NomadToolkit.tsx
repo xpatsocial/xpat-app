@@ -56,6 +56,8 @@ export default function NomadToolkit({ onPartnerPress }: NomadToolkitProps) {
             style={styles.row}
             onPress={() => onPartnerPress(tool.partner, tool.url)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${tool.title}: ${tool.subtitle} via ${tool.partner}`}
           >
             <View style={styles.iconWrap}>
               <Feather name={tool.icon as any} size={18} color={colors.teal} />

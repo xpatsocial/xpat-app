@@ -17,6 +17,7 @@ import { useModeration } from '../hooks/useModeration';
 import ReportModal from '../components/ReportModal';
 import Avatar from '../components/Avatar';
 import XPBadge from '../components/XPBadge';
+import ContextMenu, { ContextMenuItem } from '../components/ContextMenu';
 
 type UserProfileParams = {
   UserProfile: { userId: string };
@@ -303,20 +304,44 @@ export default function UserProfileScreen() {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Profile</Text>
         {userId !== user?.id ? (
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            <TouchableOpacity
-              onPress={() => setReportVisible(true)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Feather name="flag" size={18} color={colors.dark.text2} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => blockUser(userId, profile?.display_name ?? undefined)}
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-            >
-              <Feather name="slash" size={18} color={colors.dark.text2} />
-            </TouchableOpacity>
-          </View>
+          <ContextMenu
+            title={profile?.display_name || 'User'}
+            items={[
+              ...(connectionStatus === 'accepted'
+                ? [{
+                    label: 'Send Message',
+                    icon: 'mail',
+                    onPress: () => navigation.navigate('DirectMessage', { userId, displayName: profile?.display_name }),
+                  }]
+                : []),
+              {
+                label: 'Copy Profile Link',
+                icon: 'link',
+                onPress: () => {
+                  // @ts-ignore
+                  const { Clipboard } = require('react-native');
+                  if (Clipboard?.setString) Clipboard.setString(`https://xpat.social/user/${userId}`);
+                  Alert.alert('Copied', 'Profile link copied to clipboard.');
+                },
+              },
+              {
+                label: 'Block User',
+                icon: 'slash',
+                destructive: true,
+                onPress: () => blockUser(userId, profile?.display_name ?? undefined),
+              },
+              {
+                label: 'Report User',
+                icon: 'flag',
+                destructive: true,
+                onPress: () => setReportVisible(true),
+              },
+            ] as ContextMenuItem[]}
+          >
+            <View style={{ padding: 4 }}>
+              <Feather name="more-horizontal" size={20} color={colors.dark.text2} />
+            </View>
+          </ContextMenu>
         ) : (
           <View style={{ width: 22 }} />
         )}

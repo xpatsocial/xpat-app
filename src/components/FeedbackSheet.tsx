@@ -6,7 +6,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import Constants from 'expo-constants';
-import { colors, fonts, spacing, radius } from '../theme';
+import { colors, fonts, spacing, radius, shadows } from '../theme';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 
@@ -65,7 +65,7 @@ export default function FeedbackSheet({ visible, onClose, screenContext }: Feedb
         <View style={styles.sheet}>
           <View style={styles.header}>
             <Text style={styles.title}>Send Feedback</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} accessibilityRole="button" accessibilityLabel="Close feedback form">
               <Feather name="x" size={20} color={colors.dark.text2} />
             </TouchableOpacity>
           </View>
@@ -78,6 +78,9 @@ export default function FeedbackSheet({ visible, onClose, screenContext }: Feedb
                 style={[styles.categoryPill, category === cat.id && styles.categoryActive]}
                 onPress={() => { setCategory(cat.id); Haptics.selectionAsync(); }}
                 activeOpacity={0.7}
+                accessibilityRole="radio"
+                accessibilityLabel={cat.label}
+                accessibilityState={{ selected: category === cat.id }}
               >
                 <Feather name={cat.icon} size={12} color={category === cat.id ? colors.teal : colors.dark.text3} />
                 <Text style={[styles.categoryText, category === cat.id && styles.categoryTextActive]}>
@@ -98,6 +101,8 @@ export default function FeedbackSheet({ visible, onClose, screenContext }: Feedb
             maxLength={2000}
             textAlignVertical="top"
             autoFocus
+            accessibilityLabel="Feedback message"
+            accessibilityHint="Enter your feedback, bug report, or feature idea"
           />
 
           <TouchableOpacity
@@ -105,6 +110,9 @@ export default function FeedbackSheet({ visible, onClose, screenContext }: Feedb
             onPress={handleSubmit}
             disabled={!message.trim() || sending}
             activeOpacity={0.8}
+            accessibilityRole="button"
+            accessibilityLabel="Send feedback"
+            accessibilityState={{ disabled: !message.trim() || sending }}
           >
             {sending ? (
               <ActivityIndicator color={colors.dark.bg} size="small" />
@@ -129,6 +137,7 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     borderTopWidth: 1,
     borderColor: colors.dark.border,
+    ...shadows.sheet,
   },
   header: {
     flexDirection: 'row',

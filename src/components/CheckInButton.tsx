@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,10 +9,11 @@ import {
 } from 'react-native';
 import { Feather, Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors, fonts, spacing, radius } from '../theme';
+import { colors, fonts, spacing, radius, shadows } from '../theme';
 import { supabase } from '../lib/supabase';
 import { usePostHog } from '../lib/posthog';
 import { useGamification } from '../hooks/useGamification';
+import CelebrationOverlay, { CelebrationOverlayRef } from './CelebrationOverlay';
 
 type NoiseLevel = 'silent' | 'quiet' | 'moderate' | 'loud';
 
@@ -38,6 +39,7 @@ export default function CheckInButton({
 }: CheckInButtonProps) {
   const posthog = usePostHog();
   const { onCheckIn: awardCheckIn } = useGamification();
+  const celebrationRef = useRef<CelebrationOverlayRef>(null);
   const [count, setCount] = useState(0);
   const [checkedIn, setCheckedIn] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -96,11 +98,16 @@ export default function CheckInButton({
         setCheckedIn(true);
         setCount((prev) => prev + 1);
 
+        // Teal particle celebration on check-in
+        celebrationRef.current?.particles();
+
         // Award XP + badges
         const earned = await awardCheckIn(userId, spotId);
         if (earned.length > 0) {
           setBadgeEarned(earned[0]);
           setTimeout(() => setBadgeEarned(null), 4000);
+          // Badge earned — trigger confetti
+          setTimeout(() => celebrationRef.current?.confetti(), 300);
         }
 
         onCheckIn();
@@ -122,6 +129,9 @@ export default function CheckInButton({
           onPress={handleCheckIn}
           disabled={checkedIn || loading || !userId}
           android_ripple={{ color: colors.tealDark, borderless: false }}
+          accessibilityRole="button"
+          accessibilityLabel={checkedIn ? `Checked in at ${spotName}` : `Check in at ${spotName}`}
+          accessibilityState={{ disabled: checkedIn || loading || !userId }}
         >
           {checkedIn ? (
             <Text style={styles.checkedText}>Checked in ✓</Text>
@@ -140,7 +150,7 @@ export default function CheckInButton({
 
       {/* Badge earned toast */}
       {badgeEarned && (
-        <View style={styles.badgeToast} pointerEvents="none">
+        <View style={styles.badgeToast} pointerEvents="none" accessibilityLiveRegion="polite" accessibilityRole="alert" accessibilityLabel={`Badge unlocked: ${badgeEarned}`}>
           <Ionicons name="medal-sharp" size={18} color={colors.amber} />
           <Text style={styles.badgeText}>Badge unlocked: {badgeEarned}!</Text>
         </View>
@@ -168,6 +178,9 @@ export default function CheckInButton({
                   ]}
                   onPress={() => setSelectedNoise(opt.value)}
                   android_ripple={{ color: colors.teal, borderless: false }}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`${opt.label} noise level`}
+                  accessibilityState={{ selected: selectedNoise === opt.value }}
                 >
                   <Text style={styles.noiseEmoji}>{opt.icon}</Text>
                   <Text style={styles.noiseLabel}>{opt.label}</Text>
@@ -179,6 +192,8 @@ export default function CheckInButton({
               style={({ pressed }) => [styles.confirmButton, pressed && { opacity: 0.85 }]}
               onPress={() => submitCheckIn(selectedNoise)}
               android_ripple={{ color: colors.tealDark, borderless: false }}
+              accessibilityRole="button"
+              accessibilityLabel={selectedNoise ? 'Check in and report noise level' : 'Check in and skip noise report'}
             >
               <Text style={styles.confirmText}>
                 {selectedNoise ? 'Check in & report' : 'Check in (skip)'}
@@ -187,6 +202,8 @@ export default function CheckInButton({
           </Pressable>
         </Pressable>
       </Modal>
+
+      <CelebrationOverlay ref={celebrationRef} />
     </>
   );
 }
@@ -257,6 +274,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     paddingBottom: Platform.OS === 'ios' ? 40 : spacing.xl,
     gap: spacing.md,
+    ...shadows.sheet,
   },
   sheetTitle: {
     fontFamily: fonts.heading,

@@ -87,6 +87,8 @@ export default function NomadListSheet({
           onProfilePress(item.user_id);
         }}
         activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={`${displayName}, ${statusCfg.label}. ${formatArrival(item.arrived_at)}`}
       >
         {/* Avatar */}
         <View style={styles.avatarContainer}>
@@ -149,7 +151,7 @@ export default function NomadListSheet({
               </Text>
             )}
           </View>
-          <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
+          <TouchableOpacity onPress={onClose} style={styles.closeBtn} accessibilityRole="button" accessibilityLabel="Close nomad list">
             <Feather name="x" size={20} color={colors.dark.text} />
           </TouchableOpacity>
         </View>
@@ -168,6 +170,9 @@ export default function NomadListSheet({
                 Haptics.selectionAsync();
                 setFilter(f.key);
               }}
+              accessibilityRole="tab"
+              accessibilityLabel={f.label}
+              accessibilityState={{ selected: filter === f.key }}
             >
               <Text
                 style={[styles.filterText, filter === f.key && styles.filterTextActive]}

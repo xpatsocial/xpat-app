@@ -49,7 +49,7 @@ export default function NeighborhoodPulseCard({
     .slice(0, 3);
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} accessible accessibilityLabel={`Neighborhood safety: ${safety.label}. ${totalResponses} pulse${totalResponses !== 1 ? 's' : ''}`}>
       <GlassView tint="dark" intensity={80} style={styles.blur}>
         <View style={styles.row}>
           <View style={[styles.safetyDot, { backgroundColor: safety.color }]} />
