@@ -8,6 +8,7 @@ import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
 import { setUser as setSentryUser, clearUser as clearSentryUser } from '../lib/sentry';
 import { usePostHog } from '../lib/posthog';
+import { initActivationBot, triggerBotMessage } from '../lib/activationBot';
 
 // Required for expo-web-browser OAuth on Android
 WebBrowser.maybeCompleteAuthSession();
@@ -69,7 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .select('*')
       .eq('id', userId)
       .single();
-    if (data) setProfile(data);
+    if (data) {
+      setProfile(data);
+      // Initialize activation bot with user's city context
+      initActivationBot(userId, data.current_city || 'your city').then(() => {
+        triggerBotMessage('signup_complete');
+      });
+    }
   }
 
   async function refreshProfile() {

@@ -24,6 +24,7 @@ import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../lib/posthog';
 import { trackSpotViewed, trackSpotSaved, trackSpotUpvoted, trackFirstSpotSaved } from '../lib/analytics';
 import { Spot, Profile } from '../types';
+import { useActivationFunnel } from '../hooks/useActivationFunnel';
 import CheckInButton from '../components/CheckInButton';
 // AffiliateCard removed pre-launch — re-add when partner agreements signed
 import SpotCard from '../components/SpotCard';
@@ -72,9 +73,10 @@ export default function SpotDetailScreen() {
   const route = useRoute<RouteProp<RouteParams, 'SpotDetail'>>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const posthog = usePostHog();
   const celebrationRef = useRef<CelebrationOverlayRef>(null);
+  const { trackSpotViewed: trackActivationSpotViewed, trackSpotSaved: trackActivationSpotSaved } = useActivationFunnel(user?.id, profile?.current_city);
 
   const { spot } = route.params;
 
@@ -90,9 +92,10 @@ export default function SpotDetailScreen() {
   const [shareCardVisible, setShareCardVisible] = useState(false);
   const [shareCardData, setShareCardData] = useState<ShareableCardData | null>(null);
 
-  // Track screen view
+  // Track screen view + activation funnel
   useEffect(() => {
     trackSpotViewed({ spot_id: spot.id, category: spot.category, city: spot.city, source: 'map' });
+    trackActivationSpotViewed();
   }, []);
 
   // Fetch comments
@@ -207,6 +210,7 @@ export default function SpotDetailScreen() {
         setSaved(true);
         trackSpotSaved({ spot_id: spot.id, category: spot.category, city: spot.city });
         trackFirstSpotSaved({ spot_id: spot.id });
+        trackActivationSpotSaved();
         // Teal particles on save
         celebrationRef.current?.particles();
       }

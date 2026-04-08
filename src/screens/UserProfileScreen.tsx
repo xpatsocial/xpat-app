@@ -17,7 +17,12 @@ import { useModeration } from '../hooks/useModeration';
 import ReportModal from '../components/ReportModal';
 import Avatar from '../components/Avatar';
 import XPBadge from '../components/XPBadge';
+import TrustBadge from '../components/TrustBadge';
+import VouchButton from '../components/VouchButton';
+import VouchCard from '../components/VouchCard';
+import PeerReviewPrompt from '../components/PeerReviewPrompt';
 import ContextMenu, { ContextMenuItem } from '../components/ContextMenu';
+import { useTrust, type Vouch, type MutualCheckIn } from '../hooks/useTrust';
 
 type UserProfileParams = {
   UserProfile: { userId: string };
@@ -43,8 +48,12 @@ export default function UserProfileScreen() {
   const [connecting, setConnecting] = useState(false);
   const [travelOverlaps, setTravelOverlaps] = useState<TravelOverlap[]>([]);
   const [reportVisible, setReportVisible] = useState(false);
+  const [vouches, setVouches] = useState<Vouch[]>([]);
+  const [mutualCheckIns, setMutualCheckIns] = useState<MutualCheckIn[]>([]);
+  const [reviewPromptVisible, setReviewPromptVisible] = useState(false);
   const { getOverlapsWithUser } = useTravelPlans();
   const { blockUser, reportContent } = useModeration();
+  const { fetchVouchesForUser, fetchMutualCheckIns } = useTrust();
 
   const fetchAll = useCallback(async () => {
     if (!userId || !user) return;
@@ -136,9 +145,17 @@ export default function UserProfileScreen() {
       setTravelOverlaps(overlaps);
     }
 
+    // Fetch vouches for this user
+    const vouchData = await fetchVouchesForUser(userId);
+    setVouches(vouchData);
+
+    // Fetch mutual check-ins (for vouch context)
+    const mcData = await fetchMutualCheckIns(userId);
+    setMutualCheckIns(mcData);
+
     setLoading(false);
     setRefreshing(false);
-  }, [userId, user, getOverlapsWithUser]);
+  }, [userId, user, getOverlapsWithUser, fetchVouchesForUser, fetchMutualCheckIns]);
 
   useEffect(() => {
     fetchAll();
@@ -375,6 +392,10 @@ export default function UserProfileScreen() {
             <XPBadge level={profile.xp_level ?? 1} xp={profile.xp_total} showTitle />
           )}
 
+          {(profile.trust_score ?? 0) > 0 && (
+            <TrustBadge trustScore={profile.trust_score ?? 0} showScore />
+          )}
+
           {profile.tagline && (
             <Text style={styles.tagline}>{profile.tagline}</Text>
           )}
@@ -499,6 +520,33 @@ export default function UserProfileScreen() {
           )}
         </View>
 
+        {/* Vouch button (if not self) */}
+        {userId !== user?.id && (
+          <View style={styles.actionRow}>
+            <VouchButton
+              recipientId={userId}
+              recipientName={profile.display_name || 'this nomad'}
+              mutualSpot={
+                mutualCheckIns.length > 0
+                  ? { id: mutualCheckIns[0].spot_id, name: mutualCheckIns[0].spot_name, city: mutualCheckIns[0].city }
+                  : undefined
+              }
+              onVouched={fetchAll}
+            />
+            {mutualCheckIns.length > 0 && (
+              <TouchableOpacity
+                style={styles.reviewPromptBtn}
+                onPress={() => setReviewPromptVisible(true)}
+                accessibilityRole="button"
+                accessibilityLabel={`Review meeting with ${profile.display_name}`}
+              >
+                <Feather name="message-square" size={14} color={colors.teal} />
+                <Text style={styles.reviewPromptText}>Review</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {mutualCount > 0 && (
           <View style={styles.mutualRow}>
             <Feather name="users" size={12} color={colors.dark.text2} />
@@ -506,6 +554,30 @@ export default function UserProfileScreen() {
               {mutualCount} mutual connection{mutualCount !== 1 ? 's' : ''}
             </Text>
           </View>
+        )}
+
+        {/* Vouches section */}
+        {vouches.length > 0 && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Vouches</Text>
+              <Text style={styles.sectionCount}>{vouches.length}</Text>
+            </View>
+            <View style={{ width: '100%', gap: spacing.sm, marginBottom: spacing.lg }}>
+              {vouches.slice(0, 5).map((v) => (
+                <VouchCard
+                  key={v.id}
+                  vouch={v}
+                  onPressVoucher={(vid) => navigation.navigate('UserProfile', { userId: vid })}
+                />
+              ))}
+              {vouches.length > 5 && (
+                <Text style={styles.mutualText}>
+                  +{vouches.length - 5} more vouch{vouches.length - 5 !== 1 ? 'es' : ''}
+                </Text>
+              )}
+            </View>
+          </>
         )}
 
         {/* Stats */}
@@ -608,6 +680,17 @@ export default function UserProfileScreen() {
             category: reason.toLowerCase().replace(/ /g, '_') as ReportCategory,
           });
         }}
+      />
+
+      <PeerReviewPrompt
+        visible={reviewPromptVisible}
+        subjectId={userId}
+        subjectName={profile.display_name || 'this nomad'}
+        subjectAvatarUrl={profile.avatar_url}
+        interactionType={mutualCheckIns.length > 0 ? 'mutual_checkin' : 'connection'}
+        interactionRef={mutualCheckIns.length > 0 ? String(mutualCheckIns[0].spot_id) : undefined}
+        contextLabel={mutualCheckIns.length > 0 ? `at ${mutualCheckIns[0].spot_name}, ${mutualCheckIns[0].city}` : undefined}
+        onClose={() => setReviewPromptVisible(false)}
       />
     </View>
   );
@@ -866,6 +949,22 @@ const styles = StyleSheet.create({
     fontFamily: fonts.body,
     fontSize: 13,
     color: colors.dark.text3,
+  },
+  reviewPromptBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    backgroundColor: 'rgba(46,196,160,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(46,196,160,0.2)',
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  reviewPromptText: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 12,
+    color: colors.teal,
   },
   mutualRow: {
     flexDirection: 'row',

@@ -27,6 +27,9 @@ import { checkTextSafety } from '../lib/contentModeration';
 import { getRateLimitError } from '../lib/rateLimiter';
 import ContextMenu, { ContextMenuItem } from '../components/ContextMenu';
 import CelebrationOverlay, { CelebrationOverlayRef } from '../components/CelebrationOverlay';
+import ActivationProgress from '../components/ActivationProgress';
+import NewcomersSection from '../components/NewcomersSection';
+import { useActivationFunnel } from '../hooks/useActivationFunnel';
 import { Toast } from '../components/ToastNotification';
 
 export default function FeedScreen({ navigation, hideHeader }: { navigation?: any; hideHeader?: boolean }) {
@@ -37,6 +40,8 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
   const posthog = usePostHog();
   const composerRef = useRef<TextInput>(null);
   const celebrationRef = useRef<CelebrationOverlayRef>(null);
+  const activation = useActivationFunnel(user?.id, profile?.current_city);
+  const [activationDismissed, setActivationDismissed] = useState(false);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -70,6 +75,14 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
 
   // Track time spent on Feed screen
   useEffect(() => trackScreenTime('Feed'), []);
+
+  // Celebrate when user hits activation threshold (Butterfield "magic moment")
+  useEffect(() => {
+    if (activation.justActivated) {
+      celebrationRef.current?.confetti();
+      activation.clearJustActivated();
+    }
+  }, [activation.justActivated]);
 
   // ---------- Auth gate ----------
   if (!session) {
@@ -683,12 +696,46 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
           scrollEventThrottle={16}
           contentInsetAdjustmentBehavior="automatic"
           ListHeaderComponent={
-            (profile as any)?.current_city ? (
-              <ForYouSection
-                city={(profile as any).current_city}
-                workStyle={(profile as any)?.work_style}
-              />
-            ) : null
+            <>
+              {!activation.isActivated && !activationDismissed && session && (
+                <ActivationProgress
+                  progress={activation.progress}
+                  steps={activation.steps}
+                  isActivated={activation.isActivated}
+                  onStepPress={(stepId) => {
+                    if (stepId.startsWith('spot_')) {
+                      nav.navigate('Discover');
+                    } else if (stepId === 'chat_1') {
+                      nav.navigate('Home', { screen: 'Explore' });
+                    }
+                  }}
+                  onDismiss={() => setActivationDismissed(true)}
+                />
+              )}
+              {activation.isActivated && !activationDismissed && session && (
+                <ActivationProgress
+                  progress={1}
+                  steps={activation.steps}
+                  isActivated
+                  onDismiss={() => setActivationDismissed(true)}
+                />
+              )}
+              {(profile as any)?.current_city && (profile as any)?.current_country ? (
+                <NewcomersSection
+                  city={(profile as any).current_city}
+                  country={(profile as any).current_country}
+                  onPressUser={(userId, displayName) =>
+                    nav.navigate('UserProfile', { userId, displayName })
+                  }
+                />
+              ) : null}
+              {(profile as any)?.current_city ? (
+                <ForYouSection
+                  city={(profile as any).current_city}
+                  workStyle={(profile as any)?.work_style}
+                />
+              ) : null}
+            </>
           }
           refreshControl={
             <RefreshControl

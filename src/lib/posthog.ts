@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react';
 import { setIdentifyFn, setPostHogClient, setCaptureFn } from './analytics';
+import { setActivationCaptureFn } from '../hooks/useActivationFunnel';
 
 // ---------------------------------------------------------------------------
 // PostHog analytics — graceful no-op when the API key is missing or when
@@ -50,6 +51,7 @@ async function initPostHog(): Promise<PostHogClient> {
     setPostHogClient(client);
     setCaptureFn((event, props) => client.capture(event, props));
     setIdentifyFn((id, props) => client.identify(id, props));
+    setActivationCaptureFn((event, props) => client.capture(event, props));
     return wrappedClient;
   } catch {
     // posthog-react-native not installed — fall back to no-op

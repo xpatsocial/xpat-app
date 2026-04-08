@@ -62,6 +62,45 @@ export function useSpot(id: number) {
   });
 }
 
+// "Surprise Me" — Variable Reward (HUNT) from Hook Model
+// Returns a random spot from the current city's cache.
+// Each call returns a different spot, creating the anticipation that
+// drives habit formation (Eyal's variable ratio reinforcement).
+export function useSurpriseSpot(city: string | null) {
+  const queryClient = useQueryClient();
+
+  const getRandomSpot = (): Spot | null => {
+    if (!city) return null;
+
+    // Pull from cached spots to avoid extra network calls
+    const allCaches = queryClient.getQueriesData<Spot[]>({ queryKey: qk.spots.all });
+    let candidates: Spot[] = [];
+
+    for (const [, data] of allCaches) {
+      if (data) {
+        const citySpots = data.filter(
+          (s) => s.city?.toLowerCase() === city.toLowerCase(),
+        );
+        candidates = [...candidates, ...citySpots];
+      }
+    }
+
+    // Also check city-specific cache
+    const cityCache = queryClient.getQueryData<Spot[]>(qk.spots.byCity(city));
+    if (cityCache && cityCache.length > 0) {
+      candidates = cityCache;
+    }
+
+    if (candidates.length === 0) return null;
+
+    // True random selection — no weighting by votes, pure discovery
+    const index = Math.floor(Math.random() * candidates.length);
+    return candidates[index];
+  };
+
+  return { getRandomSpot };
+}
+
 // Upvote mutation with optimistic update
 export function useVoteSpot() {
   const queryClient = useQueryClient();

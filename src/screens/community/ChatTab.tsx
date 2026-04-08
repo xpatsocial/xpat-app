@@ -12,6 +12,7 @@ import { useTranslate } from '../../hooks/useTranslate';
 import { usePreferences } from '../../hooks/usePreferences';
 import { useModeration, useBlockedUsers } from '../../hooks/useModeration';
 import { ChatMessage, ReportCategory } from '../../types';
+import { useActivationFunnel } from '../../hooks/useActivationFunnel';
 import Avatar from '../../components/Avatar';
 
 type ChatScope = 'nearby' | 'global';
@@ -113,6 +114,7 @@ function CityChat({ city, country, userId, scope, setScope }: CityChatProps) {
   const { preferences } = usePreferences();
   const { blockUser, reportContent } = useModeration();
   const blockedIds = useBlockedUsers();
+  const { trackChatMessageSent: trackActivationChat } = useActivationFunnel(userId, city);
   const [text, setText] = useState('');
   const [translations, setTranslations] = useState<Record<string, string>>({});
   const flatListRef = useRef<FlatList>(null);
@@ -153,9 +155,10 @@ function CityChat({ city, country, userId, scope, setScope }: CityChatProps) {
   const handleSend = useCallback(() => {
     if (!text.trim()) return;
     sendMessage(text.trim());
+    trackActivationChat();
     setText('');
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [text, sendMessage]);
+  }, [text, sendMessage, trackActivationChat]);
 
   const handleTranslate = useCallback(async (msg: ChatMessage) => {
     // Toggle off if already translated

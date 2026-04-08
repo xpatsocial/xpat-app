@@ -24,6 +24,7 @@ import { useCityPresence } from '../hooks/useCityPresence';
 import { useSemanticSearch } from '../hooks/useSemanticSearch';
 import { usePostHog } from '../lib/posthog';
 import { trackScreenTime, trackSpotViewed } from '../lib/analytics';
+import { useActivationFunnel } from '../hooks/useActivationFunnel';
 import { clusterSpots, Cluster } from '../utils/mapClustering';
 import CityArrivalPrompt from '../components/CityArrivalPrompt';
 
@@ -121,6 +122,7 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
   const { user, profile } = useAuth();
   const posthog = usePostHog();
   const insets = useSafeAreaInsets();
+  const { trackSpotSaved: trackActivationSpotSaved } = useActivationFunnel(user?.id, profile?.current_city);
   const mapRef = useRef<MapView>(null);
   const [spots, setSpots] = useState<Spot[]>([]);
   const [category, setCategory] = useState<SpotCategory | 'all'>('all');
@@ -511,6 +513,7 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
       Alert.alert('Error', error.message);
     } else {
       Alert.alert('Saved!', `${spot.name} added to your saved spots.`);
+      trackActivationSpotSaved();
     }
   }
 
