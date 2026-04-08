@@ -3,19 +3,23 @@ import { Platform } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Crypto from 'expo-crypto';
+import * as WebBrowser from 'expo-web-browser';
 import { supabase } from '../lib/supabase';
 import { Profile } from '../types';
 import { setUser as setSentryUser, clearUser as clearSentryUser } from '../lib/sentry';
 import { usePostHog } from '../lib/posthog';
+
+// Required for expo-web-browser OAuth on Android
+WebBrowser.maybeCompleteAuthSession();
 
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, name: string, birthdate?: string) => Promise<{ error: any }>;
+  sendMagicLink: (email: string, name?: string, birthdateISO?: string) => Promise<{ error: any }>;
   signInWithApple: () => Promise<{ error: any; user?: User | null }>;
+  signInWithGoogle: () => Promise<{ error: any; user?: User | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -72,18 +76,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (user) await fetchProfile(user.id);
   }
 
-  async function signIn(email: string, password: string) {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return { error };
-  }
-
-  async function signUp(email: string, password: string, name: string, birthdate?: string) {
-    const { error } = await supabase.auth.signUp({
+  async function sendMagicLink(email: string, name?: string, birthdateISO?: string) {
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password,
       options: {
-        data: { full_name: name, ...(birthdate ? { birthdate } : {}) },
         emailRedirectTo: 'xpat://auth/callback',
+        data: {
+          ...(name ? { full_name: name } : {}),
+          ...(birthdateISO ? { birthdate: birthdateISO } : {}),
+        },
       },
     });
     return { error };
@@ -135,13 +136,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function signInWithGoogle() {
+    try {
+      const redirectUrl = 'xpat://auth/callback';
+
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+          skipBrowserRedirect: true,
+        },
+      });
+
+      if (error || !data.url) return { error: error ?? { message: 'No auth URL returned.' } };
+
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+
+      if (result.type !== 'success') {
+        // User cancelled
+        return { error: null };
+      }
+
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(result.url);
+      if (exchangeError) return { error: exchangeError };
+
+      const { data: userData } = await supabase.auth.getUser();
+      return { error: null, user: userData?.user ?? null };
+    } catch (e: any) {
+      return { error: { message: e.message || 'Google sign-in failed.' } };
+    }
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
     setProfile(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, session, profile, loading, signIn, signUp, signInWithApple, signOut, refreshProfile }}>
+    <AuthContext.Provider value={{ user, session, profile, loading, sendMagicLink, signInWithApple, signInWithGoogle, signOut, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

@@ -6,9 +6,11 @@ import { NavigationContainer } from '@react-navigation/native';
 import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, createPersister } from './src/lib/queryClient';
+import { supabase } from './src/lib/supabase';
 
 import { AuthProvider } from './src/hooks/useAuth';
 import AppNavigator from './src/navigation/AppNavigator';
@@ -67,6 +69,28 @@ function App() {
     }).catch(() => {
       // Storage unavailable — skip Sentry init
     });
+  }, []);
+
+  // Handle auth deep links (magic link + Google/Apple OAuth callbacks)
+  // xpat://auth/callback?code=xxx  — PKCE code exchange
+  useEffect(() => {
+    async function handleAuthUrl(url: string) {
+      if (url.includes('auth/callback')) {
+        await supabase.auth.exchangeCodeForSession(url);
+      }
+    }
+
+    // App opened from a cold start via deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) handleAuthUrl(url);
+    });
+
+    // App already open — foregrounded via deep link
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleAuthUrl(url);
+    });
+
+    return () => subscription.remove();
   }, []);
 
   const onLayoutRootView = useCallback(async () => {
