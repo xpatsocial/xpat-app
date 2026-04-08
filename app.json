@@ -34,7 +34,6 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.aycholdings.xpat",
-      "buildNumber": "1",
       "entitlements": {
         "aps-environment": "production",
         "com.apple.developer.associated-domains": [

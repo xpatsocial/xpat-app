@@ -1,9 +1,10 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { Image } from 'expo-image';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -14,7 +15,9 @@ import SwipeCardDeck, {
   SwipeCardDeckRef,
   SwipeDirection,
 } from '../components/SwipeCardDeck';
-import { Spot, SpotCategory } from '../types';
+import { Spot } from '../types';
+import { useSpotsByCity, useVoteSpot } from '../hooks/useSpots';
+import { useAuth } from '../hooks/useAuth';
 
 // ---------------------------------------------------------------------------
 // Category config
@@ -30,117 +33,6 @@ const CATEGORY_EMOJI: Record<string, string> = {
   other: '\uD83D\uDCCC',
 };
 
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-const MOCK_SPOTS: (Spot & { distance_km?: number; rating?: number })[] = [
-  {
-    id: 1,
-    name: 'Punspace Nimman',
-    city: 'Chiang Mai',
-    country: 'Thailand',
-    lat: 18.795,
-    lng: 98.968,
-    category: 'cowork',
-    subcategory: null,
-    note: 'Fast wifi, great AC, quiet pods for calls. Nomad paradise.',
-    description: null,
-    tags: ['wifi', 'quiet', 'air-con'],
-    photo_url: null,
-    google_place_id: null,
-    created_by: null,
-    votes: 47,
-    is_seed: true,
-    created_at: '2025-01-15T00:00:00Z',
-    distance_km: 0.8,
-    rating: 4.7,
-  },
-  {
-    id: 2,
-    name: 'Deus Ex Machina',
-    city: 'Bali',
-    country: 'Indonesia',
-    lat: -8.655,
-    lng: 115.135,
-    category: 'cafe',
-    subcategory: null,
-    note: 'Surf culture vibes, custom bikes, strong flat whites.',
-    description: null,
-    tags: ['specialty coffee', 'surf', 'aesthetic'],
-    photo_url: null,
-    google_place_id: null,
-    created_by: null,
-    votes: 62,
-    is_seed: true,
-    created_at: '2025-02-10T00:00:00Z',
-    distance_km: 2.3,
-    rating: 4.5,
-  },
-  {
-    id: 3,
-    name: 'LX Factory',
-    city: 'Lisbon',
-    country: 'Portugal',
-    lat: 38.704,
-    lng: -9.178,
-    category: 'experience',
-    subcategory: null,
-    note: 'Creative complex with shops, food, and coworking pop-ups.',
-    description: null,
-    tags: ['artsy', 'food', 'events'],
-    photo_url: null,
-    google_place_id: null,
-    created_by: null,
-    votes: 34,
-    is_seed: true,
-    created_at: '2025-03-01T00:00:00Z',
-    distance_km: 1.1,
-    rating: 4.3,
-  },
-  {
-    id: 4,
-    name: 'Outsite Canggu',
-    city: 'Bali',
-    country: 'Indonesia',
-    lat: -8.654,
-    lng: 115.132,
-    category: 'colive',
-    subcategory: null,
-    note: 'Coliving with pool, cowork, community dinners weekly.',
-    description: null,
-    tags: ['pool', 'community', 'coliving'],
-    photo_url: null,
-    google_place_id: null,
-    created_by: null,
-    votes: 29,
-    is_seed: true,
-    created_at: '2025-03-15T00:00:00Z',
-    distance_km: 3.5,
-    rating: 4.6,
-  },
-  {
-    id: 5,
-    name: 'Tacos Orinoco',
-    city: 'Mexico City',
-    country: 'Mexico',
-    lat: 19.432,
-    lng: -99.133,
-    category: 'eat',
-    subcategory: null,
-    note: 'Best al pastor in Condesa. Cheap, fast, unbeatable.',
-    description: null,
-    tags: ['tacos', 'cheap eats', 'local favorite'],
-    photo_url: null,
-    google_place_id: null,
-    created_by: null,
-    votes: 55,
-    is_seed: true,
-    created_at: '2025-04-01T00:00:00Z',
-    distance_km: 0.4,
-    rating: 4.9,
-  },
-];
 
 // ---------------------------------------------------------------------------
 // Star rating
@@ -291,22 +183,24 @@ const overlayLabel: any = {
 export default function SpotDiscoveryScreen() {
   const navigation = useNavigation();
   const deckRef = useRef<SwipeCardDeckRef>(null);
-  const [spots] = useState(MOCK_SPOTS);
+  const { user } = useAuth();
+  const { data: spots = [], isLoading } = useSpotsByCity(null);
+  const voteSpot = useVoteSpot();
 
   const handleSwipe = useCallback(
-    (spot: (typeof MOCK_SPOTS)[number], direction: SwipeDirection) => {
+    (spot: Spot, direction: SwipeDirection) => {
       switch (direction) {
         case 'right':
-          // TODO: insert into user_favorites via supabase
+          if (user) voteSpot.mutate({ spotId: spot.id, userId: user.id });
           break;
         case 'left':
           break;
         case 'up':
-          // TODO: save + navigate to spot detail
+          (navigation as any).navigate('SpotDetail', { spot });
           break;
       }
     },
-    [],
+    [user, voteSpot, navigation],
   );
 
   return (
@@ -331,16 +225,27 @@ export default function SpotDiscoveryScreen() {
       </View>
 
       {/* Card deck */}
-      <SwipeCardDeck
-        ref={deckRef}
-        data={spots}
-        keyExtractor={(s) => String(s.id)}
-        renderCard={(spot) => <SpotSwipeCard spot={spot} />}
-        onSwipe={handleSwipe}
-        renderRightOverlay={() => <SaveOverlay />}
-        renderLeftOverlay={() => <NahOverlay />}
-        renderUpOverlay={() => <MustGoOverlay />}
-      />
+      {isLoading ? (
+        <View style={screenStyles.center}>
+          <ActivityIndicator color={colors.teal} size="large" />
+        </View>
+      ) : spots.length === 0 ? (
+        <View style={screenStyles.center}>
+          <Feather name="map-pin" size={48} color={colors.dark.text3} />
+          <Text style={screenStyles.emptyText}>No spots yet</Text>
+        </View>
+      ) : (
+        <SwipeCardDeck
+          ref={deckRef}
+          data={spots}
+          keyExtractor={(s) => String(s.id)}
+          renderCard={(spot) => <SpotSwipeCard spot={spot} />}
+          onSwipe={handleSwipe}
+          renderRightOverlay={() => <SaveOverlay />}
+          renderLeftOverlay={() => <NahOverlay />}
+          renderUpOverlay={() => <MustGoOverlay />}
+        />
+      )}
 
       {/* Action buttons */}
       <View style={screenStyles.actions}>
@@ -402,6 +307,17 @@ const screenStyles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.dark.border,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  emptyText: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.dark.text3,
   },
   actions: {
     flexDirection: 'row',

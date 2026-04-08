@@ -1,9 +1,10 @@
-import React, { useRef, useCallback, useState } from 'react';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Feather } from '@expo/vector-icons';
@@ -13,109 +14,36 @@ import SwipeCardDeck, {
   SwipeCardDeckRef,
   SwipeDirection,
 } from '../components/SwipeCardDeck';
-import { LegacyAppEvent } from '../types';
+import { AppEvent, EventCategory } from '../types';
+import { useEvents } from '../hooks/useEvents';
 
 // ---------------------------------------------------------------------------
-// Extended event type with display helpers
+// Display helpers
 // ---------------------------------------------------------------------------
 
-interface SwipeEvent extends LegacyAppEvent {
+const CATEGORY_EMOJI: Record<EventCategory, string> = {
+  meetup: '🤝',
+  coworking: '💻',
+  dinner: '🍽️',
+  activity: '🎯',
+  workshop: '🛠️',
+  other: '📍',
+};
+
+interface SwipeEvent extends AppEvent {
   attendee_count: number;
   creator_name: string;
   category_emoji: string;
 }
 
-// ---------------------------------------------------------------------------
-// Mock data
-// ---------------------------------------------------------------------------
-
-const MOCK_EVENTS: SwipeEvent[] = [
-  {
-    id: 1,
-    creator_id: 'u1',
-    spot_id: null,
-    title: 'Sunset Rooftop Social',
-    description:
-      'Casual meetup for digital nomads in Chiang Mai. Bring your own drinks — we bring the vibes. Meet people, swap stories, watch the sun set.',
-    event_time: '2026-03-15T17:30:00Z',
-    city: 'Chiang Mai',
-    country: 'Thailand',
-    lat: 18.795,
-    lng: 98.968,
-    created_at: '2026-03-01T00:00:00Z',
-    attendee_count: 14,
-    creator_name: 'Sofia M.',
-    category_emoji: '\uD83C\uDF05',
-  },
-  {
-    id: 2,
-    creator_id: 'u2',
-    spot_id: null,
-    title: 'Morning Surf + Breakfast',
-    description:
-      'Meet at 6 AM at Echo Beach. All levels welcome — boards available for rent. Breakfast burritos after at the beach shack.',
-    event_time: '2026-03-16T06:00:00Z',
-    city: 'Bali',
-    country: 'Indonesia',
-    lat: -8.655,
-    lng: 115.135,
-    created_at: '2026-03-02T00:00:00Z',
-    attendee_count: 8,
-    creator_name: 'Liam C.',
-    category_emoji: '\uD83C\uDFC4',
-  },
-  {
-    id: 3,
-    creator_id: 'u3',
-    spot_id: null,
-    title: 'Lisbon Walking Tour: Hidden Gems',
-    description:
-      'Off-the-beaten-path walking tour through Alfama + Mouraria. Street art, pasteis, rooftop views. 3 hours, comfortable shoes required.',
-    event_time: '2026-03-18T10:00:00Z',
-    city: 'Lisbon',
-    country: 'Portugal',
-    lat: 38.704,
-    lng: -9.178,
-    created_at: '2026-03-05T00:00:00Z',
-    attendee_count: 22,
-    creator_name: 'Amara O.',
-    category_emoji: '\uD83D\uDEB6',
-  },
-  {
-    id: 4,
-    creator_id: 'u4',
-    spot_id: null,
-    title: 'Co-work & Chill Thursday',
-    description:
-      'Reserved the big table at Punspace. Pomodoro sessions, then tacos at 6 PM. Bring your laptop and your appetite.',
-    event_time: '2026-03-20T09:00:00Z',
-    city: 'Chiang Mai',
-    country: 'Thailand',
-    lat: 18.795,
-    lng: 98.968,
-    created_at: '2026-03-08T00:00:00Z',
-    attendee_count: 11,
-    creator_name: 'Jonas E.',
-    category_emoji: '\uD83D\uDCBB',
-  },
-  {
-    id: 5,
-    creator_id: 'u5',
-    spot_id: null,
-    title: 'Salsa Night for Nomads',
-    description:
-      'Beginner-friendly salsa class at 7 PM, then open dancing until late. No partner needed. Salsa shoes optional.',
-    event_time: '2026-03-22T19:00:00Z',
-    city: 'Medell\u00EDn',
-    country: 'Colombia',
-    lat: 6.244,
-    lng: -75.581,
-    created_at: '2026-03-10T00:00:00Z',
-    attendee_count: 19,
-    creator_name: 'Priya P.',
-    category_emoji: '\uD83D\uDC83',
-  },
-];
+function toSwipeEvent(e: AppEvent): SwipeEvent {
+  return {
+    ...e,
+    attendee_count: e.event_rsvps?.filter((r) => r.status === 'going').length ?? 0,
+    creator_name: e.profiles?.display_name ?? 'Nomad',
+    category_emoji: CATEGORY_EMOJI[e.category] ?? '📍',
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -152,7 +80,7 @@ function formatEventDateTime(iso: string): { date: string; time: string; badge: 
 // ---------------------------------------------------------------------------
 
 function EventSwipeCard({ event }: { event: SwipeEvent }) {
-  const { date, time, badge } = formatEventDateTime(event.event_time);
+  const { date, time, badge } = formatEventDateTime(event.starts_at);
 
   return (
     <View style={cardStyles.card}>
@@ -283,20 +211,32 @@ const overlayLabel: any = {
 export default function EventSwipeScreen() {
   const navigation = useNavigation();
   const deckRef = useRef<SwipeCardDeckRef>(null);
-  const [events] = useState<SwipeEvent[]>(MOCK_EVENTS);
+  const [events, setEvents] = useState<SwipeEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { upcomingEvents, rsvp } = useEvents();
 
-  const handleSwipe = useCallback((event: SwipeEvent, direction: SwipeDirection) => {
-    switch (direction) {
-      case 'right':
-        // TODO: insert RSVP "going" via supabase
-        break;
-      case 'left':
-        break;
-      case 'up':
-        // TODO: insert RSVP "interested" via supabase
-        break;
-    }
-  }, []);
+  useEffect(() => {
+    upcomingEvents(30).then((data) => {
+      setEvents(data.map(toSwipeEvent));
+      setLoading(false);
+    });
+  }, [upcomingEvents]);
+
+  const handleSwipe = useCallback(
+    (event: SwipeEvent, direction: SwipeDirection) => {
+      switch (direction) {
+        case 'right':
+          rsvp(event.id, 'going');
+          break;
+        case 'left':
+          break;
+        case 'up':
+          rsvp(event.id, 'interested');
+          break;
+      }
+    },
+    [rsvp],
+  );
 
   return (
     <SafeAreaView style={screenStyles.root} edges={['top']}>
@@ -320,16 +260,27 @@ export default function EventSwipeScreen() {
       </View>
 
       {/* Card deck */}
-      <SwipeCardDeck
-        ref={deckRef}
-        data={events}
-        keyExtractor={(e) => String(e.id)}
-        renderCard={(event) => <EventSwipeCard event={event} />}
-        onSwipe={handleSwipe}
-        renderRightOverlay={() => <GoingOverlay />}
-        renderLeftOverlay={() => <SkipEventOverlay />}
-        renderUpOverlay={() => <InterestedOverlay />}
-      />
+      {loading ? (
+        <View style={screenStyles.center}>
+          <ActivityIndicator color={colors.teal} size="large" />
+        </View>
+      ) : events.length === 0 ? (
+        <View style={screenStyles.center}>
+          <Feather name="calendar" size={48} color={colors.dark.text3} />
+          <Text style={screenStyles.emptyText}>No upcoming events</Text>
+        </View>
+      ) : (
+        <SwipeCardDeck
+          ref={deckRef}
+          data={events}
+          keyExtractor={(e) => e.id}
+          renderCard={(event) => <EventSwipeCard event={event} />}
+          onSwipe={handleSwipe}
+          renderRightOverlay={() => <GoingOverlay />}
+          renderLeftOverlay={() => <SkipEventOverlay />}
+          renderUpOverlay={() => <InterestedOverlay />}
+        />
+      )}
 
       {/* Action buttons */}
       <View style={screenStyles.actions}>
@@ -391,6 +342,17 @@ const screenStyles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.dark.border,
+  },
+  center: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  emptyText: {
+    fontFamily: fonts.body,
+    fontSize: 15,
+    color: colors.dark.text3,
   },
   actions: {
     flexDirection: 'row',

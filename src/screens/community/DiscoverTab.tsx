@@ -1,8 +1,12 @@
-import React, { useRef, useCallback, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useRef, useCallback, useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { colors, fonts, spacing, radius, shadows } from '../../theme';
 import SwipeCardDeck, { SwipeCardDeckRef, SwipeDirection } from '../../components/SwipeCardDeck';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../hooks/useAuth';
+import { useConnections } from '../../hooks/useConnections';
+import { Profile } from '../../types';
 
 interface NomadProfile {
   id: string;
@@ -13,16 +17,20 @@ interface NomadProfile {
   current_city: string | null;
   current_country: string | null;
   interests: string[];
-  mutual_connections: number;
 }
 
-const MOCK_NOMADS: NomadProfile[] = [
-  { id: '1', display_name: 'Sofia Martinez', username: 'sofiamar', avatar_url: null, bio: 'Full-stack dev exploring Southeast Asia. Coffee addict.', current_city: 'Chiang Mai', current_country: 'Thailand', interests: ['coworking', 'hiking', 'specialty coffee'], mutual_connections: 3 },
-  { id: '2', display_name: 'Liam Chen', username: 'liamdigital', avatar_url: null, bio: 'Product designer chasing surf and sunsets.', current_city: 'Bali', current_country: 'Indonesia', interests: ['surfing', 'design', 'street food'], mutual_connections: 1 },
-  { id: '3', display_name: 'Amara Osei', username: 'amarawanders', avatar_url: null, bio: 'Content creator | 42 countries | Plant mom', current_city: 'Lisbon', current_country: 'Portugal', interests: ['photography', 'coworking', 'vegan food'], mutual_connections: 5 },
-  { id: '4', display_name: 'Jonas Eriksson', username: 'jonasnomad', avatar_url: null, bio: 'Backend engineer from Stockholm. Love a good co-live.', current_city: 'Mexico City', current_country: 'Mexico', interests: ['co-living', 'mezcal', 'running'], mutual_connections: 0 },
-  { id: '5', display_name: 'Priya Patel', username: 'priyaontheroad', avatar_url: null, bio: 'Yoga teacher & UX writer bouncing between cities.', current_city: 'Medell\u00EDn', current_country: 'Colombia', interests: ['yoga', 'writing', 'cafe culture'], mutual_connections: 2 },
-];
+function profileToNomad(p: Profile): NomadProfile {
+  return {
+    id: p.id,
+    display_name: p.display_name ?? 'Nomad',
+    username: p.username,
+    avatar_url: p.avatar_url,
+    bio: p.bio,
+    current_city: p.current_city,
+    current_country: p.current_country ?? null,
+    interests: (p.skills ?? p.open_to ?? p.travel_style ?? []).slice(0, 5),
+  };
+}
 
 function NomadCard({ nomad }: { nomad: NomadProfile }) {
   return (
@@ -38,7 +46,6 @@ function NomadCard({ nomad }: { nomad: NomadProfile }) {
         <View style={cardStyles.pills}>
           {nomad.interests.slice(0, 3).map((i) => <View key={i} style={cardStyles.pill}><Text style={cardStyles.pillText}>{i}</Text></View>)}
         </View>
-        {nomad.mutual_connections > 0 && <View style={cardStyles.locRow}><Feather name="users" size={11} color={colors.teal} /><Text style={cardStyles.mutual}>{nomad.mutual_connections} mutual</Text></View>}
       </View>
     </View>
   );
@@ -58,11 +65,54 @@ const overlayLabel: any = { fontFamily: fonts.bodyBold, fontSize: 20, letterSpac
 
 export default function DiscoverTab() {
   const deckRef = useRef<SwipeCardDeckRef>(null);
-  const [nomads] = useState<NomadProfile[]>(MOCK_NOMADS);
+  const [nomads, setNomads] = useState<NomadProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { sendRequest } = useConnections();
 
-  const handleSwipe = useCallback((nomad: NomadProfile, direction: SwipeDirection) => {
-    // swipe action — persistence wired in v1.3
-  }, []);
+  useEffect(() => {
+    supabase
+      .from('profiles')
+      .select('id, username, display_name, avatar_url, bio, current_city, current_country, skills, open_to, travel_style')
+      .neq('id', user?.id ?? '')
+      .order('created_at', { ascending: false })
+      .limit(30)
+      .then(({ data }) => {
+        setNomads((data ?? []).map((p) => profileToNomad(p as Profile)));
+        setLoading(false);
+      });
+  }, [user?.id]);
+
+  const handleSwipe = useCallback(
+    (nomad: NomadProfile, direction: SwipeDirection) => {
+      switch (direction) {
+        case 'right':
+        case 'up':
+          sendRequest(nomad.id);
+          break;
+        case 'left':
+          break;
+      }
+    },
+    [sendRequest],
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator color={colors.teal} size="large" />
+      </View>
+    );
+  }
+
+  if (nomads.length === 0) {
+    return (
+      <View style={styles.center}>
+        <Feather name="users" size={48} color={colors.dark.text3} />
+        <Text style={styles.emptyText}>No nomads nearby yet</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.root}>
@@ -87,6 +137,8 @@ export default function DiscoverTab() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.dark.bg },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.md, backgroundColor: colors.dark.bg },
+  emptyText: { fontFamily: fonts.body, fontSize: 15, color: colors.dark.text3 },
   actions: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: spacing.lg, paddingVertical: spacing.md, paddingBottom: spacing.lg },
   btn: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, backgroundColor: colors.dark.bg2, ...shadows.sm },
   btnSm: { width: 46, height: 46, borderRadius: 23 },
@@ -106,5 +158,4 @@ const cardStyles = StyleSheet.create({
   pills: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs, marginTop: spacing.sm },
   pill: { backgroundColor: 'rgba(46,196,160,0.1)', paddingVertical: 3, paddingHorizontal: 10, borderRadius: radius.full, borderWidth: 1, borderColor: 'rgba(46,196,160,0.2)' },
   pillText: { fontFamily: fonts.body, fontSize: 10, color: colors.teal },
-  mutual: { fontFamily: fonts.body, fontSize: 11, color: colors.teal },
 });
