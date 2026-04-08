@@ -16,6 +16,7 @@ import { AuthProvider } from './src/hooks/useAuth';
 import AppNavigator from './src/navigation/AppNavigator';
 import { PostHogProvider } from './src/lib/posthog';
 import { initSentry, Sentry } from './src/lib/sentry';
+import { trackAppOpened } from './src/lib/analytics';
 import { colors } from './src/theme';
 import ErrorBoundary from './src/components/ErrorBoundary';
 
@@ -69,6 +70,11 @@ function App() {
     }).catch(() => {
       // Storage unavailable — skip Sentry init
     });
+  }, []);
+
+  // Track app_opened + streak on each cold start
+  useEffect(() => {
+    trackAppOpened();
   }, []);
 
   // Handle auth deep links (magic link + Google/Apple OAuth callbacks)

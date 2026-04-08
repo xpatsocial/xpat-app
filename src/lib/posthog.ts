@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useRef } from 'react';
+import { setIdentifyFn, setPostHogClient, setCaptureFn } from './analytics';
 
 // ---------------------------------------------------------------------------
 // PostHog analytics — graceful no-op when the API key is missing or when
@@ -38,11 +39,18 @@ async function initPostHog(): Promise<PostHogClient> {
       host: POSTHOG_HOST,
     });
     _rawClient = client;
-    return {
+    const wrappedClient: PostHogClient = {
       capture: (event, props) => client.capture(event, props),
       identify: (id, props) => client.identify(id, props),
       reset: () => client.reset(),
     };
+    // Set the module-level client for the fire-and-forget track() helper
+    _client = wrappedClient;
+    // Wire the raw client into the centralized analytics module
+    setPostHogClient(client);
+    setCaptureFn((event, props) => client.capture(event, props));
+    setIdentifyFn((id, props) => client.identify(id, props));
+    return wrappedClient;
   } catch {
     // posthog-react-native not installed — fall back to no-op
     return noopClient;

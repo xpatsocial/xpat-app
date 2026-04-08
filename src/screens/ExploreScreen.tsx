@@ -23,7 +23,9 @@ import NomadListSheet from '../components/NomadListSheet';
 import { useCityPresence } from '../hooks/useCityPresence';
 import { useSemanticSearch } from '../hooks/useSemanticSearch';
 import { usePostHog } from '../lib/posthog';
+import { trackScreenTime, trackSpotViewed } from '../lib/analytics';
 import { clusterSpots, Cluster } from '../utils/mapClustering';
+import CityArrivalPrompt from '../components/CityArrivalPrompt';
 
 // City -> coords lookup for launch cities (auto-zoom)
 const CITY_COORDS: Record<string, { latitude: number; longitude: number }> = {
@@ -155,6 +157,10 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
     nearbyNomads,
     isJustArrived,
   } = useCityPresence(currentCity, currentCountry);
+
+  // Track time spent on Explore screen
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useEffect(() => trackScreenTime('Explore'), []);
 
   // Semantic search
   const { search: semanticSearch, clear: clearSemantic, results: semanticResults, loading: semanticLoading, isSemantic } = useSemanticSearch();
@@ -597,6 +603,9 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
 
   return (
     <View style={styles.container}>
+      {/* City arrival share prompt */}
+      <CityArrivalPrompt city={currentCity} country={currentCountry} />
+
       {/* Full-screen map */}
       <MapView
         ref={mapRef}
@@ -629,6 +638,7 @@ export default function ExploreScreen({ navigation, activeTab = 'Map', onTabChan
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 setPulseSheetVisible(false);
                 setSelectedSpot(cluster.spots[0]);
+                trackSpotViewed({ spot_id: cluster.spots[0].id, category: cluster.spots[0].category, city: cluster.spots[0].city, source: 'map' });
               }}
               accessibilityLabel={`${cluster.spots[0].name}, ${cluster.spots[0].category}`}
             />

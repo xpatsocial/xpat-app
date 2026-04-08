@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fonts, spacing, radius } from '../theme';
 import { usePostHog } from '../lib/posthog';
+import { trackOnboardingStarted, trackOnboardingCompleted } from '../lib/analytics';
 import { supabase } from '../lib/supabase';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -46,7 +47,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
 
   // Track onboarding_started on mount
   useEffect(() => {
-    posthog.capture('onboarding_started');
+    trackOnboardingStarted();
   }, []);
 
   // Animated gradient shift
@@ -117,7 +118,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const city = selectedCity || otherCity || parsedPrefs?.current_city || 'Unknown';
     posthog.capture('onboarding_city_selected', { city });
-    posthog.capture('onboarding_completed', {
+    trackOnboardingCompleted({
       vibes: selectedVibes,
       city,
       used_ai_parse: !!parsedPrefs,

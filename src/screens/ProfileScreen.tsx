@@ -30,7 +30,10 @@ import { useAvatar } from '../hooks/useAvatar';
 import AnimatedPressable from '../components/AnimatedPressable';
 import AvailabilityToggle from '../components/AvailabilityToggle';
 import { calculateProfileCompletion } from '../lib/profilePrompts';
+import { trackScreenTime, trackProfileCompleted, identifyUser } from '../lib/analytics';
 import CelebrationOverlay, { CelebrationOverlayRef } from '../components/CelebrationOverlay';
+import ShareCardModal from '../components/ShareCardModal';
+import type { ShareableCardData } from '../components/ShareableCard';
 
 const PROFILE_HEADER_HEIGHT = 260;
 
@@ -55,6 +58,8 @@ export default function ProfileScreen() {
   const [currentCity, setCurrentCity] = useState('');
   const [saving, setSaving] = useState(false);
   const [spotsExpanded, setSpotsExpanded] = useState(false);
+  const [shareCardVisible, setShareCardVisible] = useState(false);
+  const [shareCardData, setShareCardData] = useState<ShareableCardData | null>(null);
   const SPOTS_PREVIEW_COUNT = 5;
 
   // Detect XP level increase and trigger confetti
@@ -72,6 +77,21 @@ export default function ProfileScreen() {
       setBio(profile.bio || '');
       setCurrentCity(profile.current_city || '');
       setAvatarUrl(profile.avatar_url || null);
+
+      // Track profile_completed when score crosses 50%
+      const score = calculateProfileCompletion(profile);
+      if (score >= 50) {
+        trackProfileCompleted({ score });
+      }
+
+      // Identify user with retention properties
+      if (user) {
+        identifyUser(user.id, {
+          city: profile.current_city || undefined,
+          signup_date: user.created_at,
+          onboarding_completed: true,
+        });
+      }
     }
     if (user) {
       supabase
@@ -82,6 +102,9 @@ export default function ProfileScreen() {
         .then(({ data }) => { if (data) setMySpots(data); });
     }
   }, [user, profile]);
+
+  // Track time spent on Profile screen
+  useEffect(() => trackScreenTime('Profile'), []);
 
   async function handleSave() {
     if (!user) return;
@@ -178,6 +201,28 @@ export default function ProfileScreen() {
         Alert.alert('Export Error', 'Could not export your data. Please try again.');
       }
     }
+  }
+
+  function handleShareProfile() {
+    if (!profile || !user) return;
+    const citiesSet = new Set(mySpots.map(s => s.city));
+    const daysAsNomad = Math.max(1, Math.floor(
+      (Date.now() - new Date(profile.created_at).getTime()) / (1000 * 60 * 60 * 24),
+    ));
+    setShareCardData({
+      type: 'milestone',
+      data: {
+        userName: profile.display_name || 'Nomad',
+        userId: user.id,
+        avatarUrl: avatarUrl,
+        spotsSaved: mySpots.length,
+        citiesVisited: citiesSet.size,
+        connectionsMade: 0, // connections count not tracked in this screen
+        daysAsNomad,
+        badgeName: null,
+      },
+    });
+    setShareCardVisible(true);
   }
 
   // ---------- Auth gate ----------
@@ -280,6 +325,9 @@ export default function ProfileScreen() {
     <View style={styles.container}>
       <BrandHeader rightAction={
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <TouchableOpacity onPress={handleShareProfile} accessibilityRole="button" accessibilityLabel="Share profile card">
+            <Feather name="share" size={18} color={colors.teal} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setEditing(!editing)} accessibilityRole="button" accessibilityLabel={editing ? 'Cancel editing' : 'Edit profile'}>
             <Feather name={editing ? 'x' : 'edit-2'} size={18} color={colors.teal} />
           </TouchableOpacity>
@@ -608,6 +656,20 @@ export default function ProfileScreen() {
           <Feather name="chevron-right" size={18} color={colors.dark.text2} />
         </AnimatedPressable>
 
+        <AnimatedPressable
+          style={[styles.toolkitLink, { borderColor: 'rgba(46, 196, 160, 0.35)', backgroundColor: 'rgba(46, 196, 160, 0.1)' }]}
+          onPress={() => navigation.navigate('InviteNomads')}
+        >
+          <View style={[styles.partnerIcon, { backgroundColor: 'rgba(46, 196, 160, 0.15)' }]}>
+            <Feather name="send" size={18} color={colors.teal} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.partnerLabel}>Invite Nomads</Text>
+            <Text style={styles.partnerSubtitle}>Earn badges by growing the community</Text>
+          </View>
+          <Feather name="chevron-right" size={18} color={colors.dark.text2} />
+        </AnimatedPressable>
+
 
         {/* Legal Links */}
         <View style={styles.legalRow}>
@@ -639,6 +701,11 @@ export default function ProfileScreen() {
         <Text style={styles.version}>x/pat v{Constants.expoConfig?.version || '1.1.0'} beta</Text>
       </ReAnimated.ScrollView>
       <CelebrationOverlay ref={celebrationRef} />
+      <ShareCardModal
+        visible={shareCardVisible}
+        card={shareCardData}
+        onDismiss={() => setShareCardVisible(false)}
+      />
     </View>
   );
 }

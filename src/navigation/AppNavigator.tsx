@@ -28,6 +28,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import BlockedUsersScreen from '../screens/BlockedUsersScreen';
 import AskAIScreen from '../screens/AskAIScreen';
 import DirectMessageScreen from '../screens/DirectMessageScreen';
+import InviteNomadsScreen from '../screens/InviteNomadsScreen';
 import GDPRConsent from '../components/GDPRConsent';
 import OfflineBanner from '../components/OfflineBanner';
 import ToastNotification from '../components/ToastNotification';
@@ -238,6 +239,11 @@ export default function AppNavigator() {
         <Stack.Screen
           name="DirectMessage"
           component={DirectMessageScreen}
+          options={{ presentation: 'card', animation: 'slide_from_right', animationDuration: 250 }}
+        />
+        <Stack.Screen
+          name="InviteNomads"
+          component={InviteNomadsScreen}
           options={{ presentation: 'card', animation: 'slide_from_right', animationDuration: 250 }}
         />
       </Stack.Navigator>

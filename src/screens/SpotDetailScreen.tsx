@@ -22,12 +22,15 @@ import { colors, fonts, spacing, radius } from '../theme';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../lib/posthog';
+import { trackSpotViewed, trackSpotSaved, trackSpotUpvoted, trackFirstSpotSaved } from '../lib/analytics';
 import { Spot, Profile } from '../types';
 import CheckInButton from '../components/CheckInButton';
 // AffiliateCard removed pre-launch — re-add when partner agreements signed
 import SpotCard from '../components/SpotCard';
 import ContextMenu, { ContextMenuItem } from '../components/ContextMenu';
 import CelebrationOverlay, { CelebrationOverlayRef } from '../components/CelebrationOverlay';
+import ShareCardModal from '../components/ShareCardModal';
+import type { ShareableCardData } from '../components/ShareableCard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const HERO_HEIGHT = 280;
@@ -84,10 +87,12 @@ export default function SpotDetailScreen() {
   const [hasVoted, setHasVoted] = useState(false);
   const [saved, setSaved] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>((spot as any).ai_summary ?? null);
+  const [shareCardVisible, setShareCardVisible] = useState(false);
+  const [shareCardData, setShareCardData] = useState<ShareableCardData | null>(null);
 
   // Track screen view
   useEffect(() => {
-    posthog.capture('spot_detail_viewed', { spot_id: spot.id, spot_name: spot.name });
+    trackSpotViewed({ spot_id: spot.id, category: spot.category, city: spot.city, source: 'map' });
   }, []);
 
   // Fetch comments
@@ -176,7 +181,7 @@ export default function SpotDetailScreen() {
     if (!error) {
       setHasVoted(true);
       setVotes((v) => v + 1);
-      posthog.capture('spot_upvoted', { spot_id: spot.id });
+      trackSpotUpvoted({ spot_id: spot.id });
       // Quick teal particles on first-time upvote
       celebrationRef.current?.particles();
     }
@@ -200,7 +205,8 @@ export default function SpotDetailScreen() {
         .insert({ spot_id: spot.id, user_id: user.id });
       if (!error) {
         setSaved(true);
-        posthog.capture('spot_saved', { spot_id: spot.id });
+        trackSpotSaved({ spot_id: spot.id, category: spot.category, city: spot.city });
+        trackFirstSpotSaved({ spot_id: spot.id });
         // Teal particles on save
         celebrationRef.current?.particles();
       }
@@ -253,8 +259,29 @@ export default function SpotDetailScreen() {
     );
   }
 
+  function handleShareAsCard() {
+    const CATEGORY_EMOJI: Record<string, string> = {
+      cafe: '\u2615', eat: '\uD83C\uDF7D\uFE0F', cowork: '\uD83D\uDCBB',
+      colive: '\uD83C\uDFE0', experience: '\uD83C\uDFAF', stay: '\uD83D\uDECF\uFE0F', other: '\uD83D\uDCCC',
+    };
+    setShareCardData({
+      type: 'spot_discovery',
+      data: {
+        spotName: spot.name,
+        spotPhotoUrl: spot.photo_url,
+        category: spot.category,
+        categoryEmoji: CATEGORY_EMOJI[spot.category] || '\uD83D\uDCCC',
+        city: spot.city,
+        country: spot.country,
+        votes,
+      },
+    });
+    setShareCardVisible(true);
+  }
+
   const spotContextMenuItems: ContextMenuItem[] = [
     { label: 'Share Spot', icon: 'share-2', onPress: handleShare },
+    { label: 'Share as Card', icon: 'image', onPress: handleShareAsCard },
     { label: 'Copy Address', icon: 'copy', onPress: handleCopyAddress },
     { label: 'Save to Favorites', icon: 'bookmark', onPress: handleSave },
     { label: 'Get Directions', icon: 'navigation', onPress: handleNavigate },
@@ -506,6 +533,11 @@ export default function SpotDetailScreen() {
                 <Text style={styles.actionLabel}>Share</Text>
               </TouchableOpacity>
 
+              <TouchableOpacity style={styles.actionBtn} onPress={handleShareAsCard} activeOpacity={0.7}>
+                <Feather name="image" size={18} color={colors.dark.text2} />
+                <Text style={styles.actionLabel}>Card</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity style={styles.actionBtn} onPress={handleNavigate} activeOpacity={0.7}>
                 <Feather name="navigation" size={18} color={colors.dark.text2} />
                 <Text style={styles.actionLabel}>Navigate</Text>
@@ -613,6 +645,11 @@ export default function SpotDetailScreen() {
         </Animated.ScrollView>
       </KeyboardAvoidingView>
       <CelebrationOverlay ref={celebrationRef} />
+      <ShareCardModal
+        visible={shareCardVisible}
+        card={shareCardData}
+        onDismiss={() => setShareCardVisible(false)}
+      />
     </View>
   );
 }

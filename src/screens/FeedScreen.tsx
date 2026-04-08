@@ -21,6 +21,7 @@ import ReportModal from '../components/ReportModal';
 import Skeleton from '../components/Skeleton';
 import ForYouSection from '../components/ForYouSection';
 import { usePostHog } from '../lib/posthog';
+import { trackScreenTime } from '../lib/analytics';
 import { formatTimeAgo } from '../utils/formatTime';
 import { checkTextSafety } from '../lib/contentModeration';
 import { getRateLimitError } from '../lib/rateLimiter';
@@ -66,6 +67,9 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
   useEffect(() => {
     if (session) fetchPosts();
   }, [fetchPosts, session]);
+
+  // Track time spent on Feed screen
+  useEffect(() => trackScreenTime('Feed'), []);
 
   // ---------- Auth gate ----------
   if (!session) {

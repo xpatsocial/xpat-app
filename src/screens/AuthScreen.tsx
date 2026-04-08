@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, spacing, radius } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { usePostHog } from '../lib/posthog';
+import { trackSignup, trackSignin, trackScreenTime } from '../lib/analytics';
 import { supabase } from '../lib/supabase';
 
 // EU country codes for GDPR parental consent notice (13-16)
@@ -79,6 +80,9 @@ export default function AuthScreen() {
   const [appleAgeGatePending, setAppleAgeGatePending] = useState(false);
   const [googleAgeGatePending, setGoogleAgeGatePending] = useState(false);
 
+  // Track time on auth screen
+  React.useEffect(() => trackScreenTime('Auth'), []);
+
   function getBirthdateISO(): string | undefined {
     const birthdate = parseBirthdate(birthMonth, birthDay, birthYear);
     return birthdate ? birthdate.toISOString().split('T')[0] : undefined;
@@ -130,7 +134,11 @@ export default function AuthScreen() {
       Alert.alert('Error', error.message);
       return;
     }
-    posthog.capture(isSignUp ? 'sign_up' : 'sign_in', { method: 'magic_link' });
+    if (isSignUp) {
+      trackSignup({ method: 'email' });
+    } else {
+      trackSignin({ method: 'email' });
+    }
     setView('link_sent');
   }
 
@@ -149,7 +157,7 @@ export default function AuthScreen() {
       setAppleAgeGatePending(true);
       return;
     }
-    posthog.capture('sign_in', { method: 'apple' });
+    trackSignin({ method: 'apple' });
   }
 
   async function handleAppleAgeVerify() {
@@ -167,7 +175,7 @@ export default function AuthScreen() {
     await supabase.auth.updateUser({ data: { birthdate: birthdate.toISOString().split('T')[0] } });
     setLoading(false);
     setAppleAgeGatePending(false);
-    posthog.capture('sign_in', { method: 'apple' });
+    trackSignin({ method: 'apple' });
   }
 
   // ── Google Sign-In ────────────────────────────────────────────
@@ -185,7 +193,7 @@ export default function AuthScreen() {
       setGoogleAgeGatePending(true);
       return;
     }
-    posthog.capture('sign_in', { method: 'google' });
+    trackSignin({ method: 'google' });
   }
 
   async function handleGoogleAgeVerify() {
@@ -203,7 +211,7 @@ export default function AuthScreen() {
     await supabase.auth.updateUser({ data: { birthdate: birthdate.toISOString().split('T')[0] } });
     setLoading(false);
     setGoogleAgeGatePending(false);
-    posthog.capture('sign_in', { method: 'google' });
+    trackSignin({ method: 'google' });
   }
 
   // ── Age gate UI (shared for Apple + Google) ───────────────────
