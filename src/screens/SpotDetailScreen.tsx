@@ -17,6 +17,7 @@ import { Feather } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 
 import { colors, fonts, spacing, radius } from '../theme';
 import { supabase } from '../lib/supabase';
@@ -234,12 +235,10 @@ export default function SpotDetailScreen() {
     });
   }
 
-  function handleCopyAddress() {
+  async function handleCopyAddress() {
     const address = `${spot.name}, ${spot.city}, ${spot.country}`;
     try {
-      // @ts-ignore — Clipboard deprecated but works without extra dependency
-      const { Clipboard: RNClipboard } = require('react-native');
-      if (RNClipboard?.setString) RNClipboard.setString(address);
+      await Clipboard.setStringAsync(address);
     } catch {}
     Alert.alert('Copied', 'Address copied to clipboard.');
     posthog.capture('spot_address_copied', { spot_id: spot.id });

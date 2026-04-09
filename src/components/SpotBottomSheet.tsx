@@ -14,6 +14,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import * as Clipboard from 'expo-clipboard';
 import { colors, fonts, spacing, radius, shadows, animation } from '../theme';
 import { Spot } from '../types';
 import CheckInButton from './CheckInButton';
@@ -166,10 +167,8 @@ export default function SpotBottomSheet({ spot, onClose, onSave, onAddNote, dist
                     {
                       label: 'Copy Address',
                       icon: 'copy',
-                      onPress: () => {
-                        // @ts-ignore
-                        const { Clipboard } = require('react-native');
-                        if (Clipboard?.setString) Clipboard.setString(`${spot.name}, ${spot.city}, ${spot.country}`);
+                      onPress: async () => {
+                        await Clipboard.setStringAsync(`${spot.name}, ${spot.city}, ${spot.country}`);
                         Alert.alert('Copied', 'Address copied to clipboard.');
                       },
                     },

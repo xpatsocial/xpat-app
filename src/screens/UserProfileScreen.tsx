@@ -8,6 +8,7 @@ import { Feather } from '@expo/vector-icons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 import { colors, fonts, spacing, radius } from '../theme';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -343,10 +344,8 @@ export default function UserProfileScreen() {
               {
                 label: 'Copy Profile Link',
                 icon: 'link',
-                onPress: () => {
-                  // @ts-ignore
-                  const { Clipboard } = require('react-native');
-                  if (Clipboard?.setString) Clipboard.setString(`https://xpat.social/user/${userId}`);
+                onPress: async () => {
+                  await Clipboard.setStringAsync(`https://xpat.social/user/${userId}`);
                   Alert.alert('Copied', 'Profile link copied to clipboard.');
                 },
               },

@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import * as ImageManipulator from 'expo-image-manipulator';
+import * as Clipboard from 'expo-clipboard';
 import { decode } from 'base64-arraybuffer';
 import { colors, fonts, spacing, radius } from '../theme';
 import { supabase } from '../lib/supabase';
@@ -458,10 +459,8 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
       {
         label: 'Copy Text',
         icon: 'copy',
-        onPress: () => {
-          // @ts-ignore — Clipboard deprecated but works without extra dependency
-          const { Clipboard } = require('react-native');
-          if (Clipboard?.setString) Clipboard.setString(item.content);
+        onPress: async () => {
+          await Clipboard.setStringAsync(item.content);
           Alert.alert('Copied', 'Post text copied to clipboard.');
         },
       },

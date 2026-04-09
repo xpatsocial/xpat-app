@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert, Share, Platform } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import * as Clipboard from 'expo-clipboard';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
@@ -163,9 +164,7 @@ export function useReferrals() {
   const copyReferralLink = useCallback(async () => {
     if (!referralCode) return;
     const link = `https://xpat.social/invite/${referralCode}`;
-    // @ts-ignore — Clipboard deprecated but works without extra dependency
-    const { Clipboard } = require('react-native');
-    if (Clipboard?.setString) Clipboard.setString(link);
+    await Clipboard.setStringAsync(link);
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }, [referralCode]);
 
