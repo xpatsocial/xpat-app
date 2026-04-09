@@ -169,7 +169,7 @@
       "backgroundColor": "transparent"
     },
     "android": {
-      "package": "com.aycholdings.xpat",
+      "package": "com.aychholdings.xpat",
       "minSdkVersion": 24,
       "versionCode": 1,
       "config": {
