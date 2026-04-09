@@ -6,8 +6,13 @@
  */
 import { MMKV } from 'react-native-mmkv';
 
-// Dedicated MMKV instance for analytics state (separate from query cache)
-const store = new MMKV({ id: 'xpat-analytics' });
+// Lazy MMKV — MUST NOT instantiate at module load on iOS New Architecture.
+// TurboModule init before bridge is wired causes startup crash.
+let _store: MMKV | null = null;
+function store_(): MMKV {
+  if (!_store) _store = new MMKV({ id: 'xpat-analytics' });
+  return _store;
+}
 
 // ---------------------------------------------------------------------------
 // Capture function — set by posthog.ts after init to avoid circular imports
@@ -41,23 +46,23 @@ const KEY_FIRST_SPOT_ADDED = 'analytics:first_spot_added';
 
 /** Increment and return the current session number (persisted in MMKV). */
 export function getSessionNumber(): number {
-  const current = store.getNumber(KEY_SESSION_COUNT) ?? 0;
+  const current = store_().getNumber(KEY_SESSION_COUNT) ?? 0;
   const next = current + 1;
-  store.set(KEY_SESSION_COUNT, next);
+  store_().set(KEY_SESSION_COUNT, next);
   return next;
 }
 
 /** Read the current session count without incrementing. */
 export function peekSessionCount(): number {
-  return store.getNumber(KEY_SESSION_COUNT) ?? 0;
+  return store_().getNumber(KEY_SESSION_COUNT) ?? 0;
 }
 
 /** Calculate days elapsed since the first recorded app open. */
 export function getDaysSinceInstall(): number {
-  const installDate = store.getString(KEY_INSTALL_DATE);
+  const installDate = store_().getString(KEY_INSTALL_DATE);
   if (!installDate) {
     // First time — record now
-    store.set(KEY_INSTALL_DATE, new Date().toISOString());
+    store_().set(KEY_INSTALL_DATE, new Date().toISOString());
     return 0;
   }
   const diff = Date.now() - new Date(installDate).getTime();
@@ -78,13 +83,13 @@ function todayDateString(): string {
  */
 export function updateStreak(): void {
   const today = todayDateString();
-  const lastOpen = store.getString(KEY_LAST_OPEN_DATE);
-  const currentStreak = store.getNumber(KEY_STREAK_COUNT) ?? 0;
+  const lastOpen = store_().getString(KEY_LAST_OPEN_DATE);
+  const currentStreak = store_().getNumber(KEY_STREAK_COUNT) ?? 0;
 
   if (!lastOpen) {
     // First open ever
-    store.set(KEY_STREAK_COUNT, 1);
-    store.set(KEY_LAST_OPEN_DATE, today);
+    store_().set(KEY_STREAK_COUNT, 1);
+    store_().set(KEY_LAST_OPEN_DATE, today);
     return;
   }
 
@@ -100,14 +105,14 @@ export function updateStreak(): void {
   if (diffDays === 1) {
     // Consecutive day — extend streak
     const newStreak = currentStreak + 1;
-    store.set(KEY_STREAK_COUNT, newStreak);
-    store.set(KEY_LAST_OPEN_DATE, today);
+    store_().set(KEY_STREAK_COUNT, newStreak);
+    store_().set(KEY_LAST_OPEN_DATE, today);
     posthogTrack('streak_continued', { streak_count: newStreak });
   } else if (diffDays > 1) {
     // Streak broken
     posthogTrack('streak_broken', { previous_streak_count: currentStreak });
-    store.set(KEY_STREAK_COUNT, 1);
-    store.set(KEY_LAST_OPEN_DATE, today);
+    store_().set(KEY_STREAK_COUNT, 1);
+    store_().set(KEY_LAST_OPEN_DATE, today);
   }
 }
 
@@ -170,8 +175,8 @@ export function identifyUser(
 // ---------------------------------------------------------------------------
 
 function trackOnce(key: string, event: string, properties?: Record<string, unknown>): void {
-  if (store.getBoolean(key)) return;
-  store.set(key, true);
+  if (store_().getBoolean(key)) return;
+  store_().set(key, true);
   posthogTrack(event, properties);
 }
 

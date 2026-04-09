@@ -14,7 +14,12 @@
 import { useCallback, useRef } from 'react';
 import { MMKV } from 'react-native-mmkv';
 
-const store = new MMKV({ id: 'xpat-design-metrics' });
+// Lazy MMKV — avoid TurboModule init at module load on iOS New Architecture
+let _store: MMKV | null = null;
+function store_(): MMKV {
+  if (!_store) _store = new MMKV({ id: 'xpat-design-metrics' });
+  return _store;
+}
 
 // ---------------------------------------------------------------------------
 // Core flow definitions (Zhuo: measure the flows that matter most)
@@ -98,8 +103,8 @@ export function useDesignMetrics() {
 
       // Persist error count
       const key = `${KEY_FLOW_ERRORS}:${activeFlow.current.flow}`;
-      const current = store.getNumber(key) ?? 0;
-      store.set(key, current + 1);
+      const current = store_().getNumber(key) ?? 0;
+      store_().set(key, current + 1);
     }
   }, []);
 
@@ -115,20 +120,20 @@ export function useDesignMetrics() {
 
     // Persist completion
     const completionKey = `${KEY_FLOW_COMPLETIONS}:${flow.flow}`;
-    const completions = store.getNumber(completionKey) ?? 0;
-    store.set(completionKey, completions + 1);
+    const completions = store_().getNumber(completionKey) ?? 0;
+    store_().set(completionKey, completions + 1);
 
     // Running average taps
     const tapKey = `${KEY_FLOW_AVG_TAPS}:${flow.flow}`;
-    const prevAvgTaps = store.getNumber(tapKey) ?? flow.tapCount;
+    const prevAvgTaps = store_().getNumber(tapKey) ?? flow.tapCount;
     const newAvgTaps = (prevAvgTaps * completions + flow.tapCount) / (completions + 1);
-    store.set(tapKey, newAvgTaps);
+    store_().set(tapKey, newAvgTaps);
 
     // Running average time
     const timeKey = `${KEY_FLOW_AVG_TIME}:${flow.flow}`;
-    const prevAvgTime = store.getNumber(timeKey) ?? durationMs;
+    const prevAvgTime = store_().getNumber(timeKey) ?? durationMs;
     const newAvgTime = (prevAvgTime * completions + durationMs) / (completions + 1);
-    store.set(timeKey, newAvgTime);
+    store_().set(timeKey, newAvgTime);
 
     // Fire to PostHog
     _capture('design_flow_completed', {
@@ -153,8 +158,8 @@ export function useDesignMetrics() {
     const durationMs = Date.now() - flow.startedAt;
 
     const abandonKey = `${KEY_FLOW_ABANDONS}:${flow.flow}`;
-    const abandons = store.getNumber(abandonKey) ?? 0;
-    store.set(abandonKey, abandons + 1);
+    const abandons = store_().getNumber(abandonKey) ?? 0;
+    store_().set(abandonKey, abandons + 1);
 
     _capture('design_flow_abandoned', {
       flow: flow.flow,
@@ -176,11 +181,11 @@ export function useDesignMetrics() {
     ];
 
     return flows.map((flow) => {
-      const completions = store.getNumber(`${KEY_FLOW_COMPLETIONS}:${flow}`) ?? 0;
-      const abandons = store.getNumber(`${KEY_FLOW_ABANDONS}:${flow}`) ?? 0;
-      const avgTaps = store.getNumber(`${KEY_FLOW_AVG_TAPS}:${flow}`) ?? 0;
-      const avgTimeMs = store.getNumber(`${KEY_FLOW_AVG_TIME}:${flow}`) ?? 0;
-      const errors = store.getNumber(`${KEY_FLOW_ERRORS}:${flow}`) ?? 0;
+      const completions = store_().getNumber(`${KEY_FLOW_COMPLETIONS}:${flow}`) ?? 0;
+      const abandons = store_().getNumber(`${KEY_FLOW_ABANDONS}:${flow}`) ?? 0;
+      const avgTaps = store_().getNumber(`${KEY_FLOW_AVG_TAPS}:${flow}`) ?? 0;
+      const avgTimeMs = store_().getNumber(`${KEY_FLOW_AVG_TIME}:${flow}`) ?? 0;
+      const errors = store_().getNumber(`${KEY_FLOW_ERRORS}:${flow}`) ?? 0;
 
       return {
         flow,

@@ -26,24 +26,32 @@ export const queryClient = new QueryClient({
   },
 });
 
-// MMKV instance for query cache persistence
-export const mmkv = new MMKV({ id: 'xpat-query-cache' });
+// Lazy MMKV instance — MUST NOT be instantiated at module load.
+// On iOS New Architecture, calling `new MMKV()` at import time can crash
+// the app before the TurboModule bridge is fully wired. See:
+// https://github.com/mrousavy/react-native-mmkv#readme (New Architecture guidance)
+let _mmkv: MMKV | null = null;
+function getMmkv(): MMKV {
+  if (!_mmkv) _mmkv = new MMKV({ id: 'xpat-query-cache' });
+  return _mmkv;
+}
 
 /**
  * MMKV storage adapter implementing the persister storage interface.
  * Synchronous read/write — eliminates AsyncStorage's async overhead on cold start.
+ * All MMKV access is lazy to avoid module-load-time TurboModule crashes.
  */
 export const mmkvStorage = {
   setItem: (key: string, value: string) => {
-    mmkv.set(key, value);
+    getMmkv().set(key, value);
     return Promise.resolve();
   },
   getItem: (key: string) => {
-    const value = mmkv.getString(key);
+    const value = getMmkv().getString(key);
     return Promise.resolve(value ?? null);
   },
   removeItem: (key: string) => {
-    mmkv.delete(key);
+    getMmkv().delete(key);
     return Promise.resolve();
   },
 };
@@ -57,6 +65,7 @@ export function createPersister() {
 
   // Graceful fallback: Expo Go doesn't support MMKV native module
   try {
+    const mmkv = getMmkv();
     mmkv.set('__health_check__', '1');
     mmkv.delete('__health_check__');
   } catch {

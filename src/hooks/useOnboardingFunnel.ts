@@ -17,7 +17,12 @@
 import { useCallback } from 'react';
 import { MMKV } from 'react-native-mmkv';
 
-const store = new MMKV({ id: 'xpat-onboarding' });
+// Lazy MMKV — avoid TurboModule init at module load on iOS New Architecture
+let _store: MMKV | null = null;
+function store_(): MMKV {
+  if (!_store) _store = new MMKV({ id: 'xpat-onboarding' });
+  return _store;
+}
 
 // ---------------------------------------------------------------------------
 // Onboarding steps (ordered by optimal flow)
@@ -66,14 +71,14 @@ export function useOnboardingFunnel() {
    * Initialize onboarding tracking on first app launch.
    */
   const initOnboarding = useCallback(() => {
-    if (!store.getString(KEY_STARTED_AT)) {
-      store.set(KEY_STARTED_AT, new Date().toISOString());
-      store.set(KEY_COMPLETED_STEPS, JSON.stringify([]));
-      store.set(KEY_STEP_TIMESTAMPS, JSON.stringify({}));
+    if (!store_().getString(KEY_STARTED_AT)) {
+      store_().set(KEY_STARTED_AT, new Date().toISOString());
+      store_().set(KEY_COMPLETED_STEPS, JSON.stringify([]));
+      store_().set(KEY_STEP_TIMESTAMPS, JSON.stringify({}));
 
       // Generate anonymous ID for pre-signup tracking
       const anonId = `anon_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-      store.set(KEY_ANONYMOUS_ID, anonId);
+      store_().set(KEY_ANONYMOUS_ID, anonId);
 
       _capture('onboarding_started', { anonymous_id: anonId });
     }
@@ -83,22 +88,22 @@ export function useOnboardingFunnel() {
    * Record completion of an onboarding step.
    */
   const completeStep = useCallback((step: OnboardingStep) => {
-    const completedRaw = store.getString(KEY_COMPLETED_STEPS);
+    const completedRaw = store_().getString(KEY_COMPLETED_STEPS);
     const completed: OnboardingStep[] = completedRaw ? JSON.parse(completedRaw) : [];
 
     if (completed.includes(step)) return; // Already recorded
 
     completed.push(step);
-    store.set(KEY_COMPLETED_STEPS, JSON.stringify(completed));
+    store_().set(KEY_COMPLETED_STEPS, JSON.stringify(completed));
 
     // Record timestamp
-    const timestampsRaw = store.getString(KEY_STEP_TIMESTAMPS);
+    const timestampsRaw = store_().getString(KEY_STEP_TIMESTAMPS);
     const timestamps: Record<string, string> = timestampsRaw ? JSON.parse(timestampsRaw) : {};
     timestamps[step] = new Date().toISOString();
-    store.set(KEY_STEP_TIMESTAMPS, JSON.stringify(timestamps));
+    store_().set(KEY_STEP_TIMESTAMPS, JSON.stringify(timestamps));
 
     // Calculate time from start
-    const startedAt = store.getString(KEY_STARTED_AT);
+    const startedAt = store_().getString(KEY_STARTED_AT);
     const elapsedMs = startedAt ? Date.now() - new Date(startedAt).getTime() : 0;
 
     _capture('onboarding_step_completed', {
@@ -106,7 +111,7 @@ export function useOnboardingFunnel() {
       step_index: completed.length,
       elapsed_ms: elapsedMs,
       elapsed_seconds: Math.round(elapsedMs / 1000),
-      anonymous_id: store.getString(KEY_ANONYMOUS_ID),
+      anonymous_id: store_().getString(KEY_ANONYMOUS_ID),
     });
 
     // Key milestones
@@ -133,7 +138,7 @@ export function useOnboardingFunnel() {
   const skipStep = useCallback((step: OnboardingStep) => {
     _capture('onboarding_step_skipped', {
       step,
-      anonymous_id: store.getString(KEY_ANONYMOUS_ID),
+      anonymous_id: store_().getString(KEY_ANONYMOUS_ID),
     });
   }, []);
 
@@ -141,16 +146,16 @@ export function useOnboardingFunnel() {
    * Get current onboarding state.
    */
   const getOnboardingState = useCallback(() => {
-    const completedRaw = store.getString(KEY_COMPLETED_STEPS);
+    const completedRaw = store_().getString(KEY_COMPLETED_STEPS);
     const completed: OnboardingStep[] = completedRaw ? JSON.parse(completedRaw) : [];
-    const startedAt = store.getString(KEY_STARTED_AT);
+    const startedAt = store_().getString(KEY_STARTED_AT);
 
     return {
       completed,
       isComplete: completed.includes('first_spot_saved'),
       stepCount: completed.length,
       startedAt,
-      anonymousId: store.getString(KEY_ANONYMOUS_ID),
+      anonymousId: store_().getString(KEY_ANONYMOUS_ID),
     };
   }, []);
 

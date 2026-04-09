@@ -19,7 +19,12 @@
 import { supabase } from './supabase';
 import { MMKV } from 'react-native-mmkv';
 
-const store = new MMKV({ id: 'xpat-investment' });
+// Lazy MMKV — avoid TurboModule init at module load on iOS New Architecture
+let _store: MMKV | null = null;
+function store_(): MMKV {
+  if (!_store) _store = new MMKV({ id: 'xpat-investment' });
+  return _store;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -144,7 +149,7 @@ export async function measureInvestment(userId: string): Promise<InvestmentSnaps
   // Check cache: only re-measure once per day at most
   const cacheKey = `investment:${userId}`;
   const today = new Date().toISOString().split('T')[0];
-  const cached = store.getString(cacheKey);
+  const cached = store_().getString(cacheKey);
 
   if (cached) {
     try {
@@ -229,7 +234,7 @@ export async function measureInvestment(userId: string): Promise<InvestmentSnaps
     };
 
     // Cache locally
-    store.set(cacheKey, JSON.stringify(snapshot));
+    store_().set(cacheKey, JSON.stringify(snapshot));
 
     return snapshot;
   } catch {
@@ -319,7 +324,7 @@ export function getNextInvestmentAction(snapshot: InvestmentSnapshot): {
  * measureInvestment() fetches fresh data.
  */
 export function invalidateInvestmentCache(userId: string): void {
-  store.delete(`investment:${userId}`);
+  store_().delete(`investment:${userId}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -327,5 +332,5 @@ export function invalidateInvestmentCache(userId: string): void {
 // ---------------------------------------------------------------------------
 
 export function resetInvestmentData(): void {
-  store.clearAll();
+  store_().clearAll();
 }

@@ -68,6 +68,22 @@ if grep -l "^throw new Error" src/lib/*.ts 2>/dev/null; then
   RISKS=$((RISKS + 1))
 fi
 
+# Module-level `new MMKV()` — causes iOS New Architecture startup crash
+# TurboModule bridge is not yet wired at JS module load time.
+# Must be lazy-instantiated inside a function.
+if grep -rnE "^(export )?const [a-zA-Z_]+ = new MMKV\(" src/ 2>/dev/null; then
+  echo "  ✗ Module-level new MMKV() detected — crashes iOS New Architecture on launch"
+  echo "    Use lazy pattern: let _store: MMKV|null = null; function store_() { ... }"
+  FAIL=1
+fi
+
+# Module-level `createClient()` from supabase with throwing constructor
+# Currently uses safe fallbacks — flag if throw pattern reappears
+if grep -nE "^throw new Error.*EXPO_PUBLIC_SUPABASE" src/lib/supabase.ts 2>/dev/null; then
+  echo "  ✗ supabase.ts throws at module load — crashes app if env vars missing in build"
+  FAIL=1
+fi
+
 # Missing font files referenced in App.tsx
 if [ -f "App.tsx" ]; then
   MISSING_FONTS=0

@@ -16,8 +16,12 @@ import { MMKV } from 'react-native-mmkv';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
-// Dedicated MMKV instance for trigger/habit data
-const store = new MMKV({ id: 'xpat-triggers' });
+// Lazy MMKV — avoid TurboModule init at module load on iOS New Architecture
+let _store: MMKV | null = null;
+function store_(): MMKV {
+  if (!_store) _store = new MMKV({ id: 'xpat-triggers' });
+  return _store;
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -95,7 +99,7 @@ export function recordAppOpen(firstScreen: string): void {
   const record: UsageRecord = { hour, firstScreen, hookCycle, date };
 
   // Load existing history
-  const raw = store.getString(KEY_USAGE_HISTORY);
+  const raw = store_().getString(KEY_USAGE_HISTORY);
   let history: UsageRecord[] = [];
   try {
     history = raw ? JSON.parse(raw) : [];
@@ -115,7 +119,7 @@ export function recordAppOpen(firstScreen: string): void {
     history = history.slice(-MAX_HISTORY_SIZE);
   }
 
-  store.set(KEY_USAGE_HISTORY, JSON.stringify(history));
+  store_().set(KEY_USAGE_HISTORY, JSON.stringify(history));
 
   // Rebuild profile after each new data point
   rebuildTriggerProfile(history);
@@ -161,14 +165,14 @@ function rebuildTriggerProfile(history: UsageRecord[]): void {
     totalSessions: history.length,
   };
 
-  store.set(KEY_TRIGGER_PROFILE, JSON.stringify(profile));
+  store_().set(KEY_TRIGGER_PROFILE, JSON.stringify(profile));
 }
 
 /**
  * Get the current trigger profile. Returns null if insufficient data.
  */
 export function getTriggerProfile(): TriggerProfile | null {
-  const raw = store.getString(KEY_TRIGGER_PROFILE);
+  const raw = store_().getString(KEY_TRIGGER_PROFILE);
   if (!raw) return null;
 
   try {
@@ -230,7 +234,7 @@ interface ScheduleTriggerParams {
  */
 export async function scheduleNextTrigger(params: ScheduleTriggerParams): Promise<void> {
   const today = new Date().toISOString().split('T')[0];
-  const lastTriggerDate = store.getString(KEY_LAST_TRIGGER_DATE);
+  const lastTriggerDate = store_().getString(KEY_LAST_TRIGGER_DATE);
 
   // Rate limit: max 1 per day
   if (lastTriggerDate === today) return;
@@ -281,7 +285,7 @@ export async function scheduleNextTrigger(params: ScheduleTriggerParams): Promis
   });
 
   // Record that we scheduled a trigger today
-  store.set(KEY_LAST_TRIGGER_DATE, today);
+  store_().set(KEY_LAST_TRIGGER_DATE, today);
 }
 
 // ---------------------------------------------------------------------------
@@ -294,8 +298,8 @@ export async function scheduleNextTrigger(params: ScheduleTriggerParams): Promis
  */
 export function recordTriggerOpened(hookCycle: HookCycle): void {
   const key = `triggers:opens:${hookCycle}`;
-  const current = store.getNumber(key) ?? 0;
-  store.set(key, current + 1);
+  const current = store_().getNumber(key) ?? 0;
+  store_().set(key, current + 1);
 }
 
 /**
@@ -303,9 +307,9 @@ export function recordTriggerOpened(hookCycle: HookCycle): void {
  */
 export function getTriggerOpenCounts(): Record<HookCycle, number> {
   return {
-    spot_discovery: store.getNumber('triggers:opens:spot_discovery') ?? 0,
-    social_connection: store.getNumber('triggers:opens:social_connection') ?? 0,
-    city_pulse: store.getNumber('triggers:opens:city_pulse') ?? 0,
+    spot_discovery: store_().getNumber('triggers:opens:spot_discovery') ?? 0,
+    social_connection: store_().getNumber('triggers:opens:social_connection') ?? 0,
+    city_pulse: store_().getNumber('triggers:opens:city_pulse') ?? 0,
   };
 }
 
@@ -314,10 +318,10 @@ export function getTriggerOpenCounts(): Record<HookCycle, number> {
 // ---------------------------------------------------------------------------
 
 export function resetTriggerData(): void {
-  store.delete(KEY_USAGE_HISTORY);
-  store.delete(KEY_LAST_TRIGGER_DATE);
-  store.delete(KEY_TRIGGER_PROFILE);
-  store.delete('triggers:opens:spot_discovery');
-  store.delete('triggers:opens:social_connection');
-  store.delete('triggers:opens:city_pulse');
+  store_().delete(KEY_USAGE_HISTORY);
+  store_().delete(KEY_LAST_TRIGGER_DATE);
+  store_().delete(KEY_TRIGGER_PROFILE);
+  store_().delete('triggers:opens:spot_discovery');
+  store_().delete('triggers:opens:social_connection');
+  store_().delete('triggers:opens:city_pulse');
 }

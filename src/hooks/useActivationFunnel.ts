@@ -19,8 +19,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { MMKV } from 'react-native-mmkv';
 import { triggerBotMessage, initActivationBot } from '../lib/activationBot';
 
-// Shared MMKV instance — same ID as analytics.ts for consistency
-const store = new MMKV({ id: 'xpat-analytics' });
+// Lazy MMKV — avoid TurboModule init at module load on iOS New Architecture
+let _store: MMKV | null = null;
+function store_(): MMKV {
+  if (!_store) _store = new MMKV({ id: 'xpat-analytics' });
+  return _store;
+}
 
 // ---------------------------------------------------------------------------
 // Keys
@@ -108,12 +112,12 @@ export function useActivationFunnel(userId?: string | null, city?: string | null
 
   // Compute state from MMKV
   const computeState = useCallback((): ActivationState => {
-    const spotsSaved = store.getNumber(KEY_SPOTS_SAVED_COUNT) ?? 0;
-    const chatMessagesSent = store.getNumber(KEY_CHAT_MESSAGES_SENT) ?? 0;
-    const isActivated = store.getBoolean(KEY_ACTIVATED) ?? false;
+    const spotsSaved = store_().getNumber(KEY_SPOTS_SAVED_COUNT) ?? 0;
+    const chatMessagesSent = store_().getNumber(KEY_CHAT_MESSAGES_SENT) ?? 0;
+    const isActivated = store_().getBoolean(KEY_ACTIVATED) ?? false;
 
     // 48-hour window tracking
-    const startedAt = store.getString(KEY_STARTED_AT);
+    const startedAt = store_().getString(KEY_STARTED_AT);
     let hoursRemaining: number | null = null;
     let windowExpired = false;
     if (startedAt && !isActivated) {
@@ -183,8 +187,8 @@ export function useActivationFunnel(userId?: string | null, city?: string | null
 
   // Initialize on mount — start the 48-hour window on first use
   useEffect(() => {
-    if (userId && !store.getString(KEY_STARTED_AT)) {
-      store.set(KEY_STARTED_AT, new Date().toISOString());
+    if (userId && !store_().getString(KEY_STARTED_AT)) {
+      store_().set(KEY_STARTED_AT, new Date().toISOString());
       _capture('activation_window_started', { window_hours: 48 });
     }
     setState(computeState());
@@ -196,9 +200,9 @@ export function useActivationFunnel(userId?: string | null, city?: string | null
   // ----- Action trackers -----
 
   const trackSpotViewed = useCallback(async () => {
-    const current = store.getNumber(KEY_SPOTS_VIEWED_COUNT) ?? 0;
+    const current = store_().getNumber(KEY_SPOTS_VIEWED_COUNT) ?? 0;
     const next = current + 1;
-    store.set(KEY_SPOTS_VIEWED_COUNT, next);
+    store_().set(KEY_SPOTS_VIEWED_COUNT, next);
 
     // First spot viewed triggers bot message
     if (next === 1) {
@@ -207,9 +211,9 @@ export function useActivationFunnel(userId?: string | null, city?: string | null
   }, []);
 
   const trackSpotSaved = useCallback(async () => {
-    const current = store.getNumber(KEY_SPOTS_SAVED_COUNT) ?? 0;
+    const current = store_().getNumber(KEY_SPOTS_SAVED_COUNT) ?? 0;
     const next = current + 1;
-    store.set(KEY_SPOTS_SAVED_COUNT, next);
+    store_().set(KEY_SPOTS_SAVED_COUNT, next);
 
     // Bot messages at milestones
     if (next === 1) {
@@ -222,7 +226,7 @@ export function useActivationFunnel(userId?: string | null, city?: string | null
     }
 
     // Check if this completes activation
-    const chatSent = store.getNumber(KEY_CHAT_MESSAGES_SENT) ?? 0;
+    const chatSent = store_().getNumber(KEY_CHAT_MESSAGES_SENT) ?? 0;
     if (next >= ACTIVATION_SPOTS_THRESHOLD && chatSent >= ACTIVATION_CHAT_THRESHOLD) {
       markActivated();
     }
@@ -231,9 +235,9 @@ export function useActivationFunnel(userId?: string | null, city?: string | null
   }, [computeState]);
 
   const trackChatMessageSent = useCallback(async () => {
-    const current = store.getNumber(KEY_CHAT_MESSAGES_SENT) ?? 0;
+    const current = store_().getNumber(KEY_CHAT_MESSAGES_SENT) ?? 0;
     const next = current + 1;
-    store.set(KEY_CHAT_MESSAGES_SENT, next);
+    store_().set(KEY_CHAT_MESSAGES_SENT, next);
 
     // First chat message triggers bot message
     if (next === 1) {
@@ -242,7 +246,7 @@ export function useActivationFunnel(userId?: string | null, city?: string | null
     }
 
     // Check if this completes activation
-    const spotsSaved = store.getNumber(KEY_SPOTS_SAVED_COUNT) ?? 0;
+    const spotsSaved = store_().getNumber(KEY_SPOTS_SAVED_COUNT) ?? 0;
     if (spotsSaved >= ACTIVATION_SPOTS_THRESHOLD && next >= ACTIVATION_CHAT_THRESHOLD) {
       markActivated();
     }
@@ -251,15 +255,15 @@ export function useActivationFunnel(userId?: string | null, city?: string | null
   }, [computeState]);
 
   const markActivated = useCallback(() => {
-    if (store.getBoolean(KEY_ACTIVATED)) return; // already activated
+    if (store_().getBoolean(KEY_ACTIVATED)) return; // already activated
 
-    store.set(KEY_ACTIVATED, true);
-    store.set(KEY_ACTIVATED_AT, new Date().toISOString());
+    store_().set(KEY_ACTIVATED, true);
+    store_().set(KEY_ACTIVATED_AT, new Date().toISOString());
 
     _capture('user_activated', {
-      spots_saved: store.getNumber(KEY_SPOTS_SAVED_COUNT) ?? 0,
-      chat_messages_sent: store.getNumber(KEY_CHAT_MESSAGES_SENT) ?? 0,
-      spots_viewed: store.getNumber(KEY_SPOTS_VIEWED_COUNT) ?? 0,
+      spots_saved: store_().getNumber(KEY_SPOTS_SAVED_COUNT) ?? 0,
+      chat_messages_sent: store_().getNumber(KEY_CHAT_MESSAGES_SENT) ?? 0,
+      spots_viewed: store_().getNumber(KEY_SPOTS_VIEWED_COUNT) ?? 0,
     });
 
     setState((prev) => ({ ...prev, isActivated: true, justActivated: true }));

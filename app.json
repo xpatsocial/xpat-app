@@ -20,11 +20,7 @@
           "color": "#2EC4A0"
         }
       ],
-      "@react-native-community/datetimepicker",
-      "expo-font",
-      "expo-secure-store",
-      "expo-image",
-      "expo-web-browser"
+      "@react-native-community/datetimepicker"
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -33,7 +29,6 @@
     },
     "ios": {
       "supportsTablet": false,
-      "deploymentTarget": "16.0",
       "bundleIdentifier": "com.aychholdings.xpat",
       "entitlements": {
         "aps-environment": "production",
@@ -167,7 +162,6 @@
     },
     "android": {
       "package": "com.aychholdings.xpat",
-      "minSdkVersion": 24,
       "versionCode": 1,
       "config": {
         "googleMaps": {
