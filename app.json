@@ -34,7 +34,7 @@
     "ios": {
       "supportsTablet": false,
       "deploymentTarget": "16.0",
-      "bundleIdentifier": "com.aycholdings.xpat",
+      "bundleIdentifier": "com.aychholdings.xpat",
       "entitlements": {
         "aps-environment": "production",
         "com.apple.developer.associated-domains": [
@@ -42,7 +42,7 @@
           "webcredentials:xpat.social"
         ],
         "com.apple.security.application-groups": [
-          "group.com.aycholdings.xpat"
+          "group.com.aychholdings.xpat"
         ]
       },
       "usesAppleSignIn": true,
