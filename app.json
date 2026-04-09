@@ -40,9 +40,6 @@
         "com.apple.developer.associated-domains": [
           "applinks:xpat.social",
           "webcredentials:xpat.social"
-        ],
-        "com.apple.security.application-groups": [
-          "group.com.aychholdings.xpat"
         ]
       },
       "usesAppleSignIn": true,

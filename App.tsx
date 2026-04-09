@@ -133,28 +133,28 @@ function App() {
         <AuthProvider>
           <NavigationContainer linking={linking as any}>
             <ReducedMotionConfig mode={ReduceMotion.System} />
-            <ErrorBoundary>
-              <AppNavigator />
-            </ErrorBoundary>
+            <AppNavigator />
           </NavigationContainer>
         </AuthProvider>
       </PostHogProvider>
     </SafeAreaProvider>
   );
 
-  if (persister && !persisterError) {
-    return (
-      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-        {inner}
-      </PersistQueryClientProvider>
-    );
-  }
-
-  return (
+  const providerTree = persister && !persisterError ? (
+    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+      {inner}
+    </PersistQueryClientProvider>
+  ) : (
     <QueryClientProvider client={queryClient}>
       {inner}
     </QueryClientProvider>
   );
+
+  // TOP-LEVEL ErrorBoundary wraps EVERYTHING including providers —
+  // catches errors thrown during provider init, navigation, or any screen render.
+  // Previously ErrorBoundary was inside NavigationContainer, which meant provider
+  // crashes would kill the entire app with no user feedback.
+  return <ErrorBoundary>{providerTree}</ErrorBoundary>;
 }
 
 export default Sentry.wrap(App);
