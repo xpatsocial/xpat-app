@@ -8,6 +8,7 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { PersistQueryClientProvider } from '@tanstack/react-query-persist-client';
 import { queryClient, createPersister } from './src/lib/queryClient';
 import { supabase } from './src/lib/supabase';
@@ -51,8 +52,18 @@ if (Platform.OS === 'android') {
 
 SplashScreen.preventAutoHideAsync();
 
-// Create persister once at module level (stable reference)
-const persister = createPersister();
+// Lazy persister — wrapped in try/catch so any MMKV / persister failure
+// doesn't crash the entire app at module load. Falls back to in-memory cache
+// which still gives us all React Query benefits minus offline persistence.
+let persister: ReturnType<typeof createPersister> | null = null;
+let persisterError: Error | null = null;
+try {
+  persister = createPersister();
+} catch (e) {
+  persisterError = e as Error;
+  // eslint-disable-next-line no-console
+  console.warn('[xpat] Persister init failed, falling back to in-memory cache:', e);
+}
 
 function App() {
   const [fontsLoaded] = useFonts({
@@ -113,22 +124,36 @@ function App() {
     );
   }
 
+  // Use PersistQueryClientProvider when persister initialized successfully,
+  // otherwise fall back to plain QueryClientProvider (in-memory only).
+  const inner = (
+    <SafeAreaProvider onLayout={onLayoutRootView}>
+      <StatusBar style="light" />
+      <PostHogProvider>
+        <AuthProvider>
+          <NavigationContainer linking={linking as any}>
+            <ReducedMotionConfig mode={ReduceMotion.System} />
+            <ErrorBoundary>
+              <AppNavigator />
+            </ErrorBoundary>
+          </NavigationContainer>
+        </AuthProvider>
+      </PostHogProvider>
+    </SafeAreaProvider>
+  );
+
+  if (persister && !persisterError) {
+    return (
+      <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
+        {inner}
+      </PersistQueryClientProvider>
+    );
+  }
+
   return (
-    <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
-      <SafeAreaProvider onLayout={onLayoutRootView}>
-        <StatusBar style="light" />
-        <PostHogProvider>
-          <AuthProvider>
-            <NavigationContainer linking={linking as any}>
-              <ReducedMotionConfig mode={ReduceMotion.System} />
-              <ErrorBoundary>
-                <AppNavigator />
-              </ErrorBoundary>
-            </NavigationContainer>
-          </AuthProvider>
-        </PostHogProvider>
-      </SafeAreaProvider>
-    </PersistQueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      {inner}
+    </QueryClientProvider>
   );
 }
 
