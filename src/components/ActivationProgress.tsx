@@ -77,6 +77,9 @@ function StepRow({
       onPress={onPress}
       disabled={step.completed}
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${step.label}, ${step.completed ? 'completed' : 'not yet completed'}`}
+      accessibilityState={{ disabled: step.completed, checked: step.completed }}
     >
       <View style={styles.stepCheck}>
         <Animated.View style={[styles.checkCircleFilled, checkStyle]}>
@@ -188,6 +191,8 @@ export default function ActivationProgress({
             <TouchableOpacity
               onPress={onDismiss}
               hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Dismiss activation card"
             >
               <Feather name="x" size={16} color={colors.dark.text3} />
             </TouchableOpacity>
@@ -204,6 +209,8 @@ export default function ActivationProgress({
       <TouchableOpacity
         style={styles.pill}
         activeOpacity={0.8}
+        accessibilityRole="button"
+        accessibilityLabel={`${completedCount} of ${steps.length} activation steps completed, ${Math.round(progress * 100)} percent done`}
         onPress={() => {
           // Find first incomplete step
           const nextStep = steps.find((s) => !s.completed);
