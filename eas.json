@@ -27,9 +27,12 @@
     "production": {
       "autoIncrement": true,
       "cache": {
-        "key": "v5-all-capabilities-2026-03-10"
+        "key": "v6-playbooks-bugfixes-2026-04-08"
       },
       "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://diiqponrvrcpwoerenwz.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpaXFwb25ydnJjcHdvZXJlbnd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODI4ODMsImV4cCI6MjA4ODU1ODg4M30.3rkaz6nZC_2_3UsHQNd07PnFoBkypBwstBeH7lr6wPQ",
+        "GOOGLE_MAPS_API_KEY": "AIzaSyD-c7Zkn2AffwCtFOu9UW8covVAumM-h1c",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
     }

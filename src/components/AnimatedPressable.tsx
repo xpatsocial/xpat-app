@@ -7,12 +7,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
+import { animation } from '../theme';
 
-const SPRING_CONFIG = {
-  damping: 15,
-  stiffness: 300,
-  mass: 0.6,
-};
+const SPRING_CONFIG = animation.springPress;
 
 type HapticStyle = 'light' | 'medium' | 'heavy' | 'selection' | 'success' | 'error' | 'warning';
 

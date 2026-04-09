@@ -19,10 +19,20 @@ import { DirectMessage } from '../types';
 import Avatar from '../components/Avatar';
 
 export default function DirectMessageScreen({ route, navigation }: any) {
-  const partnerId = route?.params?.partnerId ?? '';
+  const partnerId = route?.params?.partnerId;
   const partnerName = route?.params?.partnerName ?? 'User';
   const { user } = useAuth();
   const insets = useSafeAreaInsets();
+
+  // Guard: missing partnerId — don't call useConversation with empty string
+  if (!partnerId) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.dark.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontFamily: fonts.body, color: colors.dark.text2, fontSize: 14 }}>Conversation not found</Text>
+      </View>
+    );
+  }
+
   const { messages, loading, sending, sendMessage } = useConversation(partnerId);
   const [text, setText] = useState('');
   const flatListRef = useRef<FlatList>(null);

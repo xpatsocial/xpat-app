@@ -33,6 +33,7 @@
     },
     "ios": {
       "supportsTablet": false,
+      "deploymentTarget": "16.0",
       "bundleIdentifier": "com.aycholdings.xpat",
       "entitlements": {
         "aps-environment": "production",
@@ -169,10 +170,11 @@
     },
     "android": {
       "package": "com.aycholdings.xpat",
+      "minSdkVersion": 24,
       "versionCode": 1,
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyD-c7Zkn2AffwCtFOu9UW8covVAumM-h1c"
+          "apiKey": "GOOGLE_MAPS_API_KEY_PLACEHOLDER"
         }
       },
       "adaptiveIcon": {
@@ -205,6 +207,11 @@
               "scheme": "https",
               "host": "xpat.social",
               "pathPrefix": "/feed"
+            },
+            {
+              "scheme": "https",
+              "host": "xpat.social",
+              "pathPrefix": "/invite"
             }
           ],
           "category": [

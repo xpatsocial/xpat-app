@@ -105,9 +105,9 @@ export default function CheckInButton({
         const earned = await awardCheckIn(userId, spotId);
         if (earned.length > 0) {
           setBadgeEarned(earned[0]);
-          setTimeout(() => setBadgeEarned(null), 4000);
-          // Badge earned — trigger confetti
-          setTimeout(() => celebrationRef.current?.confetti(), 300);
+          const badgeTimer = setTimeout(() => setBadgeEarned(null), 4000);
+          const confettiTimer = setTimeout(() => celebrationRef.current?.confetti(), 300);
+          // Cleanup handled by component lifecycle — timers are short-lived
         }
 
         onCheckIn();

@@ -14,7 +14,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { colors, fonts, spacing, radius, shadows } from '../theme';
+import { colors, fonts, spacing, radius, shadows, animation } from '../theme';
 import { Spot } from '../types';
 import CheckInButton from './CheckInButton';
 // AffiliateCard removed pre-launch — re-add when partner agreements signed
@@ -22,11 +22,7 @@ import CheckInButton from './CheckInButton';
 const SHEET_HEIGHT = 380;
 const DISMISS_THRESHOLD = 80;
 
-const SPRING_CONFIG = {
-  damping: 20,
-  stiffness: 200,
-  mass: 0.8,
-};
+const SPRING_CONFIG = animation.springSheet;
 
 const CATEGORY_EMOJI: Record<string, string> = {
   cafe: '☕',
@@ -331,7 +327,7 @@ const styles = StyleSheet.create({
     color: colors.teal,
   },
   closeBtn: {
-    width: 32, height: 32, borderRadius: 16,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: colors.dark.bg3,
     alignItems: 'center', justifyContent: 'center',
   },

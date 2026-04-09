@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 import { PresenceDisplay } from '../types';
 
-const HEARTBEAT_INTERVAL = 30_000; // 30 seconds
+const HEARTBEAT_INTERVAL = 120_000; // 120 seconds — battery-friendly for dual-phone nomads
 const ONLINE_THRESHOLD = 5 * 60 * 1000; // 5 minutes
 const RECENTLY_ACTIVE_THRESHOLD = 24 * 60 * 60 * 1000; // 24 hours
 

@@ -92,7 +92,7 @@ export default function Avatar({ uri, name, userId, size = 40, verified, trusted
 
 const styles = StyleSheet.create({
   image: {
-    backgroundColor: '#2C2C2E',
+    backgroundColor: colors.dark.bg2,
   },
   fallback: {
     alignItems: 'center',
@@ -100,7 +100,7 @@ const styles = StyleSheet.create({
   },
   initials: {
     fontFamily: fonts.bodyBold,
-    color: '#1C1C1E',
+    color: colors.dark.bg,
   },
   badge: {
     position: 'absolute',

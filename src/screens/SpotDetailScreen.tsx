@@ -78,7 +78,16 @@ export default function SpotDetailScreen() {
   const celebrationRef = useRef<CelebrationOverlayRef>(null);
   const { trackSpotViewed: trackActivationSpotViewed, trackSpotSaved: trackActivationSpotSaved } = useActivationFunnel(user?.id, profile?.current_city);
 
-  const { spot } = route.params;
+  const spot = route.params?.spot;
+
+  // Guard: malformed deep link with missing spot param
+  if (!spot) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.dark.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontFamily: fonts.body, color: colors.dark.text2, fontSize: 14 }}>Spot not found</Text>
+      </View>
+    );
+  }
 
   const [comments, setComments] = useState<SpotComment[]>([]);
   const [loadingComments, setLoadingComments] = useState(true);

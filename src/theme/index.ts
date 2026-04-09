@@ -16,7 +16,7 @@ export const colors = {
     bg4: '#48484A',
     text: '#F5F5F5',
     text2: '#BABABF',
-    text3: '#636366',
+    text3: '#8E8E93', // Raised from #636366 (2.66:1) to meet WCAG AA 4.5:1 contrast
     border: '#48484A',
     borderLight: '#5A5A5E',
   },
@@ -33,6 +33,7 @@ export const fonts = {
   heading: 'DMSerifDisplay-Regular',
   body: 'SpaceMono-Regular',
   bodyBold: 'SpaceMono-Bold',
+  mono: 'SpaceMono-Regular',
 };
 
 export const spacing = {
@@ -107,5 +108,11 @@ export const animation = {
   spring: { damping: 15, stiffness: 150 },
   springFast: { damping: 20, stiffness: 300 },
   springGentle: { damping: 12, stiffness: 100 },
+  /** Press interactions — snappy scale response */
+  springPress: { damping: 15, stiffness: 300, mass: 0.6 },
+  /** Tab indicator — smooth glide */
+  springTab: { damping: 18, stiffness: 220, mass: 0.4 },
+  /** Sheets/modals — heavier, more grounded */
+  springSheet: { damping: 20, stiffness: 200, mass: 0.8 },
   duration: { fast: 200, normal: 300, slow: 500 },
 };

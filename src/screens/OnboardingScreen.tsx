@@ -12,6 +12,7 @@ import { Feather } from '@expo/vector-icons';
 import GlassView from '../components/GlassView';
 import * as Haptics from 'expo-haptics';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, fonts, spacing, radius } from '../theme';
 import { usePostHog } from '../lib/posthog';
 import { trackOnboardingStarted, trackOnboardingCompleted } from '../lib/analytics';
@@ -35,6 +36,7 @@ interface OnboardingScreenProps {
 }
 
 export default function OnboardingScreen({ navigation }: OnboardingScreenProps) {
+  const insets = useSafeAreaInsets();
   const [step, setStep] = useState(0);
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [selectedCity, setSelectedCity] = useState<string | null>(null);
@@ -420,7 +422,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
       )}
 
       {/* Step indicators */}
-      <View style={styles.dots}>
+      <View style={[styles.dots, { bottom: Math.max(50, insets.bottom + 16) }]}>
         {[0, 1, 2, 3].map((i) => (
           <View
             key={i}

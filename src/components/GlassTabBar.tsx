@@ -10,7 +10,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
-import { colors, fonts } from '../theme';
+import { colors, fonts, animation } from '../theme';
 
 const TAB_ICONS: Record<string, string> = {
   Home: 'home',
@@ -18,11 +18,7 @@ const TAB_ICONS: Record<string, string> = {
   Profile: 'user',
 };
 
-const SPRING_CONFIG = {
-  damping: 18,
-  stiffness: 220,
-  mass: 0.4,
-};
+const SPRING_CONFIG = animation.springTab;
 
 interface GlassTabBarProps {
   state: any;

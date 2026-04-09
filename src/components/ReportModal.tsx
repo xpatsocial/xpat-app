@@ -12,7 +12,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { colors, fonts, spacing, radius } from '../theme';
+import { colors, fonts, spacing, radius, animation } from '../theme';
 
 interface ReportModalProps {
   visible: boolean;
@@ -26,11 +26,7 @@ const REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Fake Profile', 'Scam', 
 const SHEET_HEIGHT = 380;
 const DISMISS_THRESHOLD = 80;
 
-const SPRING_CONFIG = {
-  damping: 20,
-  stiffness: 200,
-  mass: 0.8,
-};
+const SPRING_CONFIG = animation.springSheet;
 
 export default function ReportModal({
   visible,
@@ -187,9 +183,9 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
   closeBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: colors.dark.bg3,
     alignItems: 'center',
     justifyContent: 'center',

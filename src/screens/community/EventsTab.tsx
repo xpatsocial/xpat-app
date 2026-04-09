@@ -12,7 +12,7 @@ import {
 import { Feather } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
-import { colors, fonts, spacing, radius } from '../../theme';
+import { colors, fonts, spacing, radius, shadows } from '../../theme';
 import { useAuth } from '../../hooks/useAuth';
 import { useEvents } from '../../hooks/useEvents';
 import EventCard from '../../components/EventCard';
@@ -419,11 +419,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm + 2,
     paddingHorizontal: spacing.md,
     borderRadius: radius.full,
-    shadowColor: colors.teal,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    ...shadows.glow(colors.teal),
   },
   fabText: {
     fontFamily: fonts.bodyBold,

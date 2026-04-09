@@ -159,8 +159,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
 
-      if (result.type !== 'success') {
-        // User cancelled
+      if (result.type !== 'success' || !result.url) {
+        // User cancelled or WebView returned no URL
         return { error: null };
       }
 

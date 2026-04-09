@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { colors, fonts, spacing, radius } from '../theme';
 import { Spot } from '../types';
+import AnimatedPressable from './AnimatedPressable';
 
 const CATEGORY_EMOJI: Record<string, string> = {
   cafe: '☕',
@@ -22,7 +23,7 @@ interface SpotCardProps {
 // Critical for FlashList performance in feeds (RN Performance 2026 research)
 const SpotCard = React.memo(function SpotCard({ spot, onPress }: SpotCardProps) {
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.7} accessibilityRole="button" accessibilityLabel={`${spot.name}, ${spot.category} in ${spot.city}, ${spot.country}. ${spot.votes || 0} votes`}>
+    <AnimatedPressable style={styles.card} onPress={onPress} hapticStyle="light" accessibilityRole="button" accessibilityLabel={`${spot.name}, ${spot.category} in ${spot.city}, ${spot.country}. ${spot.votes || 0} votes`}>
       <View style={styles.header}>
         <View style={styles.categoryPill}>
           <Text style={styles.categoryEmoji}>{CATEGORY_EMOJI[spot.category] || '📌'}</Text>
@@ -47,7 +48,7 @@ const SpotCard = React.memo(function SpotCard({ spot, onPress }: SpotCardProps) 
           {new Date(spot.created_at).toLocaleDateString()}
         </Text>
       </View>
-    </TouchableOpacity>
+    </AnimatedPressable>
   );
 });
 

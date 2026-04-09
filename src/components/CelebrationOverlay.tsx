@@ -1,4 +1,4 @@
-import React, { useCallback, useImperativeHandle, forwardRef, useState } from 'react';
+import React, { useCallback, useImperativeHandle, forwardRef, useState, useRef, useEffect } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import Animated, {
   useSharedValue,
@@ -216,12 +216,15 @@ const CelebrationOverlay = forwardRef<CelebrationOverlayRef>((_, ref) => {
     setParticles([]);
   }, []);
 
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const trigger = useCallback((mode: CelebrationMode, customColor?: string) => {
     const newParticles = mode !== 'pulse' ? generateParticles(mode, customColor) : [];
     setParticles(newParticles);
     setActiveMode(mode);
     setRenderKey(k => k + 1);
-    setTimeout(() => {
+    if (dismissTimerRef.current) clearTimeout(dismissTimerRef.current);
+    dismissTimerRef.current = setTimeout(() => {
       dismiss();
     }, AUTO_DISMISS_MS);
   }, [dismiss]);

@@ -31,6 +31,13 @@ const KEY_CHAT_MESSAGES_SENT = 'activation:chat_messages_sent';
 const KEY_SPOTS_VIEWED_COUNT = 'activation:spots_viewed_count';
 const KEY_ACTIVATED = 'activation:completed';
 const KEY_ACTIVATED_AT = 'activation:completed_at';
+const KEY_STARTED_AT = 'activation:started_at';
+
+// ---------------------------------------------------------------------------
+// 48-hour activation window (Butterfield urgency principle)
+// ---------------------------------------------------------------------------
+
+const ACTIVATION_WINDOW_MS = 48 * 60 * 60 * 1000; // 48 hours
 
 // ---------------------------------------------------------------------------
 // Thresholds (Butterfield methodology: find the number where retention changes)
@@ -65,6 +72,10 @@ export interface ActivationState {
   chatMessagesSent: number;
   /** Whether activation just happened this session (for celebration) */
   justActivated: boolean;
+  /** Hours remaining in the 48-hour activation window (null if expired or activated) */
+  hoursRemaining: number | null;
+  /** Whether the 48-hour window has expired without activation */
+  windowExpired: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,6 +102,8 @@ export function useActivationFunnel(userId?: string | null, city?: string | null
     spotsSaved: 0,
     chatMessagesSent: 0,
     justActivated: false,
+    hoursRemaining: null,
+    windowExpired: false,
   });
 
   // Compute state from MMKV
@@ -98,6 +111,20 @@ export function useActivationFunnel(userId?: string | null, city?: string | null
     const spotsSaved = store.getNumber(KEY_SPOTS_SAVED_COUNT) ?? 0;
     const chatMessagesSent = store.getNumber(KEY_CHAT_MESSAGES_SENT) ?? 0;
     const isActivated = store.getBoolean(KEY_ACTIVATED) ?? false;
+
+    // 48-hour window tracking
+    const startedAt = store.getString(KEY_STARTED_AT);
+    let hoursRemaining: number | null = null;
+    let windowExpired = false;
+    if (startedAt && !isActivated) {
+      const elapsed = Date.now() - new Date(startedAt).getTime();
+      const remaining = ACTIVATION_WINDOW_MS - elapsed;
+      if (remaining > 0) {
+        hoursRemaining = Math.ceil(remaining / (60 * 60 * 1000));
+      } else {
+        windowExpired = true;
+      }
+    }
 
     const spotsComplete = Math.min(spotsSaved, ACTIVATION_SPOTS_THRESHOLD);
     const chatComplete = Math.min(chatMessagesSent, ACTIVATION_CHAT_THRESHOLD);
@@ -149,11 +176,17 @@ export function useActivationFunnel(userId?: string | null, city?: string | null
       spotsSaved,
       chatMessagesSent,
       justActivated: false,
+      hoursRemaining,
+      windowExpired,
     };
   }, []);
 
-  // Initialize on mount
+  // Initialize on mount — start the 48-hour window on first use
   useEffect(() => {
+    if (userId && !store.getString(KEY_STARTED_AT)) {
+      store.set(KEY_STARTED_AT, new Date().toISOString());
+      _capture('activation_window_started', { window_hours: 48 });
+    }
     setState(computeState());
     if (userId && city) {
       initActivationBot(userId, city);

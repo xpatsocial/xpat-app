@@ -35,7 +35,16 @@ export default function UserProfileScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   const { user } = useAuth();
-  const { userId } = route.params;
+  const userId = route.params?.userId;
+
+  // Guard: malformed deep link with missing userId
+  if (!userId) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.dark.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontFamily: fonts.body, color: colors.dark.text2, fontSize: 14 }}>User not found</Text>
+      </View>
+    );
+  }
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [spots, setSpots] = useState<Spot[]>([]);

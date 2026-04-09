@@ -11,13 +11,9 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Feather } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
-import { colors, fonts, spacing } from '../theme';
+import { colors, fonts, spacing, animation } from '../theme';
 
-const SPRING_CONFIG = {
-  damping: 20,
-  stiffness: 200,
-  mass: 0.8,
-};
+const SPRING_CONFIG = animation.springSheet;
 
 const ACTION_WIDTH = 72;
 const SNAP_THRESHOLD = 40;

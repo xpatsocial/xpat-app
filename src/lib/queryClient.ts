@@ -16,9 +16,12 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 5 * 60 * 1000,       // 5 min — refetch in background, no loading flicker
-      gcTime: 7 * 24 * 60 * 60 * 1000, // 7 days — offline browsing
+      gcTime: 24 * 60 * 60 * 1000, // 24h — reduced from 7d to prevent OOM on 2GB devices
       retry: 2,
       retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30000),
+      refetchOnWindowFocus: false,     // Prevent thundering herd on app foreground
+      refetchOnReconnect: 'always',    // Smart refetch on network restore instead
+      networkMode: 'offlineFirst',     // Use cache immediately, refetch in background
     },
   },
 });
@@ -68,5 +71,6 @@ export function createPersister() {
     storage,
     throttleTime: 1000, // debounce writes to 1s to avoid thrashing
     key: 'XPAT_QUERY_CACHE_V1',
+    maxAge: 24 * 60 * 60 * 1000, // 24h max persisted cache age — prevents unbounded MMKV growth
   });
 }

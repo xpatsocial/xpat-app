@@ -3,6 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { createMaterialTopTabNavigator } from '@react-navigation/material-top-tabs';
 import { Feather } from '@expo/vector-icons';
 import Animated from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { colors, fonts, spacing, radius } from '../theme';
 import BrandHeader from '../components/BrandHeader';
 
@@ -35,7 +36,10 @@ function CommunityTabBar({ state, navigation }: any) {
               key={route.key}
               style={[tabStyles.pill, isFocused && tabStyles.pillActive]}
               onPress={() => {
-                if (!isFocused) navigation.navigate(route.name);
+                if (!isFocused) {
+                  Haptics.selectionAsync();
+                  navigation.navigate(route.name);
+                }
               }}
               activeOpacity={0.7}
             >

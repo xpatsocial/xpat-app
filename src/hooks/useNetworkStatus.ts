@@ -6,7 +6,6 @@
  */
 import { useState, useEffect } from 'react';
 import NetInfo, { NetInfoState } from '@react-native-community/netinfo';
-import { useQueryClient } from '@tanstack/react-query';
 
 export interface NetworkStatus {
   isOnline: boolean;
@@ -20,7 +19,6 @@ export function useNetworkStatus(): NetworkStatus {
     isWifi: false,
     connectionType: null,
   });
-  const queryClient = useQueryClient();
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state: NetInfoState) => {
@@ -32,18 +30,12 @@ export function useNetworkStatus(): NetworkStatus {
         isWifi,
         connectionType: state.type,
       });
-
-      // Pause React Query background refetches when offline
-      if (!isOnline) {
-        queryClient.getQueryCache().getAll().forEach((query) => {
-          // Mark all active queries as paused — they'll retry when back online
-          query.setOptions({ ...query.options, networkMode: 'offlineFirst' });
-        });
-      }
+      // networkMode: 'offlineFirst' is set globally in queryClient.ts —
+      // React Query handles pause/resume automatically, no per-query patching needed
     });
 
     return unsubscribe;
-  }, [queryClient]);
+  }, []);
 
   return status;
 }

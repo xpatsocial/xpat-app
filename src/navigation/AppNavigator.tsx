@@ -29,6 +29,7 @@ import BlockedUsersScreen from '../screens/BlockedUsersScreen';
 import AskAIScreen from '../screens/AskAIScreen';
 import DirectMessageScreen from '../screens/DirectMessageScreen';
 import InviteNomadsScreen from '../screens/InviteNomadsScreen';
+import TravelWrappedScreen from '../screens/TravelWrappedScreen';
 import GDPRConsent from '../components/GDPRConsent';
 import OfflineBanner from '../components/OfflineBanner';
 import ToastNotification from '../components/ToastNotification';
@@ -117,6 +118,7 @@ export default function AppNavigator() {
 
   return (
     <>
+      <ErrorBoundary>
       <Stack.Navigator
         screenOptions={{
           headerShown: false,
@@ -246,7 +248,13 @@ export default function AppNavigator() {
           component={InviteNomadsScreen}
           options={{ presentation: 'card', animation: 'slide_from_right', animationDuration: 250 }}
         />
+        <Stack.Screen
+          name="TravelWrapped"
+          component={TravelWrappedScreen}
+          options={{ presentation: 'modal', animation: 'fade_from_bottom', animationDuration: 300 }}
+        />
       </Stack.Navigator>
+      </ErrorBoundary>
 
       {/* GDPR Consent overlay on first launch */}
       <GDPRConsent

@@ -12,7 +12,7 @@ import Animated, {
   runOnJS,
 } from 'react-native-reanimated';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { colors, fonts, spacing, radius } from '../theme';
+import { colors, fonts, spacing, radius, animation } from '../theme';
 import { NeighborhoodTag, SAFETY_TAGS, VIBE_TAGS } from '../types';
 
 interface NeighborhoodPulseSheetProps {
@@ -25,11 +25,7 @@ interface NeighborhoodPulseSheetProps {
 const SHEET_HEIGHT = 420;
 const DISMISS_THRESHOLD = 80;
 
-const SPRING_CONFIG = {
-  damping: 20,
-  stiffness: 200,
-  mass: 0.8,
-};
+const SPRING_CONFIG = animation.springSheet;
 
 const TAG_ICONS: Partial<Record<NeighborhoodTag, string>> = {
   'feels safe': 'shield',

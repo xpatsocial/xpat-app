@@ -106,7 +106,7 @@ export function useVoteSpot() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ spotId, userId }: { spotId: number; userId: string }) => {
+    mutationFn: async ({ spotId, userId }: { spotId: number; userId: string; hasVoted?: boolean }) => {
       // Check if already voted
       const { data: existing } = await supabase
         .from('spot_votes')
@@ -124,14 +124,15 @@ export function useVoteSpot() {
         return { voted: true };
       }
     },
-    onMutate: async ({ spotId }) => {
-      // Optimistic: increment vote count immediately
+    onMutate: async ({ spotId, hasVoted }) => {
+      // Optimistic: adjust vote count based on current vote state
       await queryClient.cancelQueries({ queryKey: qk.spots.byId(spotId) });
       const prev = queryClient.getQueryData<Spot>(qk.spots.byId(spotId));
       if (prev) {
+        const delta = hasVoted ? -1 : 1;
         queryClient.setQueryData(qk.spots.byId(spotId), {
           ...prev,
-          votes: (prev.votes ?? 0) + 1,
+          votes: Math.max(0, (prev.votes ?? 0) + delta),
         });
       }
       return { prev };
