@@ -71,6 +71,7 @@ export function createPersister() {
     storage,
     throttleTime: 1000, // debounce writes to 1s to avoid thrashing
     key: 'XPAT_QUERY_CACHE_V1',
-    maxAge: 24 * 60 * 60 * 1000, // 24h max persisted cache age — prevents unbounded MMKV growth
   });
+  // Note: persister maxAge is enforced via PersistQueryClientProvider's maxAge prop
+  // and/or queryClient's gcTime (24h) — prevents unbounded MMKV growth
 }
