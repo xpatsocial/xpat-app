@@ -17,6 +17,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useConversation } from '../hooks/useDirectMessages';
 import { DirectMessage } from '../types';
 import Avatar from '../components/Avatar';
+import { usePostHog } from '../lib/posthog';
 
 export default function DirectMessageScreen({ route, navigation }: any) {
   const partnerId = route?.params?.partnerId;
@@ -37,12 +38,15 @@ export default function DirectMessageScreen({ route, navigation }: any) {
   const [text, setText] = useState('');
   const flatListRef = useRef<FlatList>(null);
 
+  const posthog = usePostHog();
+
   const handleSend = useCallback(() => {
     if (!text.trim()) return;
     sendMessage(text.trim());
+    posthog?.capture('dm_message_sent', { partner_id: partnerId });
     setText('');
     setTimeout(() => flatListRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [text, sendMessage]);
+  }, [text, sendMessage, posthog, partnerId]);
 
   function renderMessage({ item }: { item: DirectMessage }) {
     const isMe = item.sender_id === user?.id;

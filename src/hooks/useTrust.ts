@@ -7,6 +7,7 @@
 import { useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
+import { usePostHog } from '../lib/posthog';
 
 // ─── Trust level thresholds (Gebbia: "10+ reviews changes everything") ───
 
@@ -85,6 +86,7 @@ export interface MutualCheckIn {
 
 export function useTrust() {
   const { user } = useAuth();
+  const posthog = usePostHog();
 
   // ── Vouching ──
 
@@ -135,8 +137,15 @@ export function useTrust() {
     // Recalculate trust score for recipient
     await supabase.rpc('recalculate_trust_score', { p_user_id: recipientId });
 
+    posthog?.capture('vouch_given', {
+      recipient_id: recipientId,
+      has_note: !!note,
+      has_spot: !!spotId,
+      city: city ?? undefined,
+    });
+
     return { success: true };
-  }, [user]);
+  }, [user, posthog]);
 
   const removeVouch = useCallback(async (recipientId: string): Promise<boolean> => {
     if (!user) return false;
@@ -145,8 +154,11 @@ export function useTrust() {
       .delete()
       .eq('voucher_id', user.id)
       .eq('recipient_id', recipientId);
+    if (!error) {
+      posthog?.capture('vouch_removed', { recipient_id: recipientId });
+    }
     return !error;
-  }, [user]);
+  }, [user, posthog]);
 
   // ── Peer Reviews (double-blind) ──
 
