@@ -4,7 +4,6 @@ import { View, ActivityIndicator, Text, TextInput, Platform } from 'react-native
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { ReducedMotionConfig, ReduceMotion } from 'react-native-reanimated';
-import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -66,11 +65,12 @@ try {
 }
 
 function App() {
-  const [fontsLoaded] = useFonts({
-    'DMSerifDisplay-Regular': require('./assets/fonts/DMSerifDisplay-Regular.ttf'),
-    'SpaceMono-Regular': require('./assets/fonts/SpaceMono-Regular.ttf'),
-    'SpaceMono-Bold': require('./assets/fonts/SpaceMono-Bold.ttf'),
-  });
+  // Fonts are statically registered via expo-font config plugin in app.json,
+  // making them available in iOS Info.plist UIAppFonts at app launch — no
+  // runtime loading needed. Calling useFonts() here was triggering
+  // FontLoaderModule.registerFont() which crashed in production builds on
+  // iOS New Architecture (TurboModule queue panic, Apr 9 2026 incident).
+  const fontsLoaded = true;
 
   // Only initialize Sentry after GDPR consent is accepted
   useEffect(() => {

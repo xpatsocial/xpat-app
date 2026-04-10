@@ -20,7 +20,17 @@
           "color": "#2EC4A0"
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/DMSerifDisplay-Regular.ttf",
+            "./assets/fonts/SpaceMono-Regular.ttf",
+            "./assets/fonts/SpaceMono-Bold.ttf"
+          ]
+        }
+      ]
     ],
     "splash": {
       "image": "./assets/splash-icon.png",
