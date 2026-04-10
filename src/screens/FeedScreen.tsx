@@ -402,21 +402,32 @@ export default function FeedScreen({ navigation, hideHeader }: { navigation?: an
     );
   }
 
-  async function submitReport(reason: string) {
+  async function submitReport(submission: { reason: string; description: string; goodFaithConfirmed: boolean } | string) {
     if (!user) return;
     const rateLimitMsg = getRateLimitError('report');
     if (rateLimitMsg) {
       Alert.alert('Slow down', rateLimitMsg);
       return;
     }
-    await supabase.from('reports').insert({
+    // DSA Art. 16 compliant: handle both new submission shape and legacy string
+    const reason = typeof submission === 'string' ? submission : submission.reason;
+    const description = typeof submission === 'string' ? '' : submission.description;
+    const { data: insertedReport } = await supabase.from('reports').insert({
       reporter_id: user.id,
       target_type: 'post',
       target_id: String(reportTarget.id),
       reason,
-    });
+      description,
+      good_faith_confirmed: typeof submission === 'string' ? false : submission.goodFaithConfirmed,
+    }).select('id').single();
     setReportTarget({ id: 0, visible: false });
-    Alert.alert('Reported', 'Thanks for reporting. We\'ll review this post.');
+    // DSA Art. 16(5): confirmation receipt with reference ID
+    Alert.alert(
+      'Report received',
+      insertedReport?.id
+        ? `Reference: #${insertedReport.id}\n\nWe'll review this within 24 hours per our community guidelines and EU DSA obligations.`
+        : "Thanks for reporting. We'll review this within 24 hours."
+    );
   }
 
   async function handleShare(item: Post) {

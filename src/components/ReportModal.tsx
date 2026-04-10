@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity,
+  View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Platform,
 } from 'react-native';
 import GlassView from './GlassView';
 import { Feather } from '@expo/vector-icons';
@@ -14,16 +14,31 @@ import Animated, {
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { colors, fonts, spacing, radius, animation } from '../theme';
 
+// EU Digital Services Act Art. 16 — Notice and Action Mechanism
+// Reports must capture:
+//  • Sufficiently substantiated explanation (description field)
+//  • Clear indication of electronic location (auto-captured via targetId)
+//  • Good-faith confirmation
+//  • Notifier identity (user_id from session)
+// Per: Regulation (EU) 2022/2065 Article 16(2)
+export interface ReportSubmission {
+  reason: string;
+  description: string;
+  goodFaithConfirmed: boolean;
+}
+
 interface ReportModalProps {
   visible: boolean;
   targetType: 'post' | 'spot' | 'comment' | 'pulse' | 'user';
   targetId: string;
   onClose: () => void;
-  onSubmit: (reason: string) => void;
+  // Backwards compatible: callers can accept just `reason: string` (legacy)
+  // or the new full ReportSubmission shape (DSA-compliant).
+  onSubmit: (submission: ReportSubmission | string) => void;
 }
 
 const REASONS = ['Spam', 'Harassment', 'Inappropriate', 'Fake Profile', 'Scam', 'Felt unsafe at meetup', 'Other'];
-const SHEET_HEIGHT = 380;
+const SHEET_HEIGHT = 540;
 const DISMISS_THRESHOLD = 80;
 
 const SPRING_CONFIG = animation.springSheet;
@@ -38,15 +53,21 @@ export default function ReportModal({
   const translateY = useSharedValue(SHEET_HEIGHT);
   const context = useSharedValue(0);
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
+  const [description, setDescription] = useState('');
+  const [goodFaithConfirmed, setGoodFaithConfirmed] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setSelectedReason(null);
+      setDescription('');
+      setGoodFaithConfirmed(false);
       translateY.value = withSpring(0, SPRING_CONFIG);
     } else {
       translateY.value = withTiming(SHEET_HEIGHT, { duration: 200 });
     }
   }, [visible]);
+
+  const canSubmit = !!selectedReason && description.trim().length >= 10 && goodFaithConfirmed;
 
   const panGesture = Gesture.Pan()
     .onStart(() => {
@@ -70,8 +91,12 @@ export default function ReportModal({
   }));
 
   function handleSubmit() {
-    if (!selectedReason) return;
-    onSubmit(selectedReason);
+    if (!canSubmit || !selectedReason) return;
+    onSubmit({
+      reason: selectedReason,
+      description: description.trim(),
+      goodFaithConfirmed,
+    });
   }
 
   if (!visible) return null;
@@ -89,55 +114,89 @@ export default function ReportModal({
             </TouchableOpacity>
           </View>
 
-          <Text style={styles.subtitle}>
-            Why are you reporting this {targetType}?
-          </Text>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+            <Text style={styles.subtitle}>
+              Why are you reporting this {targetType}?
+            </Text>
 
-          <View style={styles.reasonGrid}>
-            {REASONS.map((reason) => {
-              const active = selectedReason === reason;
-              return (
-                <TouchableOpacity
-                  key={reason}
-                  style={[styles.reasonPill, active && styles.reasonPillActive]}
-                  onPress={() => setSelectedReason(reason)}
-                  activeOpacity={0.7}
-                  accessibilityRole="radio"
-                  accessibilityLabel={reason}
-                  accessibilityState={{ selected: active }}
-                >
-                  <Text
-                    style={[
-                      styles.reasonText,
-                      active && styles.reasonTextActive,
-                    ]}
+            <View style={styles.reasonGrid}>
+              {REASONS.map((reason) => {
+                const active = selectedReason === reason;
+                return (
+                  <TouchableOpacity
+                    key={reason}
+                    style={[styles.reasonPill, active && styles.reasonPillActive]}
+                    onPress={() => setSelectedReason(reason)}
+                    activeOpacity={0.7}
+                    accessibilityRole="radio"
+                    accessibilityLabel={reason}
+                    accessibilityState={{ selected: active }}
                   >
-                    {reason}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+                    <Text
+                      style={[
+                        styles.reasonText,
+                        active && styles.reasonTextActive,
+                      ]}
+                    >
+                      {reason}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
 
-          <View style={styles.actions}>
+            <Text style={styles.fieldLabel}>Tell us what happened *</Text>
+            <TextInput
+              style={styles.descriptionInput}
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Describe what you saw and why it violates our community guidelines..."
+              placeholderTextColor={colors.dark.text3}
+              multiline
+              numberOfLines={4}
+              maxLength={500}
+              accessibilityLabel="Report description"
+              accessibilityHint="Required, minimum 10 characters"
+              textAlignVertical="top"
+            />
+            <Text style={styles.charCount}>{description.length}/500 (min 10)</Text>
+
             <TouchableOpacity
-              style={[
-                styles.submitBtn,
-                !selectedReason && styles.submitBtnDisabled,
-              ]}
-              onPress={handleSubmit}
-              disabled={!selectedReason}
-              accessibilityRole="button"
-              accessibilityLabel="Submit report"
-              accessibilityState={{ disabled: !selectedReason }}
+              style={styles.checkboxRow}
+              onPress={() => setGoodFaithConfirmed(!goodFaithConfirmed)}
+              activeOpacity={0.7}
+              accessibilityRole="checkbox"
+              accessibilityLabel="I confirm this report is accurate and submitted in good faith"
+              accessibilityState={{ checked: goodFaithConfirmed }}
             >
-              <Text style={styles.submitText}>Submit Report</Text>
+              <View style={[styles.checkbox, goodFaithConfirmed && styles.checkboxActive]}>
+                {goodFaithConfirmed && <Feather name="check" size={14} color={colors.dark.bg} />}
+              </View>
+              <Text style={styles.checkboxLabel}>
+                I confirm this report is accurate and submitted in good faith.
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={onClose} style={styles.cancelBtn} accessibilityRole="button" accessibilityLabel="Cancel report">
-              <Text style={styles.cancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.actions}>
+              <TouchableOpacity
+                style={[
+                  styles.submitBtn,
+                  !canSubmit && styles.submitBtnDisabled,
+                ]}
+                onPress={handleSubmit}
+                disabled={!canSubmit}
+                accessibilityRole="button"
+                accessibilityLabel="Submit report"
+                accessibilityState={{ disabled: !canSubmit }}
+              >
+                <Text style={styles.submitText}>Submit Report</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity onPress={onClose} style={styles.cancelBtn} accessibilityRole="button" accessibilityLabel="Cancel report">
+                <Text style={styles.cancelText}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </GlassView>
       </Animated.View>
     </GestureDetector>
@@ -222,6 +281,60 @@ const styles = StyleSheet.create({
   reasonTextActive: {
     color: colors.dark.bg,
     fontFamily: fonts.bodyBold,
+  },
+  fieldLabel: {
+    fontFamily: fonts.bodyBold,
+    fontSize: 12,
+    color: colors.dark.text,
+    marginBottom: spacing.xs,
+  },
+  descriptionInput: {
+    backgroundColor: colors.dark.bg2,
+    borderWidth: 1,
+    borderColor: colors.dark.border,
+    borderRadius: radius.md,
+    padding: spacing.sm + spacing.xs,
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.dark.text,
+    minHeight: 80,
+    marginBottom: spacing.xs,
+  },
+  charCount: {
+    fontFamily: fonts.body,
+    fontSize: 10,
+    color: colors.dark.text3,
+    textAlign: 'right',
+    marginBottom: spacing.md,
+  },
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+    marginBottom: spacing.lg,
+    paddingVertical: spacing.xs,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 1.5,
+    borderColor: colors.dark.border,
+    backgroundColor: colors.dark.bg2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 1,
+  },
+  checkboxActive: {
+    backgroundColor: colors.teal,
+    borderColor: colors.teal,
+  },
+  checkboxLabel: {
+    flex: 1,
+    fontFamily: fonts.body,
+    fontSize: 12,
+    color: colors.dark.text2,
+    lineHeight: 17,
   },
   actions: {
     gap: spacing.sm,

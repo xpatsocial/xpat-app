@@ -680,12 +680,16 @@ export default function UserProfileScreen() {
         targetType="user"
         targetId={userId}
         onClose={() => setReportVisible(false)}
-        onSubmit={(reason) => {
+        onSubmit={(submission) => {
           setReportVisible(false);
+          // DSA Art. 16 compliant: handle both new submission shape and legacy string
+          const reason = typeof submission === 'string' ? submission : submission.reason;
+          const description = typeof submission === 'string' ? '' : submission.description;
           reportContent({
             contentType: 'profile',
             reportedUserId: userId,
             category: reason.toLowerCase().replace(/ /g, '_') as ReportCategory,
+            description,
           });
         }}
       />

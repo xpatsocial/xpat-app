@@ -87,6 +87,9 @@ export function useModeration() {
     [user],
   );
 
+  // EU DSA Art. 16 (Notice and Action Mechanism) compliant reporting.
+  // Captures: reason, description, good-faith confirmation, content URL (via target_id),
+  // notifier identity (via reporter_id). Returns reference ID per Art. 16(5).
   const reportContent = useCallback(
     async (opts: {
       contentType: 'profile' | 'message' | 'post' | 'spot' | 'event';
@@ -94,6 +97,7 @@ export function useModeration() {
       reportedUserId?: string;
       category: ReportCategory;
       description?: string;
+      goodFaithConfirmed?: boolean;
     }) => {
       if (!user) return false;
 
@@ -103,15 +107,20 @@ export function useModeration() {
         return false;
       }
 
-      const { error } = await supabase.from('reports').insert({
-        reporter_id: user.id,
-        reported_user_id: opts.reportedUserId || null,
-        target_type: opts.contentType,
-        target_id: opts.contentId ? Number(opts.contentId) : null,
-        reason: opts.category,
-        description: opts.description || null,
-        status: 'pending',
-      });
+      const { data: inserted, error } = await supabase
+        .from('reports')
+        .insert({
+          reporter_id: user.id,
+          reported_user_id: opts.reportedUserId || null,
+          target_type: opts.contentType,
+          target_id: opts.contentId ? Number(opts.contentId) : null,
+          reason: opts.category,
+          description: opts.description || null,
+          good_faith_confirmed: opts.goodFaithConfirmed ?? false,
+          status: 'pending',
+        })
+        .select('id')
+        .single();
 
       if (error) {
         Alert.alert('Error', 'Failed to submit report. Please try again.');
@@ -119,7 +128,13 @@ export function useModeration() {
       }
 
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert('Report Submitted', 'Thank you. Our team will review this within 24 hours.');
+      // DSA Art. 16(5): confirmation receipt with reference identifier
+      Alert.alert(
+        'Report received',
+        inserted?.id
+          ? `Reference: #${inserted.id}\n\nWe'll review this within 24 hours per our community guidelines and EU Digital Services Act obligations.`
+          : "Thank you. Our team will review this within 24 hours."
+      );
       return true;
     },
     [user],
