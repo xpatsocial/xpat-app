@@ -15,6 +15,8 @@
       "developmentClient": true,
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_DkgZLo2zSeJwGynMNWCwZdDbZP97AE7MgDpwL63TUaqB",
         "EXPO_PUBLIC_SENTRY_DSN": "https://77a74064ce468793a24f406581308a8d@o4511018130079744.ingest.us.sentry.io/4511193014861824",
         "EXPO_PUBLIC_SUPABASE_URL": "https://diiqponrvrcpwoerenwz.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpaXFwb25ydnJjcHdvZXJlbnd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODI4ODMsImV4cCI6MjA4ODU1ODg4M30.3rkaz6nZC_2_3UsHQNd07PnFoBkypBwstBeH7lr6wPQ",
@@ -25,6 +27,8 @@
     "preview": {
       "distribution": "internal",
       "env": {
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_DkgZLo2zSeJwGynMNWCwZdDbZP97AE7MgDpwL63TUaqB",
         "EXPO_PUBLIC_SENTRY_DSN": "https://77a74064ce468793a24f406581308a8d@o4511018130079744.ingest.us.sentry.io/4511193014861824",
         "SENTRY_DISABLE_AUTO_UPLOAD": "true"
       }
@@ -35,6 +39,8 @@
         "key": "v6-playbooks-bugfixes-2026-04-08"
       },
       "env": {
+        "EXPO_PUBLIC_POSTHOG_HOST": "https://us.i.posthog.com",
+        "EXPO_PUBLIC_POSTHOG_KEY": "phc_DkgZLo2zSeJwGynMNWCwZdDbZP97AE7MgDpwL63TUaqB",
         "EXPO_PUBLIC_SENTRY_DSN": "https://77a74064ce468793a24f406581308a8d@o4511018130079744.ingest.us.sentry.io/4511193014861824",
         "EXPO_PUBLIC_SUPABASE_URL": "https://diiqponrvrcpwoerenwz.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRpaXFwb25ydnJjcHdvZXJlbnd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI5ODI4ODMsImV4cCI6MjA4ODU1ODg4M30.3rkaz6nZC_2_3UsHQNd07PnFoBkypBwstBeH7lr6wPQ",
