@@ -2,7 +2,11 @@
 # Pre-build validation loop — run before every EAS build to catch issues early.
 # Feedback loop: catches bundle errors, syntax errors, and missing modules before burning build credits.
 #
-# Usage: bash scripts/pre-build-check.sh
+# Usage:
+#   bash scripts/pre-build-check.sh           — validate only (no version bump)
+#   bash scripts/pre-build-check.sh --bump    — validate + bump patch version
+#   bash scripts/pre-build-check.sh --bump minor — validate + bump minor version
+#   bash scripts/pre-build-check.sh --bump major — validate + bump major version
 #
 # Exit codes:
 #   0 — all checks passed, safe to build
@@ -10,6 +14,12 @@
 
 set -e
 cd "$(dirname "$0")/.."
+
+# Parse args for version bump
+BUMP=""
+if [ "$1" = "--bump" ]; then
+  BUMP="${2:-patch}"
+fi
 
 echo "╔══════════════════════════════════════════════════════════╗"
 echo "║        x/pat Pre-Build Validation Pipeline             ║"
@@ -116,6 +126,13 @@ rm -rf /tmp/xpat-prebuild-check /tmp/xpat-prebuild-android
 
 echo ""
 if [ "$FAIL" -eq 0 ]; then
+  # Auto-bump version if requested (only after all validation passes)
+  if [ -n "$BUMP" ]; then
+    echo ""
+    echo "→ [version bump] $BUMP"
+    bash scripts/bump-version.sh "$BUMP" | sed 's/^/  /'
+  fi
+
   echo "╔══════════════════════════════════════════════════════════╗"
   echo "║  ✓ ALL CHECKS PASSED — safe to build                    ║"
   echo "╚══════════════════════════════════════════════════════════╝"
