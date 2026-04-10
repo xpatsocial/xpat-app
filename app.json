@@ -2,7 +2,7 @@
   "expo": {
     "name": "x/pat",
     "slug": "xpat-app",
-    "version": "1.4.1",
+    "version": "1.4.2",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -11,7 +11,14 @@
       "expo-location",
       "expo-image-picker",
       "expo-splash-screen",
-      "@sentry/react-native",
+      [
+        "@sentry/react-native/expo",
+        {
+          "organization": "xpat",
+          "project": "react-native",
+          "url": "https://sentry.io/"
+        }
+      ],
       "expo-apple-authentication",
       [
         "expo-notifications",

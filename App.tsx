@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, Text, TextInput, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -51,18 +51,16 @@ if (Platform.OS === 'android') {
 
 SplashScreen.preventAutoHideAsync();
 
-// Lazy persister — wrapped in try/catch so any MMKV / persister failure
-// doesn't crash the entire app at module load. Falls back to in-memory cache
-// which still gives us all React Query benefits minus offline persistence.
-let persister: ReturnType<typeof createPersister> | null = null;
-let persisterError: Error | null = null;
-try {
-  persister = createPersister();
-} catch (e) {
-  persisterError = e as Error;
-  // eslint-disable-next-line no-console
-  console.warn('[xpat] Persister init failed, falling back to in-memory cache:', e);
-}
+// Initialize Sentry IMMEDIATELY at module load — before any other code runs.
+// This catches launch crashes that happen before React mounts. We respect
+// GDPR by not setting user identity (PII) until consent is granted, but
+// the SDK itself initializes early to capture all crashes.
+initSentry();
+
+// NOTE: createPersister() is intentionally NOT called at module load.
+// Calling it here triggers MMKV TurboModule init before the bridge is wired,
+// causing the app to abort on iOS New Architecture. It is now lazy-initialized
+// inside the App() component on first render via useState initializer.
 
 function App() {
   // Fonts are statically registered via expo-font config plugin in app.json,
@@ -72,16 +70,18 @@ function App() {
   // iOS New Architecture (TurboModule queue panic, Apr 9 2026 incident).
   const fontsLoaded = true;
 
-  // Only initialize Sentry after GDPR consent is accepted
-  useEffect(() => {
-    AsyncStorage.getItem('gdpr_accepted').then((val) => {
-      if (val === 'true') {
-        initSentry();
-      }
-    }).catch(() => {
-      // Storage unavailable — skip Sentry init
-    });
-  }, []);
+  // LAZY persister — only initialized on first render, AFTER React has mounted
+  // and the TurboModule bridge is fully wired. Falls back to in-memory cache
+  // if MMKV init throws (no offline persistence but app still works).
+  const [persister] = useState(() => {
+    try {
+      return createPersister();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn('[xpat] Persister init failed, falling back to in-memory cache:', e);
+      return null;
+    }
+  });
 
   // Track app_opened + streak on each cold start
   useEffect(() => {
@@ -140,7 +140,7 @@ function App() {
     </SafeAreaProvider>
   );
 
-  const providerTree = persister && !persisterError ? (
+  const providerTree = persister ? (
     <PersistQueryClientProvider client={queryClient} persistOptions={{ persister }}>
       {inner}
     </PersistQueryClientProvider>

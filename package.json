@@ -1,6 +1,6 @@
 {
   "name": "xpat-app-expo",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
@@ -46,6 +46,7 @@
     "expo-splash-screen": "~55.0.15",
     "expo-status-bar": "~55.0.5",
     "expo-web-browser": "~55.0.13",
+    "posthog-react-native": "^4.41.1",
     "react": "19.2.0",
     "react-native": "0.83.4",
     "react-native-gesture-handler": "~2.30.0",
